@@ -18,7 +18,7 @@ for(j in 2:nsteps){
   r= lsfit(x[,mod],r)$res
   xr= lsfit(x[,mod],x)$res
   ip=t(xr)%*%r/sqrt(diag(t(xr)%*%xr))
- ip[mod]=0
+  ip[mod]=0
   pred[j]=which.max(abs(ip))
   scor[j]=ip[pred[j]]
   s[j]=sign(sum(xr[,pred[j]]*r))
