@@ -1,5 +1,3 @@
-
-
 source("morefuns.R")
 
 
