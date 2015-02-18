@@ -30,7 +30,7 @@ return(list(pred=pred,s=s,scor=scor,bhat=bhat))
 
 
 myfs.pval=
-function(fsfit,x,y,sigma,nsteps=NULL,signed.eta=FALSE,alpha=.10,spacing.paper=TRUE,which.pred=1:nsteps){
+function(fsfit,x,y,sigma,nsteps=NULL,signed.eta=FALSE,alpha=.10,spacing.paper=TRUE,which.pred=1:nsteps,trace=F){
 # pvalues for forwrd stepwise
 # does ryan's two-sided version
 #  returns pval and interval for predictor just entered (default with which.pred=1:nsteps) 
@@ -50,6 +50,7 @@ proj=0
 
 stepind=NULL
 for(j in 1:nsteps){
+if(trace) cat(c("step=",j),fill=T)
   notin=rep(T,p)
   if(j>1) {
   mod=pred[1:(j-1)]
@@ -80,6 +81,8 @@ pv=rep(NA,p)
 ci=cov=matrix(NA,nrow=p,ncol=2)
 
 for(k in 1:nsteps){
+if(trace) cat(c("step=",k),fill=T)
+
 pp=sum(stepind<=k)
 b=rep(0,pp)
 mod=pred[1:k]
@@ -194,3 +197,46 @@ hh=scale(bb$u,center=F,scale=1/sqrt(bb$d))%*%t(bb$v)
         return(list(x=x, Sigma=Sigma))
 }
 
+
+
+
+compute.testing.pv=function(x,y,protos){
+# constraints for max corr within cluster
+    # protos are indices of prototypes from clustering in 1:p
+SMALL=1e-6
+ngroups=length(protos)
+for(j in 1:khat){
+    cat(j)
+    A=NULL
+     jhat=protos[j]
+     bhat=sum(x[,jhat]%*%y)
+    s=sign(bhat)
+oo=clus==j
+oo[jhat]=F        
+  for(jj in which(oo)){
+      ss=sign(x[,jj]%*%y)
+    A=rbind(A, -(s*x[,jhat]-x[,jj]))
+    A=rbind(A, -(s*x[,jhat]+x[,jj]))
+    }
+    b=rep(0,nrow(A))
+######
+eta=x[,jhat]
+    pp=nrow(A)
+ #compute vm, vp
+  alp=as.vector(A%*%eta/sum(eta^2))
+  alp[abs(alp)<SMALL]=0
+  vp=rep(Inf,pp)
+  vm=rep(-Inf,pp)
+  for(jj in 1:pp){
+   if(alp[jj]<0) vm[jj]=(b[jj]-(A%*%y)[jj]+alp[jj]*sum(eta*y))/alp[jj]
+   if(alp[jj]>0) vp[jj]=(b[jj]-(A%*%y)[jj]+alp[jj]*sum(eta*y))/alp[jj]
+   }
+   vmm[j]=max(vm,na.rm=T)
+   vpp[j]=min(vp,na.rm=T)
+    sigma.eta=sigma*sqrt(sum(eta^2))
+   u=0  #null
+   pv[j]=1-(pnorm((bhat-u)/sigma.eta)-pnorm((vmm[j]-u)/sigma.eta))/(pnorm((vpp[j]-u)/sigma.eta)-pnorm((vmm[j]-u)/sigma.eta))
+    pv[j]=2*min(pv[j],1-pv[j])
+}
+return(list(A=A,b=b,vm=vmm,vp=vpp,pv=pv))
+}

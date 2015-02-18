@@ -1,8 +1,7 @@
 library(glmnet)
 
 
-source("newfuns.R")
-source("ryanjon.R")
+source("funs.R")
 
 set.seed(33)
 n=20
@@ -24,5 +23,5 @@ bhat = coef(a, s=lam)[-1]
 
 # compute fixed lambda p-values
 
-a4=mylasso.pv(x,y,bhat,lam,sigma)
+a4=fixedLamInf(x,y,bhat,n*lam,sigma,compute.ci=T)
 

@@ -1,9 +1,10 @@
 library(genlasso)
 
-fixedLamInf=function(x,y,bhat,lam,sigma,alpha=.05){
+fixedLamInf=function(x,y,bhat,lam,sigma,alpha=.10,trace=F,compute.ci=F,tol=1e-5){
     # inference for fixed lam lasso
 #assumes data is centered
-junk=tf.jonab(y,x,bhat,lam)
+ # careful!  lam is for usual lasso problem; glmnet uses n*lam 
+junk=tf.jonab(y,x,bhat,lam,tol=tol)
 n=length(y)
 a=junk$A
 b=junk$b
@@ -16,6 +17,7 @@ ci=matrix(NA,pp,2)
 etaall=matrix(NA,nrow=pp,ncol=n)
 SMALL=1e-7
 for(k in 1:pp){
+    if(trace) cat(k,fill=T)
 eta=ginv(t(xe))[,k]
 etaall[k,]=eta
 vs=tf.jonvs(y,a,b,eta)
@@ -31,7 +33,7 @@ vpall[k]=vpp
   pv[k]=(1-exp(val2-val0))/(exp(val1-val0)-exp(val2-val0))
    #pv[k]=1-(pnorm((tt-u)/sigma.eta)-pnorm((vmm-u)/sigma.eta))/(pnorm((vpp-u)/sigma.eta)-pnorm((vmm-u)/sigma.eta))
     pv[k]=2*min(pv[k],1-pv[k])
-    ci[k,]=tf.jonint(y,eta,sigma^2,vs,alpha)
+  if(compute.ci)  ci[k,]=tf.jonint.rob(y,eta,sigma^2,vs,alpha)
 }
 return(list(lam=lam,eta=etaall,vm=vmall,vp=vpall,pv=pv,ci=ci))
 }
@@ -133,7 +135,7 @@ tf.jonab = function(y,X,beta,lambda,tol=1e-5) {
   E = abs(beta)>tol
   XE = X[,E,drop=F]
   XEc = X[,!E,drop=F]
-  #XEi = solve(t(XE) %*% XE)
+ # XEi = solve(t(XE) %*% XE)
 #ROB changed this
   XEi = ginv(t(XE) %*% XE)
   XEp = XEi %*% t(XE)
@@ -212,7 +214,7 @@ bin.search = function(x, fun, val, inc=0.01, tol=1e-2) {
 
 rob=function(x, fun, val, inc=0.01, tol=1e-2,xl=x-10,xr=x+10) {
 # note - hard coded 10 above
-    #  here is used grid serach instead of binary search
+    #  here is used grid search instead of binary search
 G = 1000
   xg = seq(xl,xr,length=G)
   vals = numeric(G)
