@@ -18,7 +18,7 @@ y=x%*%beta+sigma*rnorm(n)
 
 
 a=glmnet(x,y,standardize=F)
-lam = .5
+lam = .01
 bhat = coef(a, s=lam)[-1]
 
 # compute fixed lambda p-values

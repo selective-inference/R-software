@@ -30,7 +30,7 @@ return(list(pred=pred,s=s,scor=scor,bhat=bhat))
 
 
 myfs.pval=
-function(fsfit,x,y,sigma,nsteps=NULL,signed.eta=FALSE,alpha=.10,spacing.paper=TRUE,which.pred=1:nsteps,trace=F){
+function(fsfit,x,y,sigma,nsteps=NULL,alpha=.10,which.pred=1:nsteps,trace=F,compute.ci=TRUE,two.sided=TRUE){
 # pvalues for forwrd stepwise
 # does ryan's two-sided version
 #  returns pval and interval for predictor just entered (default with which.pred=1:nsteps) 
@@ -40,7 +40,7 @@ n=nrow(x)
 p=ncol(x)
 if(is.null(nsteps)){ nsteps=length(a$pred)}
 # first center x and y
-x=scale(x,T,F)
+x=scale(x,TRUE,FALSE)
 y=y-mean(y)
 SMALL=1e-7
 pred=fsfit$pred
@@ -90,7 +90,6 @@ mod=pred[1:k]
 # compute pvalue only for predictor which.pred[k]
 for(jj in which.pred[k]){
   eta=as.vector(temp[jj,])
-  if(signed.eta) eta=eta*s[which.pred[k]]
   alp=as.vector(a%*%eta/sum(eta^2))
   alp[abs(alp)<SMALL]=0
   vp=rep(Inf,pp)
@@ -106,17 +105,22 @@ for(jj in which.pred[k]){
    tt=sum(eta*y)
    sigma.eta=sigma*sqrt(sum(eta^2))
    u=0  #null
-   pv[k]=1-(pnorm((tt-u)/sigma.eta)-pnorm((vmm-u)/sigma.eta))/(pnorm((vpp-u)/sigma.eta)-pnorm((vmm-u)/sigma.eta))
-    pv[k]=2*min(pv[k],1-pv[k])
-junk=selint2(vmm,vpp,tt,alpha,sigma.eta=sigma.eta,spacing.paper=spacing.paper)
+  # pv[k]=1-(pnorm((tt-u)/sigma.eta)-pnorm((vmm-u)/sigma.eta))/(pnorm((vpp-u)/sigma.eta)-pnorm((vmm-u)/sigma.eta))
+  #  pv[k]=2*min(pv[k],1-pv[k])
+  pv[k]= mytruncnorm(tt, vpp, vmm, sigma.eta, u)
+if(two.sided)  pv[k]=2*min(pv[k],1-pv[k])
+#  junk=selint2(vmm,vpp,tt,alpha,sigma.eta=sigma.eta,spacing.paper=spacing.paper)
+#ci[k,]=junk$int
+#cov[k,]=junk$cov
+  
+  if(compute.ci)
+      {
+          vs=list(vm=vmm,vp=vpp)
+          junk=selection.int(y,eta,sigma^2,vs,alpha)
+          ci[k,]=junk$ci;cov[k,]=junk$cov
+      }
+}}
 
-# Check this is correct!!
-
-#ci[k,]=junk$int*s[k]
-ci[k,]=junk$int
-cov[k,]=junk$cov
-   }
- }
 return(list(pv=pv,vm=vmall,vp=vpall,ci=ci,cov=cov))
 }
 

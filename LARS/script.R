@@ -1,12 +1,20 @@
 
 
 
-library(lars)
-library(covTest,lib.loc="lib.covTest")
-library(larsInference,lib.loc="lib.larsInference")
+
+
+#library(larsInference,lib.loc="lib.larsInference")
 
 # this uses an older version of genlasso (older than CRAN version)
-library(genlasso,lib.loc="/Users/tibs/Dropbox/spacings/jasa-rev/mylib")
+#library(genlasso,lib.loc="/Users/tibs/Dropbox/spacings/jasa-rev/mylib")
+
+library(polypath,lib.loc="/Users/tibs/dropbox/gamma/mylib")
+
+
+options(error=dump.frames)
+
+source("funs.R")
+source("../fixedLamLasso/funs.R")  # to get pv+CI funcs
 
 set.seed(33)
 n=20
@@ -20,11 +28,48 @@ x=scale(x,T,T)/sqrt(n-1)
 beta=c(3,3,rep(0,p-2))
 y=x%*%beta+sigma*rnorm(n)
 
-aa=lars(x,y,norm=F,type="lasso")
-aaa=covTest(aa,x,y,sigma=sigma)
+larfit=lar(y,x,verbose=TRUE)
 
-aa2=lars(x,y,norm=F,type="lar")
+#have to add this things until ryan changes his lar
+larfit$meanx=colMeans(x)
+larfit$normx=rep(1,ncol(x))
+larfit$normalize=F
+larfit$beta=cbind(larfit$beta,lsfit(x,y)$coef[-1])
+larfit$type="LAR"
+larfit$mu=mean(y)
 
-b=larsInference(aa2,x,y,sigma=sigma)
-pv.spacing[ii,1:nsteps]=b$pvalues.forw
+aa2=larInference(x,y,larfit,sigma)
 
+a3=covtest(larfit,x,y,sigma)
+
+
+
+#check covtest or lar
+n=100
+p=10
+nsim=200
+sigma=1
+tt=pv2=matrix(NA,nsim,p)
+for(ii in 1:nsim){
+    cat(ii)
+   x=matrix(rnorm(n*p),n,p)
+x=scale(x,T,T)/sqrt(n-1)
+    beta=c(3,3,0,rep(0,p-3))
+y=as.numeric(x%*%beta)+rnorm(n)
+        y=y-mean(y)
+larfit=lar(y,x)
+larfit$meanx=colMeans(x)
+larfit$normx=rep(1,ncol(x))
+larfit$normalize=F
+larfit$beta=cbind(larfit$beta,lsfit(x,y)$coef[-1])
+larfit$type="LAR"
+larfit$mu=mean(y)
+#tt[ii,]=covtest(larfit,x,y,sigma=sigma)
+    pv2[ii,]=larInference(x,y,larfit,sigma,compute.ci=F)$pv
+}
+pv=1-pexp(tt,1)
+        par(mfrow=c(2,2))
+        for(i in 1:4){
+            plot((1:nsim)/nsim,sort(pv2[,i]))
+             abline(0,1)
+        }

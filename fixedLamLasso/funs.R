@@ -1,6 +1,8 @@
-library(genlasso)
+require(genlasso)
+require(truncnorm)
+require(MASS)
 
-fixedLamInf=function(x,y,bhat,lam,sigma,alpha=.10,trace=F,compute.ci=F,tol=1e-5){
+fixedLamInf=function(x,y,bhat,lam,sigma,alpha=.10,trace=F,compute.ci=F,tol=1e-5,one.sided=TRUE,nsigma=50){
     # inference for fixed lam lasso
 #assumes data is centered
  # careful!  lam is for usual lasso problem; glmnet uses n*lam 
@@ -13,13 +15,16 @@ xe=x[,e,drop=F]
 
 pp=length(e)
 pv=vmall=vpall=rep(NA,pp)
-ci=matrix(NA,pp,2)
+ci=cov=matrix(NA,pp,2)
 etaall=matrix(NA,nrow=pp,ncol=n)
 SMALL=1e-7
 for(k in 1:pp){
     if(trace) cat(k,fill=T)
 eta=ginv(t(xe))[,k]
+    bhat=sum(eta*y)
+    if(one.sided) eta=eta*sign(bhat)
 etaall[k,]=eta
+   
 vs=tf.jonvs(y,a,b,eta)
 vpp=vs$vp;vmm=vs$vm
 vmall[k]=vmm
@@ -27,15 +32,13 @@ vpall[k]=vpp
    tt=sum(eta*y)
    sigma.eta=sigma*sqrt(sum(eta^2))
    u=0  #null
-      val0=pnorm((tt-u)/sigma.eta,log.p=TRUE)
-      val1=pnorm((vmm-u)/sigma.eta,log.p=TRUE)
-      val2=pnorm((vpp-u)/sigma.eta,log.p=TRUE)
-  pv[k]=(1-exp(val2-val0))/(exp(val1-val0)-exp(val2-val0))
-   #pv[k]=1-(pnorm((tt-u)/sigma.eta)-pnorm((vmm-u)/sigma.eta))/(pnorm((vpp-u)/sigma.eta)-pnorm((vmm-u)/sigma.eta))
-    pv[k]=2*min(pv[k],1-pv[k])
-  if(compute.ci)  ci[k,]=tf.jonint.rob(y,eta,sigma^2,vs,alpha)
-}
-return(list(lam=lam,eta=etaall,vm=vmall,vp=vpall,pv=pv,ci=ci))
+  pv[k]= 1-mytruncnorm(tt, vpp, vmm, sigma.eta, u)
+if(!one.sided)  pv[k]=2*min(pv[k],1-pv[k])
+  if(compute.ci) { junk=selection.int(y,eta,sigma^2,vs,alpha,nsigma=nsigma)
+                   ci[k,]=junk$ci;cov[k,]=junk$cov
+               
+}}
+return(list(lam=lam,eta=etaall,vm=vmall,vp=vpall,pv=pv,ci=ci,cov=cov))
 }
 
 ### functions from Ryan
@@ -173,14 +176,7 @@ tf.jonint = function(y,eta,sigma2,vs,alpha,del=1e-3) {
   return(c(lo,hi))
 }
 
-tf.jonint.rob = function(y,eta,sigma2,vs,alpha,del=1e-3) {
-    #Rob's version using grid search
-  fun = function(x) return(tnorm.surv(sum(eta*y),x,sqrt(sigma2),vs$vm,vs$vp))
-  inc = sqrt(sum(eta^2)*sigma2)*del
-  lo = rob(sum(eta*y),fun,alpha/2,inc=inc)
-  hi = rob(sum(eta*y),fun,1-alpha/2,inc=inc)
-  return(c(lo,hi))
-}
+
 
 tnorm.cdf = function(x,mean,sd,a,b) {
   return((pnorm(x,mean,sd)-pnorm(a,mean,sd))/
@@ -188,6 +184,7 @@ tnorm.cdf = function(x,mean,sd,a,b) {
 }
 
 tnorm.surv = function(x,mean,sd,a,b) {
+    #prob(X>x)
   return((pnorm(b,mean,sd)-pnorm(x,mean,sd))/
          (pnorm(b,mean,sd)-pnorm(a,mean,sd)))
 }
@@ -212,11 +209,11 @@ bin.search = function(x, fun, val, inc=0.01, tol=1e-2) {
  
 }
 
-rob=function(x, fun, val, inc=0.01, tol=1e-2,xl=x-10,xr=x+10) {
-# note - hard coded 10 above
+grid.search=function(x, fun, val, xL,xR, inc=0.01, tol=1e-2) {
+#
     #  here is used grid search instead of binary search
 G = 1000
-  xg = seq(xl,xr,length=G)
+  xg = seq(xL,xR,length=G)
   vals = numeric(G)
   for (i in 1:G) vals[i] = fun(xg[i])
   return(xg[which.min(abs(vals-val))])
@@ -224,3 +221,44 @@ G = 1000
 }
 
 
+
+mytruncnorm = function(etay, vpos, vneg, sigma, etamu){
+    # From Sam Gross- uses exp approximation in extreme tails
+	# if range is too many sds away from mu, then there
+	# will be numerical errors from using truncnorm
+	if(max(vneg-etamu,etamu-vpos)/sigma < 7){
+		     return(ptruncnorm(etay, vneg, vpos, etamu, sigma))
+                 }
+		   
+	else{
+	   
+	      return(1 - pexp(vpos-etay, etamu-vpos)/ pexp(vpos-vneg, etamu-vpos))
+	        
+          }
+    }
+
+selection.int = function(y,eta,sigma,vs,alpha,del=1e-4,nsigma=50) {
+    #Rob's version using grid search
+    etay=sum(eta*y)
+fun = function(x) return(tnorm.surv(etay,x,sigma,vs$vm,vs$vp))
+ #   fun = function(x) return(1-mytruncnorm(etay,vs$vp,vs$vm,sigma,x))
+  inc = sqrt(sum(eta^2)*sigma)*del
+    sigma.eta=sqrt(sum(eta^2))*sigma
+    xL=etay-nsigma*sigma.eta
+    xR=etay+nsigma*sigma.eta
+ #   cat(c(nsigma,etay,xL,sigma.eta),fill=T)
+  lo = grid.search(etay,fun,alpha/2,xL,xR,inc=inc)
+  hi = grid.search(etay,fun,1-alpha/2,xL,xR,inc=inc)
+    covlo=fun(lo)
+    covhi=fun(hi)
+  return(list(ci=c(lo,hi), cov=c(covlo,covhi)))
+}
+
+#tf.jonint.rob = function(y,eta,sigma2,vs,alpha,del=1e-3) {
+#    #Rob's version using grid search
+#  fun = function(x) return(tnorm.surv(sum(eta*y),x,sqrt(sigma2),vs$vm,vs$vp))
+#  inc = sqrt(sum(eta^2)*sigma2)*del
+#  lo = rob(sum(eta*y),fun,alpha/2,inc=inc)
+#  hi = rob(sum(eta*y),fun,1-alpha/2,inc=inc)
+#  return(c(lo,hi))
+#}
