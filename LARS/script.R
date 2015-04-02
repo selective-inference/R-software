@@ -27,6 +27,7 @@ x=scale(x,T,T)/sqrt(n-1)
 #generate y
 beta=c(3,3,rep(0,p-2))
 y=x%*%beta+sigma*rnorm(n)
+y=y-mean(y)
 
 larfit=lar(y,x,verbose=TRUE)
 

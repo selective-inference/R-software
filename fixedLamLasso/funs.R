@@ -2,10 +2,11 @@ require(genlasso)
 require(truncnorm)
 require(MASS)
 
-fixedLamInf=function(x,y,bhat,lam,sigma,alpha=.10,trace=F,compute.ci=F,tol=1e-5,one.sided=TRUE,nsigma=50){
+fixedLassoInf=function(x,y,bhat,lam,sigma,alpha=.10,trace=F,compute.ci=F,tol=1e-5,one.sided=TRUE,nsigma=10){
     # inference for fixed lam lasso
 #assumes data is centered
- # careful!  lam is for usual lasso problem; glmnet uses n*lam 
+ # careful!  lam is for usual lasso problem; glmnet uses lam/n
+    this.call=match.call()
 junk=tf.jonab(y,x,bhat,lam,tol=tol)
 n=length(y)
 a=junk$A
@@ -15,14 +16,14 @@ xe=x[,e,drop=F]
 
 pp=length(e)
 pv=vmall=vpall=rep(NA,pp)
-ci=cov=matrix(NA,pp,2)
+ci=miscov=matrix(NA,pp,2)
 etaall=matrix(NA,nrow=pp,ncol=n)
 SMALL=1e-7
 for(k in 1:pp){
     if(trace) cat(k,fill=T)
 eta=ginv(t(xe))[,k]
-    bhat=sum(eta*y)
-    if(one.sided) eta=eta*sign(bhat)
+    bhat0=sum(eta*y)
+    if(one.sided) eta=eta*sign(bhat0)
 etaall[k,]=eta
    
 vs=tf.jonvs(y,a,b,eta)
@@ -32,14 +33,30 @@ vpall[k]=vpp
    tt=sum(eta*y)
    sigma.eta=sigma*sqrt(sum(eta^2))
    u=0  #null
-  pv[k]= 1-mytruncnorm(tt, vpp, vmm, sigma.eta, u)
+#  pv[k]= 1-mytruncnorm(tt, vmm, vpp, sigma.eta, u)
+  pv[k]=  1-ptruncnorm(tt, vmm, vpp, u, sigma.eta)
+   
 if(!one.sided)  pv[k]=2*min(pv[k],1-pv[k])
   if(compute.ci) { junk=selection.int(y,eta,sigma^2,vs,alpha,nsigma=nsigma)
-                   ci[k,]=junk$ci;cov[k,]=junk$cov
+                   ci[k,]=junk$ci;miscov[k,]=junk$miscov
                
 }}
-return(list(lam=lam,eta=etaall,vm=vmall,vp=vpall,pv=pv,ci=ci,cov=cov))
+out=list(lam=lam,eta=etaall,vm=vmall,vp=vpall,pv=pv,ci=ci,miscov=miscov,pred=e,alpha=alpha,lambda=lam)
+class(out)="fixedLassoInf"
+    out$call=this.call
+return(out)
 }
+
+
+print.fixedLassoInf=function(x,digits = max(3, getOption("digits") - 3),...){
+      cat("\nCall: ", deparse(x$call), "\n\n")
+      cat(c("lambda=",x$lam,", alpha=",x$alpha),fill=T)
+      cat("",fill=T)
+tab=cbind(x$pred,x$pv,x$ci,x$miscov)
+      dimnames(tab)=list(NULL,c("predictor","p-value","lowerConfPt","upperConfPt","lowerArea","upperArea"))
+      print(tab)
+  }
+
 
 ### functions from Ryan
 tf.jonbands = function(y,x,beta,k,lambda,alpha,sigma2,verb=FALSE) {
@@ -222,7 +239,7 @@ G = 1000
 
 
 
-mytruncnorm = function(etay, vpos, vneg, sigma, etamu){
+mytruncnorm = function(etay, vneg,vpos, sigma, etamu){
     # From Sam Gross- uses exp approximation in extreme tails
 	# if range is too many sds away from mu, then there
 	# will be numerical errors from using truncnorm
@@ -237,11 +254,12 @@ mytruncnorm = function(etay, vpos, vneg, sigma, etamu){
           }
     }
 
-selection.int = function(y,eta,sigma,vs,alpha,del=1e-4,nsigma=50) {
+selection.int = function(y,eta,sigma,vs,alpha,del=1e-4,nsigma=10) {
     #Rob's version using grid search
     etay=sum(eta*y)
-fun = function(x) return(tnorm.surv(etay,x,sigma,vs$vm,vs$vp))
- #   fun = function(x) return(1-mytruncnorm(etay,vs$vp,vs$vm,sigma,x))
+#    fun = function(x) return(tnorm.surv(etay,x,sigma,vs$vm,vs$vp))
+    fun = function(x) return(1-ptruncnorm(etay,vs$vm,vs$vp,x,sigma))
+ #   fun = function(x) return(1-mytruncnorm(etay,vs$vm,vs$vp,sigma,x))
   inc = sqrt(sum(eta^2)*sigma)*del
     sigma.eta=sqrt(sum(eta^2))*sigma
     xL=etay-nsigma*sigma.eta
@@ -250,8 +268,8 @@ fun = function(x) return(tnorm.surv(etay,x,sigma,vs$vm,vs$vp))
   lo = grid.search(etay,fun,alpha/2,xL,xR,inc=inc)
   hi = grid.search(etay,fun,1-alpha/2,xL,xR,inc=inc)
     covlo=fun(lo)
-    covhi=fun(hi)
-  return(list(ci=c(lo,hi), cov=c(covlo,covhi)))
+    covhi=1-fun(hi)
+  return(list(ci=c(lo,hi), miscov=c(covlo,covhi)))
 }
 
 #tf.jonint.rob = function(y,eta,sigma2,vs,alpha,del=1e-3) {
