@@ -1,0 +1,12 @@
+covTest                 Compute the covariance test for adaptive linear
+                        modelling
+covTest-package         Compute the covariance test for adaptive linear
+                        modelling
+lars.en                 Function to fit least angle regression path of
+                        solution for the elastic net.
+lars.glm                Function to fit least angle regression path of
+                        solution for Ll-penalized (lasso) logistic
+                        regression and the Cox proportional hazards
+                        model.
+predict.lars.en         Function to make predictions from lars.en fit
+predict.lars.glm        Function to make predictions from lars.glm fit

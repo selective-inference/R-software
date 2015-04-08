@@ -1,0 +1,5 @@
+larsInference           Compute p-values and confidence intervals after
+                        each step of the Least Angle Regression LAR
+                        algorithm.
+larsInference-package   Compute p-values and confidence intervals after
+                        each step of the LAR algorithm

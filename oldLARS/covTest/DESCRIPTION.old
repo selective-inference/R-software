@@ -1,0 +1,9 @@
+Package: covTest
+Title: Computes covariance test for adaptive linear modelling
+Version: 1.0
+Depends: lars,glmpath (>= 0.96)
+Author: Richard Lockhart, Jon Taylor, Ryan Tibshirani, Rob Tibshirani
+Maintainer: Rob Tibshirani <tibs@stanford.edu>
+Description: This package computes cova riance test for adaptive linear modelling. 
+License: GPL-2
+
