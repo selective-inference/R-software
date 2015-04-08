@@ -29,15 +29,15 @@ beta=c(3,3,rep(0,p-2))
 y=x%*%beta+sigma*rnorm(n)
 y=y-mean(y)
 
-larfit=lar(y,x,verbose=TRUE)
+larfit=lar(x,y,verbose=TRUE,normalize=F,intercept=T)
 
 #have to add this things until ryan changes his lar
-larfit$meanx=colMeans(x)
-larfit$normx=rep(1,ncol(x))
-larfit$normalize=F
-larfit$beta=cbind(larfit$beta,lsfit(x,y)$coef[-1])
-larfit$type="LAR"
-larfit$mu=mean(y)
+#larfit$meanx=colMeans(x)
+#larfit$normx=rep(1,ncol(x))
+#larfit$normalize=F
+#larfit$beta=cbind(larfit$beta,lsfit(x,y)$coef[-1])
+#larfit$type="LAR"
+#larfit$mu=mean(y)
 
 aa2=larInference(x,y,larfit,sigma)
 

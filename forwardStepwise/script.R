@@ -1,5 +1,5 @@
 source("funs.R")
-
+options(error=dump.frames)
 source("../fixedLamLasso/funs.R")  # to get pv+CI funcs
 set.seed(33)
 n=20
@@ -19,9 +19,59 @@ a=forwardStep(x,y)
 
 aa=forwardStepInf(a,x,y,sigma,compute.ci=T,nsteps=2)
 
-aa2=forwardStepInf(a,x,y,sigma,compute.ci=T,fixed.step=4)
+#aa2=forwardStepInf(a,x,y,sigma,compute.ci=T,fixed.step=4)
+aa3=forwardStepInf(a,x,y,sigma,compute.ci=T, aic.stop=T)
 
-aa3=myfs.pval(a,x,y,sigma,compute.ci=F)
+
+
+
+###########
+# test aic case
+set.seed(33)
+n=20
+p=5
+nsim=2000
+
+
+x=matrix(rnorm(n*p),n,p)
+x=scale(x,T,T)/sqrt(n-1)
+
+#generate y
+beta=c(0,0,rep(0,p-2))
+sigma=1
+pv=matrix(NA,nsim,p)
+ran=matrix(NA,nsim,2)
+aichat=rep(NA,nsim)
+seeds=sample(1:99999,size=nsim)
+for(ii in 1:nsim){
+    set.seed(seeds[ii])
+    cat(ii)
+y=x%*%beta+sigma*rnorm(n)
+y=y-mean(y)
+
+fsfit=forwardStep(x,y)
+
+#aa=forwardStepInf(fsfit,x,y,sigma,compute.ci=F,nsteps=2)
+
+aa2=forwardStepInf(fsfit,x,y,sigma,compute.ci=F,fixed.step=2)
+#aa3=forwardStepInf(fsfit,x,y,sigma,compute.ci=F, aic.stop=T)
+pv[ii,]=aa2$pv
+aichat[ii]=fsfit$aichat
+    aichat[ii]=2
+ #   aichat[ii]=4
+    if(!is.na(aa3$A)) ran[ii,]=range(aa3$A%*%y-aa3$b)
+}
+
+pvv=NULL
+for(ii in 1:nsim){
+     pvv=c(pvv,pv[ii,1:aichat[ii]])
+ }
+ #pvv=pv[,1]
+o=!is.na(pvv)
+ plot((1:sum(o))/sum(o),sort(pvv[o]))
+ abline(0,1)
+
+######
 
 n=100
 p=10
