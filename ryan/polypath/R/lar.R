@@ -2,21 +2,54 @@
 # a response vector y and predictor matrix X.  We assume
 # that X has columns in general position.
 
-lar <- function(y, X, maxsteps=2000, minlam=0, verbose=FALSE) {
- 
+lar <- function(X,y, maxsteps=2000, minlam=0, verbose=FALSE,normalize=TRUE, intercept=TRUE, eps = .Machine$double.eps) {
+this.call=match.call()
   if (missing(y)) stop("y is missing.")
   if (!is.numeric(y)) stop("y must be numeric.")
-  if (length(y) == 0) stop("There must be at least one data point [must have length(y) > 1].")
+  if (length(y) == 0) stop("There must be at least one data point [must have length(y) > 0].")
   if (missing(X)) stop("X is missing.")
   if (!is.null(X) && !is.matrix(X)) stop("X must be a matrix.")
   if (length(y)!=nrow(X)) stop("Dimensions don't match [length(y) != nrow(X)].")
+  if (ncol(X) == 0) stop("There must be at least one predictor [must have ncol(X) > 0].")
   if (checkcols(X)) stop("X cannot have duplicate columns.")
 
   # For simplicity
   y = as.numeric(y)
   n = nrow(X)
   p = ncol(X)
+  one <- rep(1, n)
+######    # added by Rob
+  if (intercept) {
+        meanx <- drop(one %*% X)/n
+        X <- scale(X, meanx, FALSE)
+        mu <- mean(y)
+        y <- drop(y - mu)
+    }
+    else {
+        meanx <- rep(0,p)
+        mu <- 0
+        y <- drop(y)
+    }
 
+  if (normalize) {
+        normx <- sqrt(drop(one %*% (X^2)))
+        nosignal <- normx/sqrt(n) < eps
+        if (any(nosignal)) {
+            ignores <- im[nosignal]
+            inactive <- im[-ignores]
+            normx[nosignal] <- eps * sqrt(n)
+            if (trace) 
+                cat("LARS Step 0 :\t", sum(nosignal), "Variables with Variance < eps; dropped for good\n")
+        }
+        else ignores <- NULL
+        names(normx) <- NULL
+        X <- scale(X, FALSE, normx)
+    }
+    else {
+        normx <- rep(1, p)
+        ignores <- NULL
+    }
+#####
   # Find the first variable to enter and its sign
   uhat = t(X)%*%y
   ihit = which.max(abs(uhat))   # Hitting coordinate
@@ -45,11 +78,20 @@ lar <- function(y, X, maxsteps=2000, minlam=0, verbose=FALSE) {
   beta[,1] = 0
 
   # Gamma matrix!
-  Gamma = rbind(
-    t(s*X[,ihit]+X[,Seq(1,p)[-ihit]]),
-    t(s*X[,ihit]-X[,Seq(1,p)[-ihit]]),
-    t(s*X[,ihit]))
+  Gamma = matrix(0,0,n)
+  if (p>1) Gamma = rbind(Gamma,t(s*X[,ihit]+X[,-ihit]),t(s*X[,ihit]-X[,-ihit]))
+  Gamma = rbind(Gamma,t(s*X[,ihit]))
   nk = nrow(Gamma)
+
+  # M plus
+  if (p>1) {
+    c = t(as.numeric(Sign(t(X)%*%y)) * t(X))
+    ratio = t(c[,-ihit])%*%c[,ihit]/sum(c[,ihit]^2)
+    ip = 1-ratio > 0
+    crit = (t(c[,-ihit])%*%y - ratio*sum(c[,ihit]*y))/(1-ratio)
+    mp = max(max(crit[ip]),0)
+  }
+  else mp = 0
   
   # Other things to keep track of, but not return
   r = 1                      # Size of active set
@@ -118,17 +160,20 @@ lar <- function(y, X, maxsteps=2000, minlam=0, verbose=FALSE) {
         
     # Gamma matrix!
     X2perp = X2 - X1 %*% backsolve(R,t(Q1)%*%X2)
-    c = t(rbind(t(X2perp)/(1-bb),t(X2perp)/(-1-bb)))
-    c0 = Gamma[nrow(Gamma),]
-    imax = ihit + (p-r)*(shit==-1)
-    ii = t(c) %*% y <= lambda[k-1]
-    jj = ii & 1:(2*(p-r))!=imax
-
-    if (any(ii)) Gamma = rbind(Gamma,t(c0-c[,ii]))
-    if (any(!ii)) Gamma = rbind(Gamma,t(c[,!ii]-c0))
-    if (any(jj)) Gamma = rbind(Gamma,t(c[,imax]-c[,jj]))
-    Gamma = rbind(Gamma,t(c[,imax]))
+    c = t(t(X2perp)/(shits-bb))
+    Gamma = rbind(Gamma,shits*t(X2perp))
+    if (ncol(c)>1) Gamma = rbind(Gamma,t(c[,ihit]-c[,-ihit]))
+    Gamma = rbind(Gamma,t(c[,ihit]))
     nk = c(nk,nrow(Gamma))
+
+    # M plus
+    if (ncol(c)>1) {
+      ratio = t(c[,-ihit])%*%c[,ihit]/sum(c[,ihit]^2)
+      ip = 1-ratio > 0
+      crit = (t(c[,-ihit])%*%y - ratio*sum(c[,ihit]*y))/(1-ratio)
+      mp = c(mp,max(max(crit[ip]),0))
+    }
+    else mp = c(mp,0)
     
     # Update all of the variables
     r = r+1
@@ -182,6 +227,12 @@ lar <- function(y, X, maxsteps=2000, minlam=0, verbose=FALSE) {
 
   if (verbose) cat("\n")
 
-  return(list(lambda=lambda,action=action,df=df,beta=beta,
-              completepath=completepath,Gamma=Gamma,nk=nk))
+beta=cbind(beta,lsfit(X,y)$coef[-1]) #ROB ADDED for compatibility with lars; NOTE this needs to be fixed, eg for p>n
+
+beta=t(beta)# for compatibility with LARS function
+
+  out=list(lambda=lambda,action=action,df=df,beta=beta,
+              completepath=completepath,Gamma=Gamma,nk=nk,mp=mp,mu=mu,meanx=meanx,normx=normx,normalize=normalize,intercept=intercept,type="LAR", call=this.call)
+  class(out)="lars"
+  return(out)
 }

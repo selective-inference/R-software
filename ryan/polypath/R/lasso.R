@@ -7,10 +7,11 @@ lasso <- function(y, X, maxsteps=2000, minlam=0, verbose=FALSE) {
  
   if (missing(y)) stop("y is missing.")
   if (!is.numeric(y)) stop("y must be numeric.")
-  if (length(y) == 0) stop("There must be at least one data point [must have length(y) > 1].")
+  if (length(y) == 0) stop("There must be at least one data point [must have length(y) > 0].")
   if (missing(X)) stop("X is missing.")
   if (!is.null(X) && !is.matrix(X)) stop("X must be a matrix.")
   if (length(y)!=nrow(X)) stop("Dimensions don't match [length(y) != nrow(X)].")
+  if (ncol(X) == 0) stop("There must be at least one predictor [must have ncol(X) > 0].")
   if (checkcols(X)) stop("X cannot have duplicate columns.")
 
   # For simplicity
@@ -46,13 +47,14 @@ lasso <- function(y, X, maxsteps=2000, minlam=0, verbose=FALSE) {
   beta[,1] = 0
 
   # Gamma matrix!
-  Gamma = rbind(
-    t(s*X[,ihit]+X[,Seq(1,p)[-ihit]]),
-    t(s*X[,ihit]-X[,Seq(1,p)[-ihit]]),
-    t(s*X[,ihit]))
+
+  # Gamma matrix!
+  Gamma = matrix(0,0,n)
+  if (p>1) Gamma = rbind(Gamma,t(s*X[,ihit]+X[,-ihit]),t(s*X[,ihit]-X[,-ihit]))
+  Gamma = rbind(Gamma,t(s*X[,ihit]))
   nk = nrow(Gamma)
-  nkk = nk
-  sb = hit
+  #nkk = nk
+  #sb = hit
   
   # Other things to keep track of, but not return
   r = 1                      # Size of active set
@@ -70,7 +72,7 @@ lasso <- function(y, X, maxsteps=2000, minlam=0, verbose=FALSE) {
   R = qr.R(x)
   
   # Throughout the algorithm, we will maintain
-  # the decomposition X1 = Q1*R. Dimenisons:
+  # the decomposition X1 = Q1*R. Dimensions:
   # X1: n x r
   # Q1: n x r
   # Q2: n x (n-r)
@@ -94,6 +96,7 @@ lasso <- function(y, X, maxsteps=2000, minlam=0, verbose=FALSE) {
     bb = as.numeric(t(X2) %*% (X1 %*% b))
     
     # If the inactive set is empty, nothing will hit
+    ### NOTE: checking r==min(n,p), because of the Q2 factor
     if (r==min(n,p)) hit = 0
 
     # Otherwise find the next hitting time
@@ -142,39 +145,31 @@ lasso <- function(y, X, maxsteps=2000, minlam=0, verbose=FALSE) {
       beta[A,k] = a-hit*b
       
       # Gamma matrix!
-      X2perp = X2 - X1 %*% backsolve(R,t(Q1)%*%X2)
-      X1pinv = backsolve(R,t(Q1))
-      c.hit = t(rbind(t(X2perp)/(1-bb),t(X2perp)/(-1-bb)))
-      c.lea = t(X1pinv/b)
-      if (action[k-1]<0) c.hit[,(p-r)*(1+(beta[-action[k-1],k-2]<0))] = 0
-      if (action[k-1]>0) c.lea[,r] = 0
       c0 = Gamma[nrow(Gamma),]
-      
-      ii.hit = t(c.hit) %*% y < lambda[k-1]
-      c.hit.copy = c.hit
-      c.hit.copy[,!ii.hit] = 0
-      imax.hit = which.max(t(c.hit.copy) %*% y)
-      cmax.hit = c.hit.copy[,imax.hit]
-      jj.hit = ii.hit & 1:length(ii.hit)!=imax.hit
-
-      ii.lea = t(c.lea) %*% y <= lambda[k-1]
-      c.lea.copy = c.lea
-      c.lea.copy[,!ii.lea] = 0
-      imax.lea = which.max(t(c.lea.copy) %*% y)
-      cmax.lea = c.lea.copy[,imax.lea]
-      jj.lea = ii.lea & 1:length(ii.lea)!=imax.lea
-      
-      if (any(ii.hit)) Gamma = rbind(Gamma,t(c0-c.hit[,ii.hit]))
-      if (any(!ii.hit)) Gamma = rbind(Gamma,t(c.hit[,!ii.hit]-c0))
-      if (any(ii.lea)) Gamma = rbind(Gamma,t(c0-c.lea[,ii.lea]))
-      if (any(!ii.lea)) Gamma = rbind(Gamma,t(c.lea[,!ii.lea]-c0))
-      if (any(jj.hit)) Gamma = rbind(Gamma,t(cmax.hit-c.hit[,jj.hit]))
-      if (any(jj.lea)) Gamma = rbind(Gamma,t(cmax.lea-c.lea[,jj.lea]))
-      Gamma = rbind(Gamma,t(cmax.hit-cmax.lea))
-      Gamma = rbind(Gamma,t(cmax.hit))
+      # Hitting times
+      X2perp = X2 - X1 %*% backsolve(R,t(Q1)%*%X2)
+      chit = t(t(X2perp)/(shits-bb))
+      Gamma = rbind(Gamma,shits*t(X2perp))
+      if (ncol(chit)>1) Gamma = rbind(Gamma,t(chit[,ihit]-chit[,-ihit]))
+      # Leaving times
+      X1pinv = backsolve(R,t(Q1))
+      clea = t(X1pinv/b)
+      if (action[k-1]>0) clea = clea[,-r,drop=FALSE]
+      ii.lea = (t(clea) %*% y <= lambda[k-1])
+      if (any(ii.lea)) Gamma = rbind(Gamma,t(c0-clea[,ii.lea]))
+      if (any(!ii.lea)) Gamma = rbind(Gamma,t(clea[,!ii.lea]-c0))
+      ### NOTE: it's important to redefine both of clea.s and ilea.s,
+      ### since we only want to look at variables whose leaving time
+      ### is <= lambda[k-1]
+      clea.s = clea[,ii.lea,drop=FALSE]
+      ilea.s = which.max(t(clea.s)%*%y)
+      if (ncol(clea.s)>1) Gamma = rbind(Gamma,t(clea.s[,ilea.s]-clea.s[,-ilea.s]))
+      # Hitting time comes next
+      if (ncol(clea.s)>0) Gamma = rbind(Gamma,t(chit[,ihit]-clea.s[,ilea.s]))
+      Gamma = rbind(Gamma,t(chit[,ihit]))
       nk = c(nk,nrow(Gamma))
-      nkk = c(nkk,nrow(Gamma)-1)
-      sb = c(sb,t(cmax.lea)%*%y)
+      #nkk = c(nkk,nrow(Gamma)-1)
+      #sb = c(sb,t(cmax.hit)%*%y)
       
       # Update all of the variables
       r = r+1
@@ -203,42 +198,35 @@ lasso <- function(y, X, maxsteps=2000, minlam=0, verbose=FALSE) {
       action[k] = -A[ileave]
       df[k] = r-1
       beta[A,k] = a-leave*b
-
+         
       # Gamma matrix!
-      X2perp = X2 - X1 %*% backsolve(R,t(Q1)%*%X2)
-      X1pinv = backsolve(R,t(Q1))
-      c.hit = t(rbind(t(X2perp)/(1-bb),t(X2perp)/(-1-bb)))
-      c.lea = t(X1pinv/b)
-      if (action[k-1]<0) c.hit[,(p-r)*(1+(beta[-action[k-1],k-2]<0))] = 0
-      if (action[k-1]>0) c.lea[,r] = 0
       c0 = Gamma[nrow(Gamma),]
-      
-      ii.hit = t(c.hit) %*% y <= lambda[k-1]
-      c.hit.copy = c.hit
-      c.hit.copy[,!ii.hit] = 0
-      imax.hit = which.max(t(c.hit.copy) %*% y)
-      cmax.hit = c.hit.copy[,imax.hit]
-      jj.hit = ii.hit & 1:length(ii.hit)!=imax.hit
-
-      ii.lea = t(c.lea) %*% y <= lambda[k-1]
-      c.lea.copy = c.lea
-      c.lea.copy[,!ii.lea] = 0
-      imax.lea = which.max(t(c.lea.copy) %*% y)
-      cmax.lea = c.lea.copy[,imax.lea]
-      jj.lea = ii.lea & 1:length(ii.lea)!=imax.lea
-      
-      if (any(ii.hit)) Gamma = rbind(Gamma,t(c0-c.hit[,ii.hit]))
-      if (any(!ii.hit)) Gamma = rbind(Gamma,t(c.hit[,!ii.hit]-c0))
-      if (any(ii.lea)) Gamma = rbind(Gamma,t(c0-c.lea[,ii.lea]))
-      if (any(!ii.lea)) Gamma = rbind(Gamma,t(c.lea[,!ii.lea]-c0))
-      if (any(jj.hit)) Gamma = rbind(Gamma,t(cmax.hit-c.hit[,jj.hit]))
-      if (any(jj.lea)) Gamma = rbind(Gamma,t(cmax.lea-c.lea[,jj.lea]))
-      Gamma = rbind(Gamma,t(cmax.lea-cmax.hit))
-      Gamma = rbind(Gamma,t(cmax.lea))
+      # Hitting times
+      X2perp = X2 - X1 %*% backsolve(R,t(Q1)%*%X2)
+      if (r==min(n,p)) chit = matrix(0,n,0)
+      else chit = t(t(X2perp)/(shits-bb))
+      if (ncol(chit)>0) Gamma = rbind(Gamma,shits*t(X2perp))
+      if (ncol(chit)>1) Gamma = rbind(Gamma,t(chit[,ihit]-chit[,-ihit]))
+      # Leaving times
+      X1pinv = backsolve(R,t(Q1))
+      clea = t(X1pinv/b)
+      if (action[k-1]>0) clea = clea[,-r,drop=FALSE]
+      ii.lea = (t(clea) %*% y <= lambda[k-1])
+      Gamma = rbind(Gamma,t(c0-clea[,ii.lea]))
+      if (any(!ii.lea)) Gamma = rbind(Gamma,t(clea[,!ii.lea]-c0))
+      ### NOTE: it's important to redefine both of clea.s and ilea.s,
+      ### since we only want to look at variables whose leaving time
+      ### is <= lambda[k-1]
+      clea.s = clea[,ii.lea,drop=FALSE]
+      ilea.s = which.max(t(clea.s)%*%y)
+      Gamma = rbind(Gamma,t(clea.s[,ilea.s]-clea.s[,-ilea.s]))
+      # Leaving time comes next
+      if (ncol(chit)>0) Gamma = rbind(Gamma,t(clea.s[,ilea.s]-chit[,ihit]))
+      Gamma = rbind(Gamma,t(clea.s[,ilea.s]))
       nk = c(nk,nrow(Gamma))
-      nkk = c(nkk,nrow(Gamma)-1)
-      sb = c(sb,t(cmax.lea)%*%y)
-      
+      #nkk = c(nkk,nrow(Gamma)-1)
+      #sb = c(sb,t(cmax.hit)%*%y)
+     
       # Update all of the variables
       r = r-1
       I = c(I,A[ileave])
@@ -293,5 +281,5 @@ lasso <- function(y, X, maxsteps=2000, minlam=0, verbose=FALSE) {
   if (verbose) cat("\n")
 
   return(list(lambda=lambda,action=action,df=df,beta=beta,
-              completepath=completepath,Gamma=Gamma,nk=nk,nkk=nkk,sb=sb))
+              completepath=completepath,Gamma=Gamma,nk=nk))
 }
