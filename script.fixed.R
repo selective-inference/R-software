@@ -22,7 +22,7 @@ y=y-mean(y)
 a=glmnet(x,y,standardize=F)
 lam = .1
 bhat = coef(a, s=lam/n)[-1]
-#bb=lasso2lam(x,y,lam,stand=F)$coef[-1]
+
 
 # compute fixed lambda p-values
 

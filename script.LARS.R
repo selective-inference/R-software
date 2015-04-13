@@ -26,17 +26,13 @@ y=x%*%beta+sigma*rnorm(n)
 y=y-mean(y)
 
 larfit=lar(x,y,verbose=TRUE)
-                                        #have to add this things until ryan changes his lar
-#larfit$meanx=colMeans(x)
-#larfit$normx=rep(1,ncol(x))
-#larfit$normalize=F
-#larfit$beta=cbind(larfit$beta,lsfit(x,y)$coef[-1])
-#larfit$type="LAR"
-#larfit$mu=mean(y)
+                                      
 
 aa2=larInference(x,y,larfit,sigma)
 
 plot(larfit)
+
+
 
 
 #check covtest or lar

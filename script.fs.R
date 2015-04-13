@@ -16,22 +16,28 @@ y=x%*%beta+sigma*rnorm(n)
 
 y=y-mean(y)
 
+z=rnorm(n)
+
 a=forwardStep(x,y)
 
 aa=forwardStepInf(a,x,y,sigma,compute.ci=T,nsteps=2)
 
-#aa2=forwardStepInf(a,x,y,sigma,compute.ci=T,fixed.step=4)
+aa2=forwardStepInf(a,x,y,sigma,compute.ci=T,fixed.step=4)
+
 aa3=forwardStepInf(a,x,y,sigma,compute.ci=T, aic.stop=T)
 
-
-
+a=forwardStep(x,y,z=z)
+aa4=forwardStepInf(a,x,y,sigma,z=z,compute.ci=T,nsteps=2)
 
 ###########
 # test aic case
-set.seed(33)
+library(selectiveInference,lib.loc="mylib")
+library(truncnorm)
+options(error=dump.frames)
+set.seed(333)
 n=20
 p=5
-nsim=2000
+nsim=500
 
 
 x=matrix(rnorm(n*p),n,p)
@@ -43,34 +49,42 @@ sigma=1
 pv=matrix(NA,nsim,p)
 ran=matrix(NA,nsim,2)
 aichat=rep(NA,nsim)
+pvz=rep(NA,nsim)
 seeds=sample(1:99999,size=nsim)
 for(ii in 1:nsim){
     set.seed(seeds[ii])
     cat(ii)
 y=x%*%beta+sigma*rnorm(n)
 y=y-mean(y)
-
-fsfit=forwardStep(x,y)
-
+z=rnorm(n)
+    z=z-mean(z)
+fsfit=forwardStep(x,y,z)
 #aa=forwardStepInf(fsfit,x,y,sigma,compute.ci=F,nsteps=2)
 
-aa2=forwardStepInf(fsfit,x,y,sigma,compute.ci=F,fixed.step=2)
+#aa2=forwardStepInf(fsfit,x,y,sigma,compute.ci=F,fixed.step=2)
 #aa3=forwardStepInf(fsfit,x,y,sigma,compute.ci=F, aic.stop=T)
-pv[ii,]=aa2$pv
+aa4=forwardStepInf(fsfit,x,y,sigma,z=z,compute.ci=F,nsteps=5)
+#    aa4=forwardStepInf(fsfit,x,y,sigma,z=z,compute.ci=F,fixed.step=4)
+pv[ii,]=aa4$pv
+  pvz[ii]=aa4$pvz
 aichat[ii]=fsfit$aichat
     aichat[ii]=2
- #   aichat[ii]=4
-    if(!is.na(aa3$A)) ran[ii,]=range(aa3$A%*%y-aa3$b)
+
 }
 
 pvv=NULL
-for(ii in 1:nsim){
-     pvv=c(pvv,pv[ii,1:aichat[ii]])
- }
- #pvv=pv[,1]
-o=!is.na(pvv)
- plot((1:sum(o))/sum(o),sort(pvv[o]))
+#for(ii in 1:nsim){
+#     pvv=c(pvv,pv[ii,1:aichat[ii]])
+# }
+ pvv=pv[,1]
+pvv=pvz
+par(mfrow=c(2,3))
+plot((1:nsim)/nsim,sort(pvz))
+     abline(0,1)
+for(k in 1:1){
+ plot((1:nsim)/nsim,sort(pv[,k]))
  abline(0,1)
+}
 
 ######
 

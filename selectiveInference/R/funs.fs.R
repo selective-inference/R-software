@@ -1,12 +1,17 @@
 
-forwardStep=function(x,y,nsteps=min(nrow(x),ncol(x))){
+forwardStep=function(x,y,sigma=NULL,nsteps=min(nrow(x),ncol(x))){
     this.call=match.call()
     BIG=10e9
+    n=nrow(x)
 p=ncol(x)
 # fs by minimizing scaled ip
 # first center x and y
 x=scale(x,T,F)
 y=y-mean(y)
+    if(is.null(sigma) & p>=n){cat("Warning: p ge n; sigma=1 used for AIC",fill=T)}
+  if(is.null(sigma) & n>p){
+      sigma=sqrt(sum(lsfit(x,y)$res^2)/(n-p))
+  }
 pred=s=scor=bhat=rep(NA,nsteps)
    ip=t(x)%*%y/sqrt(diag(t(x)%*%x))
   pred[1]=which.max(abs(ip))
@@ -38,10 +43,13 @@ for(j in 1:nsteps){
  d=diff(aic)
 o=which(d>0)
 aichat=o[1]-1
-    out=list(pred=pred,s=s,scor=scor,bhat=bhat,rss=rss,aic=aic,aichat=aichat,call=this.call)
+    out=list(pred=pred,scor=scor,bhat=bhat,rss=rss,sigma=sigma,aic=aic,aichat=aichat,call=this.call)
     class(out)="forwardStep"
 return(out)
 }
+
+
+
 
 print.forwardStep=function(x,digits = max(3, getOption("digits") - 3),...){
       cat("\nCall: ", deparse(x$call), "\n\n")
@@ -50,12 +58,14 @@ tab=cbind(1:length(x$pred),x$pred,x$bhat,x$scor)
       dimnames(tab)=list(NULL,c("step","predictor","coef","scoreStat"))
       print(tab)
       cat("",fill=T)
+            cat("",fill=T)
+      cat(c("Value used for error standard deviation (sigma)=",round(x$sigma,6)),fill=T)
+       cat("",fill=T)
       cat(c("AIC optimal model size=",x$aichat),fill=T)
   }
 
-
 forwardStepInf=
-function(fsfit,x,y,sigma,nsteps=NULL,alpha=.10,fixed.step=NULL,aic.stop=FALSE,trace=F,compute.ci=TRUE,one.sided=TRUE){
+function(fsfit,x,y,sigma=NULL,nsteps=NULL,alpha=.10,fixed.step=NULL,aic.stop=FALSE,trace=F,compute.ci=TRUE,one.sided=TRUE){
 # pvalues for forward stepwise
 #  returns pval and interval for predictor just entered (default with which.pred=1:nsteps) 
 # otherwise which.pred is a vector of length nsteps, and it returns 
@@ -63,16 +73,22 @@ function(fsfit,x,y,sigma,nsteps=NULL,alpha=.10,fixed.step=NULL,aic.stop=FALSE,tr
     this.call=match.call()
 n=nrow(x)
 p=ncol(x)
+    
+  if(is.null(sigma)) sigma=fsfit$sigma
+    
     if(aic.stop){fixed.step=fsfit$aichat}
 if(is.null(nsteps)){ nsteps=length(fsfit$pred)}
     if(!is.null(fixed.step))  nsteps=fixed.step
 # first center x and y
+
 x=scale(x,TRUE,FALSE)
 y=y-mean(y)
-    
+
+    xx=x;
+ 
 SMALL=1e-7
 pred=fsfit$pred
-s=fsfit$s
+s=sign(fsfit$scor)
 a=NULL
 proj=0
 which.steps=1:nsteps
@@ -84,11 +100,13 @@ if(aic.stop & fsfit$aichat==0){
 }
 
 # construct matrices A and b
-xx=x # temporary x, to be orthogonali1/zed
-    vv=1/sum(x[,pred[1]]^2)
+    vv=1/sum(xx[,pred[1]]^2)
 stepind=NULL
 
- A=b=NULL       
+ A=b=NULL
+
+
+
 for(j in 1:nsteps){
 if(trace) cat(c("step=",j),fill=T)
   notin=rep(T,p)
@@ -97,7 +115,7 @@ if(trace) cat(c("step=",j),fill=T)
   notin[mod]=F
   xx[,-mod]=lsfit(xx[,mod],xx[,-mod])$res
   vv=solve(t(xx[,mod,drop=F])%*%xx[,mod,drop=F])
-  proj=x[,mod]%*%vv%*%t(xx[,mod])
+  proj=xx[,mod]%*%vv%*%t(xx[,mod])
   }
   jj=pred[j]
   rest=notin;rest[jj]=F
@@ -112,8 +130,8 @@ stepind=c(stepind,j,j)
  if(aic.stop){
      #constrain that change in AIC > 2sigma
       mod2=pred[1:j]
-       vv=solve(t(x[,mod2,drop=F])%*%x[,mod2,drop=F])
-   temp=vv%*%t(x[,mod2,drop=F])
+       vv=solve(t(xx[,mod2,drop=F])%*%xx[,mod2,drop=F])
+   temp=vv%*%t(xx[,mod2,drop=F])
       temp2=-s[j]*temp[j,,drop=F]/(sigma*sqrt(vv[j,j]))
   A=rbind(A, temp2)
   b=c(b,-sqrt(2))
@@ -134,50 +152,40 @@ b=c(b,0)
  # (equiv to bhat/se < sqrt(2))
 if(aic.stop){
      mod2=pred[1:(nsteps+1)]
- vv=solve(t(x[,mod2,drop=F])%*%x[,mod2,drop=F])
+ vv=solve(t(xx[,mod2,drop=F])%*%xx[,mod2,drop=F])
      pp=length(mod2)
-      temp=vv%*%t(x[,mod2,drop=F])
+      temp=vv%*%t(xx[,mod2,drop=F])
      snew=sign(sum(temp[pp,]*y))
      temp2=snew*temp[pp,,drop=F]/(sigma*sqrt(vv[pp,pp]))
      A=rbind(A, temp2)
   b=c(b,sqrt(2))
  }
+    
+    
 # pv tests
+
 vmall=vpall=vector("list",nsteps)
 pv=rep(NA,p)
 ci=miscov=matrix(NA,nrow=p,ncol=2)
 
 
+
 for(kk in 1:length(which.steps)){
-
 if(trace) cat(c("step=",kk),fill=T)
-
 if(is.null(fixed.step)) pp=sum(stepind<=which.steps[kk])
-
 if(!is.null(fixed.step)) pp=nrow(A)
-
 mod=pred[1:which.steps[kk]]
 
-    
  temp=(solve(t(x[,mod,drop=F])%*%x[,mod,drop=F])%*%t(x[,mod,drop=F]))
 
-
-# compute pvalued and CIs  
+# compute pvalues and CIs  
 kkk=nrow(temp)
 if(!is.null(fixed.step)) kkk=kk
   eta=as.vector(temp[kkk,])
     bhat=sum(eta*y)
     if(one.sided) eta=eta*sign(bhat)
-  alp=as.vector(A%*%eta/sum(eta^2))
-  alp[abs(alp)<SMALL]=0
-  vp=rep(Inf,pp)
-  vm=rep(-Inf,pp)
-  for(j in 1:pp){
-   if(alp[j]<0) vm[j]=(b[j]-(A%*%y)[j]+alp[j]*sum(eta*y))/alp[j]
-   if(alp[j]>0) vp[j]=(b[j]-(A%*%y)[j]+alp[j]*sum(eta*y))/alp[j]
-   }
-   vmm=max(vm,na.rm=T)
-   vpp=min(vp,na.rm=T)
+junk=compute.vmvp(eta,A,b,pp,sigma)
+vmm=junk$vm;vpp=junk$vp
    vmall[[kk]][jj]=vmm
    vpall[[kk]][jj]=vpp
    tt=sum(eta*y)
@@ -196,10 +204,15 @@ if(!one.sided)  pv[kk]=2*min(pv[kk],1-pv[kk])
       }
 
 }
-out=list(pv=pv,vm=vmall,vp=vpall,ci=ci,miscov=miscov,which.steps=which.steps,pred=fsfit$pred,stepind=stepind,alpha=alpha,one.sided=one.sided,A=A,b=b,call=this.call)
+
+        
+        
+out=list(pv=pv,vm=vmall,vp=vpall,ci=ci,miscov=miscov,pred=pred,which.steps=which.steps,stepind=stepind,alpha=alpha,sigma=sigma,one.sided=one.sided,A=A,b=b,call=this.call)
+
     class(out)="forwardStepInf"
 return(out)
 }
+
 
 print.forwardStepInf=function(x,digits = max(3, getOption("digits") - 3),...){
       cat("\nCall: ", deparse(x$call), "\n\n")
@@ -210,7 +223,35 @@ print.forwardStepInf=function(x,digits = max(3, getOption("digits") - 3),...){
 cat("",fill=T)
 cat("",fill=T)
       nn=length(x$which.steps)
-tab=cbind(x$which.steps,x$pred[1:nn],x$pv[1:nn],x$ci[1:nn,],x$miscov[1:nn,])
+tab=cbind(x$which.steps,x$pred[1:nn],round(x$pv[1:nn],6),round(x$ci[1:nn,],6),round(x$miscov[1:nn,],6))
+      
+      
         dimnames(tab)=list(NULL,c("step","predictor","p-value","lowerConfPt","upperConfPt","lowerArea","upperArea"))
       print(tab)
+
+         cat("",fill=T)
+      cat(c("Value used for error standard deviation (sigma)=",round(x$sigma,6)),fill=T)
+       cat("",fill=T)
+
   }
+  
+
+
+
+
+compute.vmvp=function(eta,A,b,pp,sigma,SMALL=1e-7){
+ # we use first pp constraints
+    A=A[1:pp,,drop=F]
+    b=b[1:pp]
+  alp=as.vector(A%*%eta/sum(eta^2))
+  alp[abs(alp)<SMALL]=0
+  vp=rep(Inf,pp)
+  vm=rep(-Inf,pp)
+  for(j in 1:pp){
+   if(alp[j]<0) vm[j]=(b[j]-(A%*%y)[j]+alp[j]*sum(eta*y))/alp[j]
+   if(alp[j]>0) vp[j]=(b[j]-(A%*%y)[j]+alp[j]*sum(eta*y))/alp[j]
+   }
+   vmm=max(vm,na.rm=T)
+   vpp=min(vp,na.rm=T)
+  return(list(vm=vmm,vp=vpp))
+}
