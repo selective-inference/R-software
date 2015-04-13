@@ -2,12 +2,12 @@ require(genlasso)
 require(truncnorm)
 require(MASS)
 
-fixedLassoInf=function(x,y,bhat,lam,sigma,alpha=.10,trace=F,compute.ci=F,tol=1e-5,one.sided=TRUE,nsigma=10){
+fixedLassoInf=function(x,y,bhat,lambda,sigma,alpha=.10,trace=F,compute.ci=F,tol=1e-5,one.sided=TRUE,nsigma=10){
     # inference for fixed lam lasso
 #assumes data is centered
- # careful!  lam is for usual lasso problem; glmnet uses lam/n
+ # careful!  lambda is for usual lasso problem; glmnet uses lambda/n
     this.call=match.call()
-junk=tf.jonab(y,x,bhat,lam,tol=tol)
+junk=tf.jonab(y,x,bhat,lambda,tol=tol)
 n=length(y)
 a=junk$A
 b=junk$b
@@ -41,11 +41,12 @@ if(!one.sided)  pv[k]=2*min(pv[k],1-pv[k])
                    ci[k,]=junk$ci;miscov[k,]=junk$miscov
                
 }}
-out=list(lam=lam,eta=etaall,vm=vmall,vp=vpall,pv=pv,ci=ci,miscov=miscov,pred=e,alpha=alpha,lambda=lam)
+out=list(pv=pv,ci=ci,miscov=miscov,eta=etaall,vm=vmall,vp=vpall,pred=e,alpha=alpha,sigma=sigma,one.sided=one.sided,lambda=lambda)
 class(out)="fixedLassoInf"
     out$call=this.call
 return(out)
 }
+
 
 
 print.fixedLassoInf=function(x,digits = max(3, getOption("digits") - 3),...){

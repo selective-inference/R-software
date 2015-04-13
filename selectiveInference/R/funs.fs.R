@@ -65,7 +65,7 @@ tab=cbind(1:length(x$pred),x$pred,x$bhat,x$scor)
   }
 
 forwardStepInf=
-function(fsfit,x,y,sigma=NULL,nsteps=NULL,alpha=.10,fixed.step=NULL,aic.stop=FALSE,trace=F,compute.ci=TRUE,one.sided=TRUE){
+function(fsfit,x,y,sigma=NULL,nsteps=NULL,alpha=.10,fixed.step=NULL,aic.stop=FALSE,trace=F,compute.ci=TRUE,one.sided=TRUE,nsigma=10){
 # pvalues for forward stepwise
 #  returns pval and interval for predictor just entered (default with which.pred=1:nsteps) 
 # otherwise which.pred is a vector of length nsteps, and it returns 
@@ -199,7 +199,7 @@ if(!one.sided)  pv[kk]=2*min(pv[kk],1-pv[kk])
   if(compute.ci)
       {
           vs=list(vm=vmm,vp=vpp)
-          junk=selection.int(y,eta,sigma^2,vs,alpha)
+          junk=selection.int(y,eta,sigma^2,vs,alpha,nsigma=nsigma)
           ci[kk,]=junk$ci;miscov[kk,]=junk$miscov
       }
 

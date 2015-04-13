@@ -1,6 +1,6 @@
 Package: selectiveInference
 Type: Package
-Title: What the package does (short line)
+Title: Selective inference for forward stepwise regression, lasso and ALR
 Version: 1.0
 Date: 2015-04-08
 Author: Who wrote it

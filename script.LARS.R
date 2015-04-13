@@ -28,7 +28,7 @@ y=y-mean(y)
 larfit=lar(x,y,verbose=TRUE)
                                       
 
-aa2=larInference(x,y,larfit,sigma)
+aa2=larInf(x,y,larfit,sigma)
 
 plot(larfit)
 
@@ -49,14 +49,9 @@ x=scale(x,T,T)/sqrt(n-1)
 y=as.numeric(x%*%beta)+rnorm(n)
         y=y-mean(y)
 larfit=lar(y,x)
-larfit$meanx=colMeans(x)
-larfit$normx=rep(1,ncol(x))
-larfit$normalize=F
-larfit$beta=cbind(larfit$beta,lsfit(x,y)$coef[-1])
-larfit$type="LAR"
-larfit$mu=mean(y)
+
 #tt[ii,]=covtest(larfit,x,y,sigma=sigma)
-    pv2[ii,]=larInference(x,y,larfit,sigma,compute.ci=F)$pv
+    pv2[ii,]=larInf(x,y,larfit,sigma,compute.ci=F)$pv
 }
 pv=1-pexp(tt,1)
         par(mfrow=c(2,2))

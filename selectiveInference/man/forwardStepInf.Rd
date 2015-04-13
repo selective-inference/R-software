@@ -7,7 +7,7 @@ Selective inference for forward stepwise regression
 Computes exact p-values and selection intervals for forward stepwise regression
 }
 \usage{
-forwardStepInf(fsfit, x, y, sigma, nsteps = NULL, alpha = 0.1, fixed.step = NULL, aic.stop = FALSE, trace = F, compute.ci = TRUE, one.sided = TRUE)
+forwardStepInf(fsfit, x, y, sigma, nsteps = NULL, alpha = 0.1, fixed.step = NULL, aic.stop = FALSE, trace = F, compute.ci = TRUE, one.sided = TRUE, nsigma=10)
 }
 \arguments{
   \item{fsfit}{
@@ -26,7 +26,7 @@ Estimate of error standard deviation; default is value returned by forwardStep
 Number of steps to analyze (default is number used in forwardStep)
 }
   \item{alpha}{
-significance level for  selection intervals (target is miscoverage alpha/2 in each tail)
+Significance level for  selection intervals (target is miscoverage alpha/2 in each tail)
 }
   \item{fixed.step}{
 If an integer k, results at step k are computed. If NULL and aic.stop is FALSE (default),
@@ -39,10 +39,13 @@ results for each FS step are computed.
 Print out more details along the way.
 }
   \item{compute.ci}{
-Compute selection interals? Default TRUE. Can slow down the computation.
+Compute selection interals? Default TRUE. Can slow down the computation, if only p-values are required.
 }
   \item{one.sided}{
 One-sided p-values? Default TRUE.
+}
+  \item{nsigma}{
+Number of error SDs for range of selection intervals search
 }
 }
 \details{
@@ -63,7 +66,6 @@ One-sided p-values? Default TRUE.
 \item{A}{Constraint matrix}
 \item{b}{Right hand side vector for constraints}
 \item{call}{The call to forwardStepInf}
-
 }
 \references{
 %% ~put references to the literature/web site here ~

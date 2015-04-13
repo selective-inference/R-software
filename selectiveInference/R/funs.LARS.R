@@ -63,14 +63,14 @@ function (object, newx, s, type = c("fit", "coefficients"), mode = c("step",
 
 
 
-larInference=function(x,y,larfit,sigma,compute.ci=TRUE,alpha=.10,one.sided=TRUE,nsigma=10,maxp = min(nrow(x), ncol(x))){
+larInf=function(x,y,larfit,sigma,compute.ci=TRUE,alpha=.10,one.sided=TRUE,nsigma=10,nsteps = min(nrow(x), ncol(x))){
     this.call=match.call()
 SMALL=1e-6
 p=ncol(x)
 nk=larfit$nk
-vmm=vpp=pv=sigma.eta=rep(NA,maxp)
-ci=miscov=matrix(NA,maxp,2)
-for(k in 1:maxp){
+vmm=vpp=pv=sigma.eta=rep(NA,nsteps)
+ci=miscov=matrix(NA,nsteps,2)
+for(k in 1:nsteps){
     mod=larfit$act[1:k]
  temp=(solve(t(x[,mod,drop=F])%*%x[,mod,drop=F])%*%t(x[,mod,drop=F]))
     temp=temp[nrow(temp),]
@@ -108,10 +108,10 @@ if(!one.sided)  pv[k]=2*min(pv[k],1-pv[k])
  
 }
 
-pv.spacing=spacing.pval.asymp.list(y,larfit,maxp,sigma=sigma)
-   junk=covtest(larfit,x,y,sigma,maxp)
+pv.spacing=spacing.pval.asymp.list(y,larfit,nsteps,sigma=sigma)
+   junk=covtest(larfit,x,y,sigma,nsteps)
     pv.cov=1-pexp(junk,1)
-    out=list(pv=pv,ci=ci,miscov=miscov,vmm=vmm,vpp=vpp,sigma.eta=sigma.eta,alpha=alpha,act=larfit$act,pv.spacing=pv.spacing, pv.cov=pv.cov)
+    out=list(pv=pv,ci=ci,miscov=miscov,vm=vmm,vp=vpp,sigma=sigma,alpha=alpha,act=larfit$act,pv.spacing=pv.spacing, pv.cov=pv.cov)
     out$call=this.call
    class(out)="larInference"
 return(out)
@@ -126,7 +126,7 @@ tab=cbind(1:length(x$act),x$act,round(x$pv,3),round(x$ci,3),round(x$miscov,3),ro
       dimnames(tab)=list(NULL,c("step","pred","exactPv","lowerConfPt","upperConfPt","lowerArea","upperArea","spacingPv","covtestPv"))
       print(tab)
   }
-covtest=function(fitobj,x,y,sigma,maxp = min(nrow(x), ncol(x))) {
+covtest=function(fitobj,x,y,sigma,nsteps = min(nrow(x), ncol(x))) {
 
     n = nrow(x)
     p = ncol(x)
@@ -135,14 +135,14 @@ covtest=function(fitobj,x,y,sigma,maxp = min(nrow(x), ncol(x))) {
     lambda.min.ratio = ifelse(nrow(x) < ncol(x), 0.1, 1e-04)
     jlist = unlist(fitobj$act)
         lamlist = c(fitobj$lambda, 0)
-    maxp.call = maxp
-    maxp = length(jlist)
-    maxp = min(maxp, which(lamlist == 0))
-    maxp = min(maxp, maxp.call)
-    jlist = jlist[1:maxp]
-    cov0 = cov = sig = rep(NA, maxp)
+    nsteps.call = nsteps
+    nsteps = length(jlist)
+    nsteps = min(nsteps, which(lamlist == 0))
+    nsteps = min(nsteps, nsteps.call)
+    jlist = jlist[1:nsteps]
+    cov0 = cov = sig = rep(NA, nsteps)
     yy = y - my
-    for (j in 1:maxp) {
+    for (j in 1:nsteps) {
             lambda = lamlist[j + 1]
                 yhat = predict.lar(fitobj, x, s = lambda, type = "fit", mode = "lam")$fit   
             cov[j] = sum(yy * yhat)

@@ -40,7 +40,7 @@ orthogonalized predictors at each step. That is, argmax t(xr) %*% r/sqrt(diag(t(
 }
 
 \author{
-Josh Loftus, Jonathan Taylor, Ryan Tibhirani, Rob Tibshirani
+Joshua Loftus, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 }
 \note{
 %%  ~~further notes~~
