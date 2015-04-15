@@ -200,15 +200,16 @@ if(!one.sided)  pv[kk]=2*min(pv[kk],1-pv[kk])
   if(compute.ci)
       {
           vs=list(vm=vmm,vp=vpp)
-          junk=selection.int(y,eta,sigma,vs,alpha,gridac=gridfac)
+          junk=selection.int(y,eta,sigma,vs,alpha,gridfac=gridfac)
           ci[kk,]=junk$ci;miscov[kk,]=junk$miscov
       }
 
 }
-
+forwardStopHat=NULL
+if(is.null(fixed.step)) forwardStopHat=forwardStop(pv,alpha)
         
         
-out=list(pv=pv,vm=vmall,vp=vpall,ci=ci,miscov=miscov,pred=pred,which.steps=which.steps,stepind=stepind,alpha=alpha,sigma=sigma,one.sided=one.sided,A=A,b=b,call=this.call)
+out=list(pv=pv,vm=vmall,vp=vpall,ci=ci,miscov=miscov,pred=pred,which.steps=which.steps,stepind=stepind,forwardStopHat=forwardStopHat,alpha=alpha,sigma=sigma,one.sided=one.sided,A=A,b=b,call=this.call)
 
     class(out)="forwardStepInf"
 return(out)
@@ -230,10 +231,13 @@ tab=cbind(x$which.steps,x$pred[1:nn],round(x$pv[1:nn],6),round(x$ci[1:nn,],6),ro
         dimnames(tab)=list(NULL,c("step","predictor","p-value","lowerConfPt","upperConfPt","lowerArea","upperArea"))
       print(tab)
 
+if(!is.null(x$forwardStopHat)){
+cat("",fill=T)
+cat(c("Estimated stopping point from forwardStop rule=", x$forwardStopHat),fill=T)
          cat("",fill=T)
       cat(c("Value used for error standard deviation (sigma)=",round(x$sigma,6)),fill=T)
        cat("",fill=T)
-
+}
   }
   
 
@@ -256,3 +260,13 @@ compute.vmvp=function(eta,A,b,pp,sigma,SMALL=1e-7){
    vpp=min(vp,na.rm=T)
   return(list(vm=vmm,vp=vpp))
 }
+
+forwardStop=function(pv,alpha=.10){
+ val=-(1/(1:length(pv)))*cumsum(log(1-pv))
+ oo=which(val <= alpha)
+ if(length(oo)==0) out=0
+ if(length(oo)>0) out=oo[length(oo)]
+return(out)
+}
+
+

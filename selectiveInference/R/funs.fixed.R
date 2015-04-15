@@ -282,10 +282,3 @@ selection.int = function(y,eta,sigma,vs,alpha,del=1e-4,gridfac=50) {
 #  return(c(lo,hi))
 #}
 
-forwardStop=function(pv,alpha=.10){
- val=-(1/(1:length(pv)))*cumsum(log(1-pv))
- oo=which(val <= alpha)
- if(length(oo)==0) out=0
- if(length(oo)>0) out=oo[length(oo)]
-return(out)
-}

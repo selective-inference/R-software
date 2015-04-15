@@ -60,6 +60,7 @@ Number of error SDs for range of selection intervals search
 \item{pred}{Predictors entered at each step of forward stepwise}
 \item{which.steps }{Which FS steps were analyzed}
 \item{step.ind}{Step indicator for each row of constraint matrix A (returned below)}
+\item{ForwardStopHat}{Estimated stopping point from forwardStop rule, approximately controlling FDR at alpha}
 \item{alpha}{Desired coverage (alpha/2 in each tail)}
 \item{sigma}{Value of error standard devarion (sigma) used}
 \item{one.sided}{Are the pvalues one-sided}
