@@ -1,0 +1,7 @@
+-cleanup lar function- see especially last step added by Rob
+
+-write .Rd file for lar 
+ -make Lar a sperate package? 
+ ior just include function in this pkg. 
+
+-write more efficent code for computing A and b for FS?
