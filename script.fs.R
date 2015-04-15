@@ -27,13 +27,18 @@ aa3=forwardStepInf(a,x,y,compute.ci=T, aic.stop=T)
 
 
 ###########
-# test aic case
+# tests
 library(selectiveInference,lib.loc="mylib")
 library(truncnorm)
 options(error=dump.frames)
+
+setting=1  # sequential steps
+#setting=2  #fixed stop
+#setting=3  #AIC stop
+
 set.seed(333)
 n=20
-p=5
+p=10
 nsim=500
 
 
@@ -41,7 +46,7 @@ x=matrix(rnorm(n*p),n,p)
 x=scale(x,T,T)/sqrt(n-1)
 
 #generate y
-beta=c(4,0,rep(0,p-2))
+beta=c(0,0,rep(0,p-2))
 sigma=1
 pv=matrix(NA,nsim,p)
 ran=matrix(NA,nsim,2)
@@ -53,23 +58,37 @@ for(ii in 1:nsim){
 y=x%*%beta+sigma*rnorm(n)
 y=y-mean(y)
 
-fsfit=forwardStep(x,y)
-#aa=forwardStepInf(fsfit,x,y,compute.ci=F,nsteps=2)
-
-#aa=forwardStepInf(fsfit,x,y,compute.ci=F,fixed.step=2)
-aa=forwardStepInf(fsfit,x,y,compute.ci=F, aic.stop=T)
+fsfit=forwardStep(x,y,sigma=sigma)
+if(setting==1) aa=forwardStepInf(fsfit,x,y,sigma=sigma,compute.ci=F,nsteps=2)
+if(setting==2) aa=forwardStepInf(fsfit,x,y,sigma=sigma,compute.ci=F,fixed.step=2)
+if(setting==3) aa=forwardStepInf(fsfit,x,y,sigma=sigma,compute.ci=F, aic.stop=T)
 pv[ii,]=aa$pv
 
 aichat[ii]=fsfit$aichat
 
-
 }
 
+
+if(setting<3){
 par(mfrow=c(2,3))
-for(k in 3:4){
+for(k in 1:4){
     o=!is.na(pv[,k])
  plot((1:sum(o))/sum(o),sort(pv[o,k]))
  abline(0,1)
 }
+}
+
+if(setting==3){
+pvall=NULL
+for(ii in 1:nsim){
+    o=1:aichat[ii]
+    pvall=c(pvall,pv[ii,o])
+    }
+
+ o=!is.na(pvall)
+ plot((1:sum(o))/sum(o),sort(pvall))
+ abline(0,1)
+ }
+
 
 #

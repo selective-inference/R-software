@@ -63,7 +63,7 @@ function (object, newx, s, type = c("fit", "coefficients"), mode = c("step",
 
 
 
-larInf=function(x,y,larfit,sigma,compute.ci=TRUE,alpha=.10,one.sided=TRUE,nsigma=10,nsteps = min(nrow(x), ncol(x))){
+larInf=function(x,y,larfit,sigma,compute.ci=TRUE,alpha=.10,one.sided=TRUE,gridfac=50,nsteps = min(nrow(x), ncol(x))){
     this.call=match.call()
 SMALL=1e-6
 p=ncol(x)
@@ -101,7 +101,7 @@ if(!one.sided)  pv[k]=2*min(pv[k],1-pv[k])
   if(compute.ci)
       {
           vs=list(vm=vmm[k],vp=vpp[k])
-           junk=selection.int(y,eta,sigma, vs, alpha,nsigma=nsigma)
+           junk=selection.int(y,eta,sigma, vs, alpha,gridfac=gridfac)
           ci[k,]=junk$ci
           miscov[k,]=junk$miscov
       }

@@ -4,47 +4,74 @@
 Prediction from a LAR fit
 }
 \description{
-%%  ~~ A concise (1-5 lines) description of what the function does. ~~
+Make predictions or extract coefficients from a fitted lar model
 }
 \usage{
 predict.lar(object, newx, s, type = c("fit", "coefficients"), mode = c("step", "fraction", "norm", "lambda"), ...)
 }
-%- maybe also 'usage' for other objects documented here.
+
 \arguments{
   \item{object}{
-%%     ~~Describe \code{object} here~~
+Object returned by a call to \code{lar} function (Not the \code{lars} function)
 }
   \item{newx}{
-%%     ~~Describe \code{newx} here~~
+If type="fit", then newx should be the x values at which the
+          fit is required. If type="coefficients", then newx can be
+          omitted.
 }
   \item{s}{
-%%     ~~Describe \code{s} here~~
+        a value, or vector of values, indexing the path. Its values
+          depends on the mode= argument. By default (mode="step"), s
+          should take on values between 0 and p (e.g., a step of 1.3
+          means .3 of the way between step 1 and 2.)
 }
   \item{type}{
-%%     ~~Describe \code{type} here~~
+If type="fit", predict returns the fitted values. If
+          type="coefficients", predict returns the coefficients.
+          Abbreviations allowed.
 }
   \item{mode}{
-%%     ~~Describe \code{mode} here~~
+Mode="step" means the s= argument indexes the lars step
+          number, and the coefficients will be returned corresponding
+          to the values corresponding to step s. If mode="fraction",
+          then s should be a number between 0 and 1, and it refers to
+          the ratio of the L1 norm of the coefficient vector, relative
+          to the norm at the full LS solution. Mode="norm" means s
+          refers to the L1 norm of the coefficient vector.
+          Mode="lambda" uses the lasso regularization parameter for s;
+          for other models it is the maximal correlation (does not make
+          sense for lars/stepwise models). Abbreviations allowed.
 }
   \item{\dots}{
-%%     ~~Describe \code{\dots} here~~
-}
+Any arguments for ‘predict.lar’ should work for ‘coef.lars’
+        }
 }
 \details{
-%%  ~~ If necessary, more details than the description above ~~
+LARS is described in detail in Efron, Hastie, Johnstone and
+     Tibshirani (2002). With the "lasso" option, it computes the
+     complete lasso solution simultaneously for ALL values of the
+     shrinkage parameter in the same computational cost as a least
+     squares fit.
 }
 \value{
-%%  ~Describe the value returned
-%%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
-%% ...
+Either a vector/matrix of fitted values, or a vector/matrix of
+     coefficients.
 }
 \references{
-%% ~put references to the literature/web site here ~
+Efron, Hastie, Johnstone and Tibshirani (2002) "Least Angle
+     Regression" (with discussion) _Annals of Statistics_; see also
+     <URL:
+     http://www-stat.stanford.edu/~hastie/Papers/LARS/LeastAngle_2002.pdf>.
+
+     Hastie, Tibshirani and Friedman (2002) Elements of Statistical
+     Learning, Springer, NY.
+
+      Jonathan Taylor, Richard Lockhart,  Ryan Tibshirani and Rob Tibshirani (2015) 
+    Exact Post-selection Inference for Forward Stepwise and Least Angle Regression.
+arXiv:1401.3889
 }
 \author{
-%%  ~~who you are~~
+Joshua Loftus, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 }
 \note{
 %%  ~~further notes~~
@@ -56,71 +83,6 @@ predict.lar(object, newx, s, type = c("fit", "coefficients"), mode = c("step", "
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
-
-## The function is currently defined as
-function (object, newx, s, type = c("fit", "coefficients"), mode = c("step", 
-    "fraction", "norm", "lambda"), ...) 
-{
-    mode <- match.arg(mode)
-    type <- match.arg(type)
-    if (missing(newx) & type == "fit") {
-        warning("Type=fit with no newx argument; type switched to coefficients")
-        type <- "coefficients"
-    }
-    betas <- object$beta
-    if (object$type != "LASSO" && mode \%in\% c("fraction", "norm")) 
-        betas = betabreaker(object)
-    dimnames(betas) = list(NULL, dimnames(betas)[[2]])
-    sbetas <- scale(betas, FALSE, 1/object$normx)
-    kp <- dim(betas)
-    k <- kp[1]
-    p <- kp[2]
-    steps <- seq(k)
-    if (missing(s)) {
-        s <- steps
-        mode <- "step"
-    }
-    sbeta <- switch(mode, step = {
-        if (any(s < 0) | any(s > k)) stop("Argument s out of range")
-        steps
-    }, fraction = {
-        if (any(s > 1) | any(s < 0)) stop("Argument s out of range")
-        nbeta <- drop(abs(sbetas) \%*\% rep(1, p))
-        nbeta/nbeta[k]
-    }, norm = {
-        nbeta <- drop(abs(sbetas) \%*\% rep(1, p))
-        if (any(s > nbeta[k]) | any(s < 0)) stop("Argument s out of range")
-        nbeta
-    }, lambda = {
-        lambdas = object$lambda
-        s[s > max(lambdas)] = max(lambdas)
-        s[s < 0] = 0
-        c(lambdas, 0)
-    })
-    sfrac <- (s - sbeta[1])/(sbeta[k] - sbeta[1])
-    sbeta <- (sbeta - sbeta[1])/(sbeta[k] - sbeta[1])
-    usbeta <- unique(sbeta)
-    useq <- match(usbeta, sbeta)
-    sbeta <- sbeta[useq]
-    betas <- betas[useq, , drop = FALSE]
-    coord <- approx(sbeta, seq(sbeta), sfrac)$y
-    left <- floor(coord)
-    right <- ceiling(coord)
-    newbetas <- ((sbeta[right] - sfrac) * betas[left, , drop = FALSE] + 
-        (sfrac - sbeta[left]) * betas[right, , drop = FALSE])/(sbeta[right] - 
-        sbeta[left])
-    newbetas[left == right, ] <- betas[left[left == right], ]
-    robject <- switch(type, coefficients = list(s = s, fraction = sfrac, 
-        mode = mode, coefficients = drop(newbetas)), fit = list(s = s, 
-        fraction = sfrac, mode = mode, fit = drop(scale(newx, 
-            object$meanx, FALSE) \%*\% t(newbetas)) + object$mu))
-    robject
-  }
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
 \keyword{ ~kwd1 }
 \keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

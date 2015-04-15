@@ -7,7 +7,7 @@ Selective inference for forward stepwise regression
 Computes exact p-values and selection intervals for forward stepwise regression
 }
 \usage{
-forwardStepInf(fsfit, x, y, sigma, nsteps = NULL, alpha = 0.1, fixed.step = NULL, aic.stop = FALSE, trace = F, compute.ci = TRUE, one.sided = TRUE, nsigma=10)
+forwardStepInf(fsfit, x, y, sigma, nsteps = NULL, alpha = 0.1, fixed.step = NULL, aic.stop = FALSE, trace = F, compute.ci = TRUE, one.sided = TRUE,gridfac=50)
 }
 \arguments{
   \item{fsfit}{
@@ -44,7 +44,7 @@ Compute selection interals? Default TRUE. Can slow down the computation, if only
   \item{one.sided}{
 One-sided p-values? Default TRUE.
 }
-  \item{nsigma}{
+  \item{gridfac}{
 Number of error SDs for range of selection intervals search
 }
 }

@@ -2,7 +2,7 @@ require(genlasso)
 require(truncnorm)
 require(MASS)
 
-fixedLassoInf=function(x,y,bhat,lambda,sigma,alpha=.10,trace=F,compute.ci=F,tol=1e-5,one.sided=TRUE,nsigma=10){
+fixedLassoInf=function(x,y,bhat,lambda,sigma,alpha=.10,trace=F,compute.ci=F,tol=1e-5,one.sided=TRUE,gridfac=50){
     # inference for fixed lam lasso
 #assumes data is centered
  # careful!  lambda is for usual lasso problem; glmnet uses lambda/n
@@ -37,7 +37,7 @@ vpall[k]=vpp
   pv[k]=  1-ptruncnorm(tt, vmm, vpp, u, sigma.eta)
    
 if(!one.sided)  pv[k]=2*min(pv[k],1-pv[k])
-  if(compute.ci) { junk=selection.int(y,eta,sigma^2,vs,alpha,nsigma=nsigma)
+  if(compute.ci) { junk=selection.int(y,eta,sigma^2,vs,alpha,gridfac=gridfac)
                    ci[k,]=junk$ci;miscov[k,]=junk$miscov
                
 }}
@@ -255,7 +255,7 @@ mytruncnorm = function(etay, vneg,vpos, sigma, etamu){
           }
     }
 
-selection.int = function(y,eta,sigma,vs,alpha,del=1e-4,nsigma=10) {
+selection.int = function(y,eta,sigma,vs,alpha,del=1e-4,gridfac=50) {
     #Rob's version using grid search
     etay=sum(eta*y)
 #    fun = function(x) return(tnorm.surv(etay,x,sigma,vs$vm,vs$vp))
@@ -263,9 +263,9 @@ selection.int = function(y,eta,sigma,vs,alpha,del=1e-4,nsigma=10) {
  #   fun = function(x) return(1-mytruncnorm(etay,vs$vm,vs$vp,sigma,x))
   inc = sqrt(sum(eta^2)*sigma)*del
     sigma.eta=sqrt(sum(eta^2))*sigma
-    xL=etay-nsigma*sigma.eta
-    xR=etay+nsigma*sigma.eta
- #   cat(c(nsigma,etay,xL,sigma.eta),fill=T)
+    xL=etay-gridfac*sigma.eta
+    xR=etay+gridfac*sigma.eta
+ #   cat(c(gridfac,etay,xL,sigma.eta),fill=T)
   lo = grid.search(etay,fun,alpha/2,xL,xR,inc=inc)
   hi = grid.search(etay,fun,1-alpha/2,xL,xR,inc=inc)
     covlo=fun(lo)
