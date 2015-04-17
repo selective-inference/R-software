@@ -2,13 +2,21 @@ require(genlasso)
 require(truncnorm)
 require(MASS)
 
-fixedLassoInf=function(x,y,bhat,lambda,sigma,alpha=.10,trace=F,compute.ci=F,tol=1e-5,one.sided=TRUE,gridfac=50){
+fixedLassoInf=function(x,y,bhat,lambda,sigma,alpha=.10,trace=F,compute.ci=F,tol=1e-5,one.sided=TRUE){
     # inference for fixed lam lasso
 #assumes data is centered
  # careful!  lambda is for usual lasso problem; glmnet uses lambda/n
     this.call=match.call()
 junk=tf.jonab(y,x,bhat,lambda,tol=tol)
 n=length(y)
+    p=ncol(x)
+
+   if(is.null(sigma) & p>=n){cat("Warning: p ge n; sigma set to 1",fill=T)
+                         sigma=1}
+  if(is.null(sigma) & n>p){
+      sigma=sqrt(sum(lsfit(x,y)$res^2)/(n-p))
+  }
+    
 a=junk$A
 b=junk$b
 e=which(bhat!=0)
@@ -24,6 +32,7 @@ for(k in 1:pp){
 eta=ginv(t(xe))[,k]
     bhat0=sum(eta*y)
     if(one.sided) eta=eta*sign(bhat0)
+    flip=(one.sided & sign(bhat0)==-1)
 etaall[k,]=eta
    
 vs=tf.jonvs(y,a,b,eta)
@@ -34,14 +43,15 @@ vpall[k]=vpp
    sigma.eta=sigma*sqrt(sum(eta^2))
    u=0  #null
 #  pv[k]= 1-mytruncnorm(tt, vmm, vpp, sigma.eta, u)
-  pv[k]=  1-ptruncnorm(tt, vmm, vpp, u, sigma.eta)
+  pv[k]=  1-rob.ptruncnorm(tt, vmm, vpp, u, sigma.eta)
    
 if(!one.sided)  pv[k]=2*min(pv[k],1-pv[k])
-  if(compute.ci) { junk=selection.int(y,eta,sigma^2,vs,alpha,gridfac=gridfac)
+  if(compute.ci) { junk=selection.int(y,eta,sigma,vs,alpha,flip=flip)
                    ci[k,]=junk$ci;miscov[k,]=junk$miscov
+                
                
 }}
-out=list(pv=pv,ci=ci,miscov=miscov,eta=etaall,vm=vmall,vp=vpall,pred=e,alpha=alpha,sigma=sigma,one.sided=one.sided,lambda=lambda)
+out=list(pv=pv,ci=ci,tailarea=miscov,eta=etaall,vm=vmall,vp=vpall,pred=e,alpha=alpha,sigma=sigma,one.sided=one.sided,lambda=lambda)
 class(out)="fixedLassoInf"
     out$call=this.call
 return(out)
@@ -53,7 +63,7 @@ print.fixedLassoInf=function(x,digits = max(3, getOption("digits") - 3),...){
       cat("\nCall: ", deparse(x$call), "\n\n")
       cat(c("lambda=",x$lam,", alpha=",x$alpha),fill=T)
       cat("",fill=T)
-tab=cbind(x$pred,x$pv,x$ci,x$miscov)
+tab=cbind(x$pred,x$pv,x$ci,x$tailarea)
       dimnames(tab)=list(NULL,c("predictor","p-value","lowerConfPt","upperConfPt","lowerArea","upperArea"))
       print(tab)
   }
@@ -227,20 +237,30 @@ bin.search = function(x, fun, val, inc=0.01, tol=1e-2) {
  
 }
 
-grid.search=function(x, fun, val, xL,xR, inc=0.01, tol=1e-2) {
+grid.search=function(fun, val, xL,xR, inc=0.01, tol=1e-2,etay=etay,vm=vm,vp=vp,sigma.eta=sigma.eta) {
 #
     #  here is used grid search instead of binary search
-G = 1000
+G = 50000
   xg = seq(xL,xR,length=G)
-  vals = numeric(G)
-  for (i in 1:G) vals[i] = fun(xg[i])
+ # vals = numeric(G)
+#  for (i in 1:G) vals[i] = fun(xg[i],etay,vm,vp,sigma.eta)
+vals = fun(xg,etay,vm,vp,sigma.eta)
   return(xg[which.min(abs(vals-val))])
 
 }
 
+rob.ptruncnorm=function(etay, vneg,vpos, etamu, sigma){
+    	if(max(vneg-etamu,etamu-vpos)/sigma < 7){
+		     return(ptruncnorm(etay, vneg, vpos, etamu, sigma))
+                 }
+		   
+	else{
+            if(etay > etamu) return(1)
+            if(etay < etamu) return(0)
+             if(etay== etamu) return(.5)
+        }}
 
-
-mytruncnorm = function(etay, vneg,vpos, sigma, etamu){
+mytruncnorm = function(etay, vneg,vpos, etamu, sigma){
     # From Sam Gross- uses exp approximation in extreme tails
 	# if range is too many sds away from mu, then there
 	# will be numerical errors from using truncnorm
@@ -255,21 +275,28 @@ mytruncnorm = function(etay, vneg,vpos, sigma, etamu){
           }
     }
 
-selection.int = function(y,eta,sigma,vs,alpha,del=1e-4,gridfac=50) {
+selection.int = function(y,eta,sigma,vs,alpha,del=1e-4,flip=F) {
     #Rob's version using grid search
+    gridfac=50 
     etay=sum(eta*y)
-#    fun = function(x) return(tnorm.surv(etay,x,sigma,vs$vm,vs$vp))
-    fun = function(x) return(1-ptruncnorm(etay,vs$vm,vs$vp,x,sigma))
- #   fun = function(x) return(1-mytruncnorm(etay,vs$vm,vs$vp,sigma,x))
+     vm=vs$vm; vp=vs$vp
+    fun = function(x,etay,vm,vp,sigma.eta) return(1-ptruncnorm(etay,vm,vp,x,sigma.eta))
+lo=-Inf
+hi=Inf
+covlo=covhi=0
+     sigma.eta=sqrt(sum(eta^2))*sigma
+if( min(etay-vm,vp-etay)>.075*sigma.eta){
   inc = sqrt(sum(eta^2)*sigma)*del
-    sigma.eta=sqrt(sum(eta^2))*sigma
+   
     xL=etay-gridfac*sigma.eta
     xR=etay+gridfac*sigma.eta
- #   cat(c(gridfac,etay,xL,sigma.eta),fill=T)
-  lo = grid.search(etay,fun,alpha/2,xL,xR,inc=inc)
-  hi = grid.search(etay,fun,1-alpha/2,xL,xR,inc=inc)
-    covlo=fun(lo)
-    covhi=1-fun(hi)
+  lo = grid.search(fun,alpha/2,xL,xR,inc=inc,etay=etay,vm=vm,vp=vp,sigma.eta=sigma.eta)
+  hi = grid.search(fun,1-alpha/2,xL,xR,inc=inc,etay=etay,vm=vm,vp=vp,sigma.eta=sigma.eta)
+    covlo=fun(lo,etay,vm,vp,sigma.eta)
+    covhi=1-fun(hi,etay,vm,vp,sigma.eta)
+     cat(c(vm,etay,vp,xL,xR,sigma.eta),fill=T)
+}
+    if(flip){temp=hi;hi=-lo;lo=-temp;  temp2=covlo;covlo=covhi;covhi=temp}
   return(list(ci=c(lo,hi), miscov=c(covlo,covhi)))
 }
 

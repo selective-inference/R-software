@@ -42,7 +42,7 @@ for(j in 1:nsteps){
  }
  d=diff(aic)
 o=which(d>0)
-      if(length(o)>0) aichat=o[1]-1
+    if(length(o)>0) aichat=o[1]-1
     if(length(o)==0) aichat=length(aic)-1
     out=list(pred=pred,scor=scor,bhat=bhat,rss=rss,sigma=sigma,aic=aic,aichat=aichat,call=this.call)
     class(out)="forwardStep"
@@ -66,7 +66,7 @@ tab=cbind(1:length(x$pred),x$pred,x$bhat,x$scor)
   }
 
 forwardStepInf=
-function(fsfit,x,y,sigma=NULL,nsteps=NULL,alpha=.10,fixed.step=NULL,aic.stop=FALSE,trace=F,compute.ci=TRUE,one.sided=TRUE,gridfac=50){
+function(fsfit,x,y,sigma=NULL,nsteps=NULL,alpha=.10,fixed.step=NULL,aic.stop=FALSE,trace=F,compute.ci=TRUE,one.sided=TRUE){
 # pvalues for forward stepwise
 #  returns pval and interval for predictor just entered (default with which.pred=1:nsteps) 
 # otherwise which.pred is a vector of length nsteps, and it returns 
@@ -85,7 +85,7 @@ if(is.null(nsteps)){ nsteps=length(fsfit$pred)}
 x=scale(x,TRUE,FALSE)
 y=y-mean(y)
 
-    xx=x;
+xx=x
  
 SMALL=1e-7
 pred=fsfit$pred
@@ -152,7 +152,7 @@ b=c(b,0)
 #for aic stop, add constraint that diff in AIC is < 2sigma, so that it stops
  # (equiv to bhat/se < sqrt(2))
 if(aic.stop){
-     mod2=pred[1:(nsteps+1)]
+      mod2=pred[1:(nsteps+1)]
  vv=solve(t(xx[,mod2,drop=F])%*%xx[,mod2,drop=F])
      pp=length(mod2)
       temp=vv%*%t(xx[,mod2,drop=F])
@@ -183,33 +183,38 @@ mod=pred[1:which.steps[kk]]
 kkk=nrow(temp)
 if(!is.null(fixed.step)) kkk=kk
   eta=as.vector(temp[kkk,])
+
     bhat=sum(eta*y)
     if(one.sided) eta=eta*sign(bhat)
+flip=(one.sided & sign(bhat)==-1)
 junk=compute.vmvp(eta,A,b,pp,sigma)
 vmm=junk$vm;vpp=junk$vp
-   vmall[[kk]][jj]=vmm
-   vpall[[kk]][jj]=vpp
+   vmall[[kk]][kk]=vmm
+   vpall[[kk]][kk]=vpp
    tt=sum(eta*y)
    sigma.eta=sigma*sqrt(sum(eta^2))
    u=0  #null
   # pv[kk]=1-(pnorm((tt-u)/sigma.eta)-pnorm((vmm-u)/sigma.eta))/(pnorm((vpp-u)/sigma.eta)-pnorm((vmm-u)/sigma.
-  pv[kk]= 1-ptruncnorm(tt, vmm, vpp, u,sigma.eta)
+  pv[kk]= 1-rob.ptruncnorm(tt, vmm, vpp, u,sigma.eta)
 if(!one.sided)  pv[kk]=2*min(pv[kk],1-pv[kk])
 
   
   if(compute.ci)
       {
-          vs=list(vm=vmm,vp=vpp)
-          junk=selection.int(y,eta,sigma,vs,alpha,gridfac=gridfac)
+           vs=list(vm=vmm,vp=vpp)
+          junk=selection.int(y,eta,sigma,vs,alpha,flip=flip)
+          cat(c(vs$vm,sum(eta*y),vs$vp,sigma,sigma.eta,alpha),fill=T)
           ci[kk,]=junk$ci;miscov[kk,]=junk$miscov
       }
 
 }
+
+    
 forwardStopHat=NULL
 if(is.null(fixed.step)) forwardStopHat=forwardStop(pv,alpha)
         
         
-out=list(pv=pv,vm=vmall,vp=vpall,ci=ci,miscov=miscov,pred=pred,which.steps=which.steps,stepind=stepind,forwardStopHat=forwardStopHat,alpha=alpha,sigma=sigma,one.sided=one.sided,A=A,b=b,call=this.call)
+out=list(pv=pv,vm=vmall,vp=vpall,ci=ci,tailarea=miscov,pred=pred,which.steps=which.steps,stepind=stepind,forwardStopHat=forwardStopHat,alpha=alpha,sigma=sigma,one.sided=one.sided,A=A,b=b,call=this.call)
 
     class(out)="forwardStepInf"
 return(out)
@@ -225,7 +230,7 @@ print.forwardStepInf=function(x,digits = max(3, getOption("digits") - 3),...){
 cat("",fill=T)
 cat("",fill=T)
       nn=length(x$which.steps)
-tab=cbind(x$which.steps,x$pred[1:nn],round(x$pv[1:nn],6),round(x$ci[1:nn,],6),round(x$miscov[1:nn,],6))
+tab=cbind(x$which.steps,x$pred[1:nn],round(x$pv[1:nn],6),round(x$ci[1:nn,],6),round(x$tailarea[1:nn,],6))
       
       
         dimnames(tab)=list(NULL,c("step","predictor","p-value","lowerConfPt","upperConfPt","lowerArea","upperArea"))
@@ -235,9 +240,9 @@ if(!is.null(x$forwardStopHat)){
 cat("",fill=T)
 cat(c("Estimated stopping point from forwardStop rule=", x$forwardStopHat),fill=T)
          cat("",fill=T)
+}
       cat(c("Value used for error standard deviation (sigma)=",round(x$sigma,6)),fill=T)
        cat("",fill=T)
-}
   }
   
 
@@ -268,5 +273,3 @@ forwardStop=function(pv,alpha=.10){
  if(length(oo)>0) out=oo[length(oo)]
 return(out)
 }
-
-

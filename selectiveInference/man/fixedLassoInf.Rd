@@ -9,7 +9,7 @@ Compute p-values and selection intervals for lasso fit with fixed value of regul
 lambda
 }
 \usage{
-fixedLassoInf(x, y, bhat, lam, sigma, alpha = 0.1, trace = F, compute.ci = F, tol = 1e-05, one.sided = TRUE,gridfac=50)
+fixedLassoInf(x, y, bhat, lam, sigma, alpha = 0.1, trace = F, compute.ci = F, tol = 1e-05, one.sided = TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -47,17 +47,18 @@ Tolerance for constraints (default 1e-5)
 }
   \item{one.sided}{
 One-sided p-values? Default TRUE.}
-  \item{gridfac}{
-Number of error SDs for selection intervals range search
-}
 }
 \details{
-%%  ~~ If necessary, more details than the description above ~~
+This function computes selective p-values and confidence intervals (selection intervals) for the lasso
+with a fixed value of the regularization parameter lambda. The selection interval estimation involves numerical search and can be fragile:
+if the observed statistics are too close to either end of the truncation interavls (Vm, Vp) (see ref), the interval of desired coverage
+cannot be computed and is set to (-Inf, +Inf). The output \code{tailarea} gives the achieved Gaussian tail area
+for reported  interval--- these should be close to alpha/2.
 }
 \value{  
 \item{pv}{p-values for each predictor}
 \item{ci}{Selection intervals}
-\item{miscov}{Realized tail area for each  selection interval}
+\item{tailarea}{Realized tail areas (left and right) for each  selection interval}
 \item{eta}{Linear functionals defining each parameter}
 \item{vm}{Lower bounds for functionals}
 \item{vp}{Upper bounds for functionals}
@@ -70,7 +71,7 @@ Number of error SDs for selection intervals range search
 }
 
 \references{
-%% ~put references to the literature/web site here ~
+ Jason D. Lee, Dennis L. Sun, Yuekai Sun, Jonathan E. Taylor (2014). Exact post-selection inference, with application to the lasso. arXiv:1311.6238
 }
 \author{
 Joshua Loftus, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani

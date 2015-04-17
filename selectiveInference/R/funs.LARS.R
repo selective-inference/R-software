@@ -63,11 +63,17 @@ function (object, newx, s, type = c("fit", "coefficients"), mode = c("step",
 
 
 
-larInf=function(x,y,larfit,sigma,compute.ci=TRUE,alpha=.10,one.sided=TRUE,gridfac=50,nsteps = min(nrow(x), ncol(x))){
+larInf=function(x,y,larfit,sigma,compute.ci=TRUE,alpha=.10,one.sided=TRUE,nsteps = min(nrow(x), ncol(x))){
     this.call=match.call()
 SMALL=1e-6
 p=ncol(x)
+    n=nrow(x)
 nk=larfit$nk
+     if(is.null(sigma) & p>=n){cat("Warning: p ge n; sigma set to 1",fill=T)
+                           sigma=1}
+  if(is.null(sigma) & n>p){
+      sigma=sqrt(sum(lsfit(x,y)$res^2)/(n-p))
+  }
 vmm=vpp=pv=sigma.eta=rep(NA,nsteps)
 ci=miscov=matrix(NA,nsteps,2)
 for(k in 1:nsteps){
@@ -77,6 +83,7 @@ for(k in 1:nsteps){
     bhat=sum(temp*y)
   eta=as.vector(temp)
     if(one.sided)eta=eta*sign(bhat)
+    flip=(one.sided & sign(bhat)==-1)
     tt=sum(eta*y)
     A= -larfit$Gam[1:nk[k],]
     pp=nrow(A)
@@ -95,13 +102,13 @@ for(k in 1:nsteps){
     sigma.eta[k]=sigma*sqrt(sum(eta^2))
        u=0  #null
    #  pv[k]=1-(pnorm((tt-u)/sigma.eta[k])-pnorm((vmm[k]-u)/sigma.eta[k]))/(pnorm((vpp[k]-u)/sigma.eta[k])-pnorm((vmm[k]-u)/sigma.eta[k]))
-pv[k]=1-ptruncnorm(tt, vmm[k], vpp[k], u, sigma.eta[k])
+pv[k]=1-rob.ptruncnorm(tt, vmm[k], vpp[k], u, sigma.eta[k])
   #  pv[k]=1-mytruncnorm(tt, vmm[k], vpp[k], u, sigma.eta[k])
 if(!one.sided)  pv[k]=2*min(pv[k],1-pv[k])
   if(compute.ci)
       {
           vs=list(vm=vmm[k],vp=vpp[k])
-           junk=selection.int(y,eta,sigma, vs, alpha,gridfac=gridfac)
+           junk=selection.int(y,eta,sigma, vs, alpha,flip=flip)
           ci[k,]=junk$ci
           miscov[k,]=junk$miscov
       }
@@ -111,7 +118,9 @@ if(!one.sided)  pv[k]=2*min(pv[k],1-pv[k])
 pv.spacing=spacing.pval.asymp.list(y,larfit,nsteps,sigma=sigma)
    junk=covtest(larfit,x,y,sigma,nsteps)
     pv.cov=1-pexp(junk,1)
-    out=list(pv=pv,ci=ci,miscov=miscov,vm=vmm,vp=vpp,sigma=sigma,alpha=alpha,act=larfit$act,pv.spacing=pv.spacing, pv.cov=pv.cov)
+
+     forwardStopHat=forwardStop(pv,alpha)
+    out=list(pv=pv,ci=ci,tailarea=miscov,vm=vmm,vp=vpp,sigma=sigma,alpha=alpha,act=larfit$act,pv.spacing=pv.spacing, pv.cov=pv.cov, forwardStopHat= forwardStopHat)
     out$call=this.call
    class(out)="larInference"
 return(out)
@@ -122,9 +131,12 @@ print.larInference=function(x,digits = max(3, getOption("digits") - 3),...){
       cat("\nCall: ", deparse(x$call), "\n\n")
       cat(c("alpha=",x$alpha),fill=T)
       cat("",fill=T)
-tab=cbind(1:length(x$act),x$act,round(x$pv,3),round(x$ci,3),round(x$miscov,3),round(x$pv.spacing,3),round(x$pv.cov,3))
+tab=cbind(1:length(x$act),x$act,round(x$pv,3),round(x$ci,3),round(x$tailarea,3),round(x$pv.spacing,3),round(x$pv.cov,3))
       dimnames(tab)=list(NULL,c("step","pred","exactPv","lowerConfPt","upperConfPt","lowerArea","upperArea","spacingPv","covtestPv"))
       print(tab)
+      cat("",fill=T)
+cat(c("Estimated stopping point from forwardStop rule=", x$forwardStopHat),fill=T)
+         cat("",fill=T)
   }
 covtest=function(fitobj,x,y,sigma,nsteps = min(nrow(x), ncol(x))) {
 

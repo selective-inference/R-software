@@ -5,7 +5,7 @@ library(truncnorm)
 library(MASS)
 
 
-set.seed(33)
+set.seed(133)
 n=20
 p=10
 sigma=1
@@ -14,7 +14,7 @@ x=matrix(rnorm(n*p),n,p)
 x=scale(x,T,T)/sqrt(n-1)
 
 #generate y
-beta=c(3,3,rep(0,p-2))
+beta=c(-20,3,rep(0,p-2))
 y=x%*%beta+sigma*rnorm(n)
 
 y=y-mean(y)
@@ -28,3 +28,19 @@ bhat = coef(a, s=lam/n)[-1]
 
 a4=fixedLassoInf(x,y,bhat,lam,sigma,compute.ci=T)
 
+
+## check of numerics for one case
+ fun = function(x,etay,vm,vp,sigma.eta) return(1-ptruncnorm(etay,vm,vp,x,sigma.eta))
+xx=seq(-62,63,length=50000)
+vm=18.98
+etay=19.81
+vp=23.37
+sigma.eta=1.4
+u=0
+
+ 1-ptruncnorm(etay, vm, vp, u, sigma.eta)
+
+w=fun(xx,etay,vm,vp,sigma.eta) 
+
+
+plot(xx,w)

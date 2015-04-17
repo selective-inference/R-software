@@ -2,28 +2,41 @@
 library(truncnorm)
 
 options(error=dump.frames)
-set.seed(33)
-n=20
+set.seed(3)
+n=40
+p=6
+
+n=100
 p=10
-sigma=1
+sigma=.7
 
 x=matrix(rnorm(n*p),n,p)
 x=scale(x,T,T)/sqrt(n-1)
 
 #generate y
-beta=c(4,2,rep(0,p-2))
+beta=c(-5,0,0,0,rep(0,p-4))
 y=x%*%beta+sigma*rnorm(n)
 
 y=y-mean(y)
 
 a=forwardStep(x,y)
 
-aa=forwardStepInf(a,x,y,compute.ci=T,nsteps=2)
+aa=forwardStepInf(a,x,y,sigma=sigma,compute.ci=T,nsteps=10,alpha=.05)
 
-aa2=forwardStepInf(a,x,y,compute.ci=T,fixed.step=4)
+aa2=forwardStepInf(a,x,y,sigma=sigma,compute.ci=T,fixed.step=4)
 
-aa3=forwardStepInf(a,x,y,compute.ci=T, aic.stop=T)
+aa3=forwardStepInf(a,x,y,sigma=sigma,compute.ci=T, aic.stop=T)
 
+fsfit=a
+sigma=a$sigma
+aic.stop=F
+trace=F
+alpha=.1
+fixed.step=NULL
+nsteps=10
+compute.ci=T
+one.sided=T
+gridfac=50
 
 
 ###########

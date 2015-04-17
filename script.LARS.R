@@ -13,8 +13,10 @@ options(error=dump.frames)
 
 
 set.seed(33)
-n=20
-p=10
+#n=20
+#p=10
+n=100
+p=40
 sigma=1
 
 x=matrix(rnorm(n*p),n,p)
