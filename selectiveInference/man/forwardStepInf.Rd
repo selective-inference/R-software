@@ -7,7 +7,7 @@ Selective inference for forward stepwise regression
 Computes exact p-values and selection intervals for forward stepwise regression
 }
 \usage{
-forwardStepInf(fsfit, x, y, sigma, nsteps = NULL, alpha = 0.1, fixed.step = NULL, aic.stop = FALSE, trace = F, compute.ci = TRUE, one.sided = TRUE,gridfac=50)
+forwardStepInf(fsfit, x, y, sigma, nsteps = NULL, alpha = 0.1, fixed.step = NULL, aic.stop = FALSE, trace = F, compute.si = TRUE, one.sided = TRUE,gridfac=50)
 }
 \arguments{
   \item{fsfit}{
@@ -23,7 +23,8 @@ Vector of outcomes (length n)
 Estimate of error standard deviation; default is value returned by forwardStep
 }
   \item{nsteps}{
-Number of steps to analyze (default is number used in forwardStep)
+Number of steps to analyze. Default is min(k,20) where k is the  number used in forwardStep.
+
 }
   \item{alpha}{
 Significance level for  selection intervals (target is miscoverage alpha/2 in each tail)
@@ -38,8 +39,8 @@ results for each FS step are computed.
   \item{trace}{
 Print out more details along the way.
 }
-  \item{compute.ci}{
-Compute selection interals? Default TRUE. Can slow down the computation, if only p-values are required.
+  \item{compute.si}{
+Compute selection intervals? Default TRUE. Can slow down the computation, if only p-values are required.
 }
   \item{one.sided}{
 One-sided p-values? Default TRUE.

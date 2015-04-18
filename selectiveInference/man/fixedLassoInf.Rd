@@ -9,7 +9,7 @@ Compute p-values and selection intervals for lasso fit with fixed value of regul
 lambda
 }
 \usage{
-fixedLassoInf(x, y, bhat, lam, sigma, alpha = 0.1, trace = F, compute.ci = F, tol = 1e-05, one.sided = TRUE)
+fixedLassoInf(x, y, bhat, lam, sigma, alpha = 0.1, trace = F, compute.si = TRUE, tol = 1e-05, one.sided = TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -39,7 +39,7 @@ Significance level for  selection intervals (target is miscoverage alpha/2 in ea
 }
   \item{trace}{
 Print out more details along the way.}
-  \item{compute.ci}{
+  \item{compute.si}{
 Compute selection intervals? Default TRUE. Can slow down the computation, if only p-values are desired. 
 }
   \item{tol}{

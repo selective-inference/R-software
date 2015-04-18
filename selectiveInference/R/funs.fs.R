@@ -1,14 +1,15 @@
 
-forwardStep=function(x,y,sigma=NULL,nsteps=min(nrow(x),ncol(x))){
+forwardStep=function(x,y,sigma=NULL,nsteps=min(nrow(x)-1,ncol(x))){
     this.call=match.call()
     BIG=10e9
     n=nrow(x)
 p=ncol(x)
+    
 # fs by minimizing scaled ip
 # first center x and y
 x=scale(x,T,F)
 y=y-mean(y)
-    if(is.null(sigma) & p>=n){cat("Warning: p ge n; sigma=1 used for AIC",fill=T)}
+    if(is.null(sigma) & p>=n){cat("Warning: p ge n; sigma=1 used for AIC",fill=T); sigma=1}
   if(is.null(sigma) & n>p){
       sigma=sqrt(sum(lsfit(x,y)$res^2)/(n-p))
   }
@@ -66,7 +67,7 @@ tab=cbind(1:length(x$pred),x$pred,x$bhat,x$scor)
   }
 
 forwardStepInf=
-function(fsfit,x,y,sigma=NULL,nsteps=NULL,alpha=.10,fixed.step=NULL,aic.stop=FALSE,trace=F,compute.ci=TRUE,one.sided=TRUE){
+function(fsfit,x,y,sigma=NULL,nsteps=NULL,alpha=.10,fixed.step=NULL,aic.stop=FALSE,trace=F,compute.si=TRUE,one.sided=TRUE){
 # pvalues for forward stepwise
 #  returns pval and interval for predictor just entered (default with which.pred=1:nsteps) 
 # otherwise which.pred is a vector of length nsteps, and it returns 
@@ -78,7 +79,7 @@ p=ncol(x)
   if(is.null(sigma)) sigma=fsfit$sigma
     
     if(aic.stop){fixed.step=fsfit$aichat}
-if(is.null(nsteps)){ nsteps=length(fsfit$pred)}
+if(is.null(nsteps)){ nsteps=min(length(fsfit$pred),20)}
     if(!is.null(fixed.step))  nsteps=fixed.step
 # first center x and y
 
@@ -107,7 +108,7 @@ stepind=NULL
  A=b=NULL
 
 
-
+if(trace) cat("Constructing constraint matrix",fill=T)
 for(j in 1:nsteps){
 if(trace) cat(c("step=",j),fill=T)
   notin=rep(T,p)
@@ -170,7 +171,7 @@ pv=rep(NA,p)
 ci=miscov=matrix(NA,nrow=p,ncol=2)
 
 
-
+if(trace) cat("Computing p-values",fill=T)
 for(kk in 1:length(which.steps)){
 if(trace) cat(c("step=",kk),fill=T)
 if(is.null(fixed.step)) pp=sum(stepind<=which.steps[kk])
@@ -199,16 +200,17 @@ vmm=junk$vm;vpp=junk$vp
 if(!one.sided)  pv[kk]=2*min(pv[kk],1-pv[kk])
 
   
-  if(compute.ci)
+  if(compute.si)
       {
+          if(trace) cat("Computing selection intervals",fill=T)
            vs=list(vm=vmm,vp=vpp)
           junk=selection.int(y,eta,sigma,vs,alpha,flip=flip)
-          cat(c(vs$vm,sum(eta*y),vs$vp,sigma,sigma.eta,alpha),fill=T)
+#     cat(c(vs$vm,sum(eta*y),vs$vp,sigma,sigma.eta,alpha),fill=T)
           ci[kk,]=junk$ci;miscov[kk,]=junk$miscov
       }
 
-}
 
+}
     
 forwardStopHat=NULL
 if(is.null(fixed.step)) forwardStopHat=forwardStop(pv,alpha)
@@ -242,8 +244,8 @@ cat(c("Estimated stopping point from forwardStop rule=", x$forwardStopHat),fill=
          cat("",fill=T)
 }
       cat(c("Value used for error standard deviation (sigma)=",round(x$sigma,6)),fill=T)
-       cat("",fill=T)
   }
+  
   
 
 

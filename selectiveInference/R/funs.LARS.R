@@ -63,7 +63,7 @@ function (object, newx, s, type = c("fit", "coefficients"), mode = c("step",
 
 
 
-larInf=function(x,y,larfit,sigma,compute.ci=TRUE,alpha=.10,one.sided=TRUE,nsteps = min(nrow(x), ncol(x))){
+larInf=function(x,y,larfit,sigma,compute.si=TRUE,alpha=.10,one.sided=TRUE,nsteps = min(nrow(x), ncol(x))){
     this.call=match.call()
 SMALL=1e-6
 p=ncol(x)
@@ -105,7 +105,7 @@ for(k in 1:nsteps){
 pv[k]=1-rob.ptruncnorm(tt, vmm[k], vpp[k], u, sigma.eta[k])
   #  pv[k]=1-mytruncnorm(tt, vmm[k], vpp[k], u, sigma.eta[k])
 if(!one.sided)  pv[k]=2*min(pv[k],1-pv[k])
-  if(compute.ci)
+  if(compute.si)
       {
           vs=list(vm=vmm[k],vp=vpp[k])
            junk=selection.int(y,eta,sigma, vs, alpha,flip=flip)
