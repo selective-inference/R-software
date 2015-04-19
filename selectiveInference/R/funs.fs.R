@@ -202,7 +202,7 @@ if(!one.sided)  pv[kk]=2*min(pv[kk],1-pv[kk])
   
   if(compute.si)
       {
-          if(trace) cat("Computing selection intervals",fill=T)
+          if(trace) cat("Computing selection interval",fill=T)
            vs=list(vm=vmm,vp=vpp)
           junk=selection.int(y,eta,sigma,vs,alpha,flip=flip)
 #     cat(c(vs$vm,sum(eta*y),vs$vp,sigma,sigma.eta,alpha),fill=T)

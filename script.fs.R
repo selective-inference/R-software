@@ -4,10 +4,10 @@ library(truncnorm)
 options(error=dump.frames)
 set.seed(3)
 n=40
-p=6
+p=16
 
 n=100
-p=10
+p=100
 sigma=.7
 
 x=matrix(rnorm(n*p),n,p)
@@ -21,11 +21,11 @@ y=y-mean(y)
 
 a=forwardStep(x,y)
 
-aa=forwardStepInf(a,x,y,sigma=sigma,compute.ci=T,nsteps=10,alpha=.05)
+aa=forwardStepInf(a,x,y,compute.si=T,alpha=.05,trace=T)
 
-aa2=forwardStepInf(a,x,y,sigma=sigma,compute.ci=T,fixed.step=4)
+aa2=forwardStepInf(a,x,y,sigma=sigma,compute.si=T,fixed.step=4)
 
-aa3=forwardStepInf(a,x,y,sigma=sigma,compute.ci=T, aic.stop=T)
+aa3=forwardStepInf(a,x,y,sigma=sigma,compute.si=T, aic.stop=T)
 
 fsfit=a
 sigma=a$sigma
