@@ -33,7 +33,7 @@ forwardStop(pv, alpha = 0.1)
 %% ~put references to the literature/web site here ~
 }
 \author{
-%%  ~~who you are~~
+Joshua Loftus, Stephen Reid,  Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 }
 \note{
 %%  ~~further notes~~

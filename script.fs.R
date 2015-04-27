@@ -6,12 +6,12 @@ set.seed(3)
 n=40
 p=16
 
-n=100
-p=100
+#n=100
+#p=100
 sigma=.7
 
 x=matrix(rnorm(n*p),n,p)
-x=scale(x,T,T)/sqrt(n-1)
+x=scale(x,T,F)
 
 #generate y
 beta=c(-5,0,0,0,rep(0,p-4))
@@ -21,7 +21,7 @@ y=y-mean(y)
 
 a=forwardStep(x,y)
 
-aa=forwardStepInf(a,x,y,compute.si=T,alpha=.05,trace=T)
+aa=forwardStepInf(a,x,y,compute.si=T,alpha=.05,trace=F)
 
 aa2=forwardStepInf(a,x,y,sigma=sigma,compute.si=T,fixed.step=4)
 

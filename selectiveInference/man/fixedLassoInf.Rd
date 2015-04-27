@@ -74,7 +74,7 @@ for reported  interval--- these should be close to alpha/2.
  Jason D. Lee, Dennis L. Sun, Yuekai Sun, Jonathan E. Taylor (2014). Exact post-selection inference, with application to the lasso. arXiv:1311.6238
 }
 \author{
-Joshua Loftus, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
+Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 }
 \note{
 %%  ~~further notes~~
@@ -87,7 +87,28 @@ Joshua Loftus, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 }
 \examples{
 
+
+#NOT RUN
+#set.seed(43)
+#n=50
+#p=10
+#sigma=.7
+#x=matrix(rnorm(n*p),n,p)
+#x=scale(x,T,T)/sqrt(n-1)
+#beta=c(3,2,0,0,rep(0,p-4))
+#y=x%*%beta+sigma*rnorm(n)
+#y=y-mean(y)
+# first run  glmnet
+#gfit=glmnet(x,y,standardize=F)
+#lam = .1
+#extract coef for a given lam; Note the 1/n factor!
+#bhat = coef(gfit, s=lam/n)[-1]
+
+# compute fixed lambda p-values and selection intervals
+#aa=fixedLassoInf(x,y,bhat,lam,sigma)
+
 }
+
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
 \keyword{ ~kwd1 }

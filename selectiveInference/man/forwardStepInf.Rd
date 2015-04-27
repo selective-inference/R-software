@@ -85,7 +85,7 @@ A significance test for forward stepwise
 model selection. arXiv:1405.3920v1
 }
 \author{
-Joshua Loftus, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
+Joshua Loftus, Stephen Reid,  Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 }
 
 
@@ -95,6 +95,32 @@ Joshua Loftus, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
+#NOT RUN
+#set.seed(43)
+#n=50
+#p=10
+#sigma=.7
+#x=matrix(rnorm(n*p),n,p)
+#x=scale(x,T,F)
+#beta=c(3,2,0,0,rep(0,p-4))
+#y=x%*%beta+sigma*rnorm(n)
+#y=y-mean(y)
+#first run forward stepwise
+# fsfit=forwardStep(x,y)
+#
+# forward stepwise inference for each successive entry of a predictor; sigma estimated
+#  from mean squared residual
+# aa=forwardStepInf(fsfit,x,y)
+
+# forward stepwise inference for fixed model of size 4, testing deletion of each predictor; 
+# known value of sigma used
+# aa2=forwardStepInf(fsfit,x,y,sigma=sigma,fixed.step=4)
+
+# forward stepwise inference for  model chosen by AIC, testing deletion of each predictor; 
+# known value of sigma used
+# aa3=forwardStepInf(fsfit,x,y,sigma=sigma, aic.stop=T)
+
+
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

@@ -2,11 +2,14 @@ require(genlasso)
 require(truncnorm)
 require(MASS)
 
-fixedLassoInf=function(x,y,bhat,lambda,sigma,alpha=.10,trace=F,compute.si=F,tol=1e-5,one.sided=TRUE){
+fixedLassoInf=function(x,y,bhat,lambda,sigma=NULL,alpha=.10,trace=F,compute.si=TRUE,tol=1e-5,one.sided=TRUE){
     # inference for fixed lam lasso
 #assumes data is centered
  # careful!  lambda is for usual lasso problem; glmnet uses lambda/n
     this.call=match.call()
+    
+    checkargs(x=x,y=y,bhat=bhat,lambda=lambda,sigma=sigma,alpha=alpha,tol=tol)
+    
 junk=tf.jonab(y,x,bhat,lambda,tol=tol)
 n=length(y)
     p=ncol(x)
@@ -196,100 +199,3 @@ tf.jonint = function(y,eta,sigma2,vs,alpha,del=1e-3) {
   return(c(lo,hi))
 }
 
-
-
-tnorm.cdf = function(x,mean,sd,a,b) {
-  return((pnorm(x,mean,sd)-pnorm(a,mean,sd))/
-         (pnorm(b,mean,sd)-pnorm(a,mean,sd)))
-}
-
-tnorm.surv = function(x,mean,sd,a,b) {
-    #prob(X>x)
-  return((pnorm(b,mean,sd)-pnorm(x,mean,sd))/
-         (pnorm(b,mean,sd)-pnorm(a,mean,sd)))
-}
-
-bin.search = function(x, fun, val, inc=0.01, tol=1e-2) {  
-  # Find left and right bounds
-  xl = x
-  while (fun(xl)>val) xl = xl-inc
-  if (xl==x) {
-    xr = x
-    while (fun(xr)<val) xr = xr+inc
-    xl = xr-inc
-  }
-  else xr = xl+inc
-  
-  # Grid search
-  G = 100
-  xg = seq(xl,xr,length=G)
-  vals = numeric(G)
-  for (i in 1:G) vals[i] = fun(xg[i])
-  return(xg[which.min(abs(vals-val))])
- 
-}
-
-
-
-selection.int = function(y,eta,sigma,vs,alpha,del=1e-4,flip=F) {
-    #Rob's version using grid search
-    gridfac=50 
-    etay=sum(eta*y)
-     vm=vs$vm; vp=vs$vp
-    fun = function(x,etay,vm,vp,sigma.eta) return(1-ptruncnorm(etay,vm,vp,x,sigma.eta))
-lo=-Inf
-hi=Inf
-covlo=covhi=0
-     sigma.eta=sqrt(sum(eta^2))*sigma
-if( min(etay-vm,vp-etay)>.075*sigma.eta){
-  inc = sqrt(sum(eta^2)*sigma)*del
-   
-    xL=etay-gridfac*sigma.eta
-    xR=etay+gridfac*sigma.eta
-  lo = grid.search(fun,alpha/2,xL,xR,inc=inc,etay=etay,vm=vm,vp=vp,sigma.eta=sigma.eta)
-  hi = grid.search(fun,1-alpha/2,xL,xR,inc=inc,etay=etay,vm=vm,vp=vp,sigma.eta=sigma.eta)
-    covlo=fun(lo,etay,vm,vp,sigma.eta)
-    covhi=1-fun(hi,etay,vm,vp,sigma.eta)
-}
-    if(flip){temp=hi;hi=-lo;lo=-temp;  temp2=covlo;covlo=covhi;covhi=temp2}
-  return(list(ci=c(lo,hi), miscov=c(covlo,covhi)))
-}
-
-grid.search=function(fun, val, xL,xR, inc=0.01, tol=1e-2,etay=etay,vm=vm,vp=vp,sigma.eta=sigma.eta) {
-#
-    #  here I used grid search instead of binary search
-G = 50000
-  xg = seq(xL,xR,length=G)
- # vals = numeric(G)
-#  for (i in 1:G) vals[i] = fun(xg[i],etay,vm,vp,sigma.eta)
-vals = fun(xg,etay,vm,vp,sigma.eta)
-  return(xg[which.min(abs(vals-val))])
-
-}
-
-rob.ptruncnorm=function(etay, vneg,vpos, etamu, sigma){
-    	if(max(vneg-etamu,etamu-vpos)/sigma < 7){
-		     return(ptruncnorm(etay, vneg, vpos, etamu, sigma))
-                 }
-		   
-	else{
-            if(etay > etamu) return(1)
-            if(etay < etamu) return(0)
-             if(etay== etamu) return(.5)
-        }
-    }
-
-mytruncnorm = function(etay, vneg,vpos, etamu, sigma){
-    # From Sam Gross- uses exp approximation in extreme tails
-	# if range is too many sds away from mu, then there
-	# will be numerical errors from using truncnorm
-	if(max(vneg-etamu,etamu-vpos)/sigma < 7){
-		     return(ptruncnorm(etay, vneg, vpos, etamu, sigma))
-                 }
-		   
-	else{
-	   
-	      return(1 - pexp(vpos-etay, etamu-vpos)/ pexp(vpos-vneg, etamu-vpos))
-	        
-          }
-    }

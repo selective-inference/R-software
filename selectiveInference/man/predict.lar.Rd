@@ -48,10 +48,7 @@ Any arguments for ‘predict.lar’ should work for ‘coef.lars’
 }
 \details{
 LARS is described in detail in Efron, Hastie, Johnstone and
-     Tibshirani (2002). With the "lasso" option, it computes the
-     complete lasso solution simultaneously for ALL values of the
-     shrinkage parameter in the same computational cost as a least
-     squares fit.
+     Tibshirani (2002).
 }
 \value{
 Either a vector/matrix of fitted values, or a vector/matrix of
@@ -71,7 +68,7 @@ Efron, Hastie, Johnstone and Tibshirani (2002) "Least Angle
 arXiv:1401.3889
 }
 \author{
-Joshua Loftus, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
+Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 }
 \note{
 %%  ~~further notes~~

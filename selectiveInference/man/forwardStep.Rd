@@ -23,7 +23,8 @@ Number of steps to take (default=min(n,p))
 }
 \details{
 This function implements forward stepwise regression, adding the predictotr maximize the scaled inner product between the residual r and the 
-orthogonalized predictors at each step. That is, argmax t(xr) %*% r/sqrt(diag(t(xr) %*% xr))
+orthogonalized predictors at each step. That is, argmax t(xr) %*% r/sqrt(diag(t(xr) %*% xr)).
+The data x and y are first centered by the function.
 }
 \value{
 \item{pred}{Predictors entered in order}
@@ -52,10 +53,21 @@ Joshua Loftus, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
+#NOT RUN
+#set.seed(43)
+#n=50
+#p=10
+#sigma=.7
+#x=matrix(rnorm(n*p),n,p)
+#x=scale(x,T,F)
+#beta=c(3,2,0,0,rep(0,p-4))
+#y=x%*%beta+sigma*rnorm(n)
+#y=y-mean(y)
+
+#fsfit=forwardStep(x,y)
 }
+
+
 
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

@@ -20,13 +20,13 @@ y=x%*%beta+sigma*rnorm(n)
 y=y-mean(y)
 
 a=glmnet(x,y,standardize=F)
-lam = .1
-bhat = coef(a, s=lam/n)[-1]
+lambda = .1
+bhat = coef(a, s=lambda/n)[-1]
 
 
 # compute fixed lambda p-values
 
-a4=fixedLassoInf(x,y,bhat,lam,sigma,compute.ci=T)
+a4=fixedLassoInf(x,y,bhat,lambda,sigma,compute.si=T)
 
 
 ## check of numerics for one case

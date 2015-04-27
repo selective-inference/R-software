@@ -65,6 +65,8 @@ function (object, newx, s, type = c("fit", "coefficients"), mode = c("step",
 
 larInf=function(x,y,larfit,sigma,compute.si=TRUE,alpha=.10,one.sided=TRUE,nsteps = min(nrow(x), ncol(x))){
     this.call=match.call()
+    
+       checkargs(x=x,y=y,larfit=larfit,lambda=lambda,sigma=sigma,alpha=alpha,nsteps=nsteps)
 SMALL=1e-6
 p=ncol(x)
     n=nrow(x)

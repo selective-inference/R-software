@@ -1,6 +1,7 @@
 
 forwardStep=function(x,y,sigma=NULL,nsteps=min(nrow(x)-1,ncol(x))){
     this.call=match.call()
+    checkargs(x=x,y=y,nsteps=nsteps,sigma=sigma)
     BIG=10e9
     n=nrow(x)
 p=ncol(x)
@@ -73,6 +74,9 @@ function(fsfit,x,y,sigma=NULL,nsteps=NULL,alpha=.10,fixed.step=NULL,aic.stop=FAL
 # otherwise which.pred is a vector of length nsteps, and it returns 
 #  info for which.pred[k]th pred at step k
     this.call=match.call()
+    
+      checkargs(x=x,y=y,nsteps=nsteps,sigma=sigma,alpha=alpha, fsfit=fsfit)
+    
 n=nrow(x)
 p=ncol(x)
     
