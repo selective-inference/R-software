@@ -107,12 +107,16 @@ if(aic.stop & fsfit$aichat==0){
 
 # construct matrices A and b
     vv=1/sum(xx[,pred[1]]^2)
-stepind=NULL
 
- A=b=NULL
 
+# A=b=stepind=NULL
+    nr=2*(nsteps*p-sum(1:nsteps))+1
+    if(aic.stop) nr=nr+nsteps
+A=matrix(NA,nrow=nr,ncol=n)
+    b=stepind=rep(NA,nr)
 
 if(trace) cat("Constructing constraint matrix",fill=T)
+    ii=0
 for(j in 1:nsteps){
 if(trace) cat(c("step=",j),fill=T)
   notin=rep(T,p)
@@ -128,10 +132,19 @@ if(trace) cat(c("step=",j),fill=T)
  w=sqrt(sum(xx[,jj]^2))
   for(k in which(rest)){
  w2=sqrt(sum(xx[,k]^2))
-A=rbind(A, -(s[j]*xx[,jj]/w-xx[,k]/w2)%*%(diag(n)-proj))
-A=rbind(A, -(s[j]*xx[,jj]/w+xx[,k]/w2)%*%(diag(n)-proj))
- b=c(b,0,0)
-stepind=c(stepind,j,j)
+
+#A=rbind(A, -(s[j]*xx[,jj]/w-xx[,k]/w2)%*%(diag(n)-proj))
+#A=rbind(A, -(s[j]*xx[,jj]/w+xx[,k]/w2)%*%(diag(n)-proj))
+ # b=c(b,0,0)
+ #stepind=c(stepind,j,j)
+  ii=ii+1
+ A[ii,]=-(s[j]*xx[,jj]/w-xx[,k]/w2)%*%(diag(n)-proj)
+ b[ii]=0
+ stepind[ii]=j
+ ii=ii+1
+  A[ii,]=-(s[j]*xx[,jj]/w+xx[,k]/w2)%*%(diag(n)-proj)
+ b[ii]=0
+ stepind[ii]=j
 }
  if(aic.stop){
      #constrain that change in AIC > 2sigma
@@ -139,8 +152,12 @@ stepind=c(stepind,j,j)
        vv=solve(t(xx[,mod2,drop=F])%*%xx[,mod2,drop=F])
    temp=vv%*%t(xx[,mod2,drop=F])
       temp2=-s[j]*temp[j,,drop=F]/(sigma*sqrt(vv[j,j]))
-  A=rbind(A, temp2)
-  b=c(b,-sqrt(2))
+      ii=ii+1
+ # A=rbind(A, temp2)
+      #  b=c(b,-sqrt(2))
+      A[ii,]=temp2
+      b[ii]=-sqrt(2)
+      stepind[ii]=j
 }
 }
 
@@ -150,9 +167,13 @@ if(is.null(fixed.step)){
 mod=pred[1:nsteps]
 fitter=solve(t(xx[,mod])%*%xx[,mod])%*%t(xx[,mod])
 aa=-1*fitter[nsteps,]*s[nsteps]
-A=rbind(A,aa)
-stepind=c(stepind,nsteps)
-b=c(b,0)
+ii=ii+1
+#A=rbind(A,aa)
+#b=c(b,0)
+#stepind=c(stepind,nsteps)
+A[ii,]=aa
+b[ii]=0
+stepind[ii]=nsteps
 }
 #for aic stop, add constraint that diff in AIC is < 2sigma, so that it stops
  # (equiv to bhat/se < sqrt(2))
@@ -163,8 +184,12 @@ if(aic.stop){
       temp=vv%*%t(xx[,mod2,drop=F])
      snew=sign(sum(temp[pp,]*y))
      temp2=snew*temp[pp,,drop=F]/(sigma*sqrt(vv[pp,pp]))
-     A=rbind(A, temp2)
-  b=c(b,sqrt(2))
+   #  A=rbind(A, temp2)
+#  b=c(b,sqrt(2))
+      #stepind=nsteps
+      A[ii,]=temp2
+b[ii]=sqrt(2)
+stepind[ii]=nsteps
  }
     
     
