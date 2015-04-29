@@ -5,7 +5,7 @@
 Forward stop rule for sequential inference
 }
 \description{
-%%  ~~ A concise (1-5 lines) description of what the function does. ~~
+Computes the forward Stop sequential stopping rule  of  G'Sell et al (2014).
 }
 \usage{
 forwardStop(pv, alpha = 0.1)
@@ -13,37 +13,29 @@ forwardStop(pv, alpha = 0.1)
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{pv}{
-%%     ~~Describe \code{pv} here~~
+vector of **sequential** p-values, for example from forwardStepInf or larInf
 }
   \item{alpha}{
-%%     ~~Describe \code{alpha} here~~
+Desired type FDR level (between 0 and 1)
 }
 }
 \details{
-%%  ~~ If necessary, more details than the description above ~~
+Computes the forward Stop sequential stopping rule  of  G'Sell et al (2014).
+Guarantees FDR control at level alpha.
 }
 \value{
-%%  ~Describe the value returned
-%%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
-%% ...
+Step number for sequential stop.
 }
 \references{
-%% ~put references to the literature/web site here ~
+Max Grazier G'Sell, Stefan Wager, Alexandra Chouldechova, Robert Tibshirani (2014).
+Sequential Selection Procedures and False Discovery Rate Control. arXiv:1309.5352.
+To appear JRSSB.
 }
 \author{
 Joshua Loftus, Stephen Reid,  Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 }
-\note{
-%%  ~~further notes~~
-}
 
-%% ~Make other sections like Warning with \section{Warning }{....} ~
 
-\seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
-}
 \examples{
 ##---- Should be DIRECTLY executable !! ----
 ##-- ==>  Define data, use random,
@@ -61,7 +53,6 @@ function (pv, alpha = 0.1)
     return(out)
   }
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
+
 \keyword{ ~kwd1 }
 \keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

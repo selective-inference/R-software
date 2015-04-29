@@ -9,7 +9,7 @@ Compute p-values and selection intervals for lasso fit with fixed value of regul
 lambda
 }
 \usage{
-fixedLassoInf(x, y, bhat, lam, sigma, alpha = 0.1, trace = F, compute.si = TRUE, tol = 1e-05, one.sided = TRUE)
+fixedLassoInf(x, y, bhat, lambda, sigma=NULL, alpha = 0.1, trace = FALSE, compute.si = TRUE, tol = 1e-05, one.sided = TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -67,7 +67,7 @@ for reported  interval--- these should be close to alpha/2.
 \item{sigma}{Value of error standard deviation (sigma) used}
 \item{one.sided}{Are the pvalues one-sided}
 \item{lambda}{Value of regularization parameter lambda used}
-\item{call}{The call to forwardStepInf}
+\item{call}{The call to fixedLassoInf}
 }
 
 \references{
@@ -76,15 +76,7 @@ for reported  interval--- these should be close to alpha/2.
 \author{
 Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 }
-\note{
-%%  ~~further notes~~
-}
 
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
-\seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
-}
 \examples{
 
 

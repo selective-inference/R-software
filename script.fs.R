@@ -1,13 +1,12 @@
  library(selectiveInference,lib.loc="mylib")
-library(truncnorm)
 
 options(error=dump.frames)
-set.seed(3)
+set.seed(333)
 n=40
 p=16
 
-#n=100
-#p=100
+n=500
+p=50
 sigma=.7
 
 x=matrix(rnorm(n*p),n,p)
@@ -15,15 +14,17 @@ x=scale(x,T,F)
 
 #generate y
 beta=c(-5,0,0,0,rep(0,p-4))
+beta=c(rep(2,10),rep(0,p-10))
+
 y=x%*%beta+sigma*rnorm(n)
 
 y=y-mean(y)
 
 a=forwardStep(x,y)
 
-aa=forwardStepInf(a,x,y,compute.si=T,alpha=.05,trace=F)
+aa=forwardStepInf(a,x,y,compute.si=F,trace=T)
 
-aa2=forwardStepInf(a,x,y,sigma=sigma,compute.si=T,fixed.step=4)
+aa2=forwardStepInf(a,x,y,sigma=sigma,compute.si=T,fixed.step=10)
 
 aa3=forwardStepInf(a,x,y,sigma=sigma,compute.si=T, aic.stop=T)
 
@@ -50,8 +51,8 @@ setting=1  # sequential steps
 #setting=3  #AIC stop
 
 set.seed(333)
-n=20
-p=10
+n=100
+p=50
 nsim=500
 
 
@@ -72,9 +73,9 @@ y=x%*%beta+sigma*rnorm(n)
 y=y-mean(y)
 
 fsfit=forwardStep(x,y,sigma=sigma)
-if(setting==1) aa=forwardStepInf(fsfit,x,y,sigma=sigma,compute.ci=F,nsteps=2)
-if(setting==2) aa=forwardStepInf(fsfit,x,y,sigma=sigma,compute.ci=F,fixed.step=2)
-if(setting==3) aa=forwardStepInf(fsfit,x,y,sigma=sigma,compute.ci=F, aic.stop=T)
+if(setting==1) aa=forwardStepInf(fsfit,x,y,sigma=sigma,compute.si=F,nsteps=2)
+if(setting==2) aa=forwardStepInf(fsfit,x,y,sigma=sigma,compute.si=F,fixed.step=2)
+if(setting==3) aa=forwardStepInf(fsfit,x,y,sigma=sigma,compute.si=F, aic.stop=T)
 pv[ii,]=aa$pv
 
 aichat[ii]=fsfit$aichat

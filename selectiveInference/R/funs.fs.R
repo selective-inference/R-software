@@ -1,5 +1,5 @@
 
-forwardStep=function(x,y,sigma=NULL,nsteps=min(nrow(x)-1,ncol(x))){
+forwardStep=function(x,y,sigma=NULL,nsteps=min(nrow(x)-1,ncol(x)),trace=FALSE){
     this.call=match.call()
     checkargs(x=x,y=y,nsteps=nsteps,sigma=sigma)
     BIG=10e9
@@ -16,6 +16,7 @@ y=y-mean(y)
   }
 pred=s=scor=bhat=rep(NA,nsteps)
    ip=t(x)%*%y/sqrt(diag(t(x)%*%x))
+    if(trace) cat("step=1",fill=T)
   pred[1]=which.max(abs(ip))
  s[1]=sign(sum(x[,pred[1]]*y))
 scor[1]=ip[pred[1]]
@@ -23,6 +24,7 @@ bhat[1]=ip[pred[1]]/sqrt(sum(x[,pred[1]]^2))
 
 r=lsfit(x[,pred[1]],y)$res
 for(j in 2:nsteps){
+     if(trace) cat(c("step=",j),fill=T)
   mod=pred[1:(j-1)]
   r= lsfit(x[,mod],r)$res
   xr= lsfit(x[,mod],x)$res
@@ -132,29 +134,20 @@ if(trace) cat(c("step=",j),fill=T)
  w=sqrt(sum(xx[,jj]^2))
   for(k in which(rest)){
  w2=sqrt(sum(xx[,k]^2))
-
-#A=rbind(A, -(s[j]*xx[,jj]/w-xx[,k]/w2)%*%(diag(n)-proj))
-#A=rbind(A, -(s[j]*xx[,jj]/w+xx[,k]/w2)%*%(diag(n)-proj))
- # b=c(b,0,0)
- #stepind=c(stepind,j,j)
   ii=ii+1
  A[ii,]=-(s[j]*xx[,jj]/w-xx[,k]/w2)%*%(diag(n)-proj)
- b[ii]=0
- stepind[ii]=j
+ b[ii]=0;  stepind[ii]=j
  ii=ii+1
   A[ii,]=-(s[j]*xx[,jj]/w+xx[,k]/w2)%*%(diag(n)-proj)
- b[ii]=0
- stepind[ii]=j
+ b[ii]=0;  stepind[ii]=j
 }
  if(aic.stop){
-     #constrain that change in AIC > 2sigma
+     #constraint so that change in AIC > 2sigma
       mod2=pred[1:j]
        vv=solve(t(xx[,mod2,drop=F])%*%xx[,mod2,drop=F])
    temp=vv%*%t(xx[,mod2,drop=F])
       temp2=-s[j]*temp[j,,drop=F]/(sigma*sqrt(vv[j,j]))
       ii=ii+1
- # A=rbind(A, temp2)
-      #  b=c(b,-sqrt(2))
       A[ii,]=temp2
       b[ii]=-sqrt(2)
       stepind[ii]=j
@@ -168,9 +161,6 @@ mod=pred[1:nsteps]
 fitter=solve(t(xx[,mod])%*%xx[,mod])%*%t(xx[,mod])
 aa=-1*fitter[nsteps,]*s[nsteps]
 ii=ii+1
-#A=rbind(A,aa)
-#b=c(b,0)
-#stepind=c(stepind,nsteps)
 A[ii,]=aa
 b[ii]=0
 stepind[ii]=nsteps
@@ -200,7 +190,8 @@ pv=rep(NA,p)
 ci=miscov=matrix(NA,nrow=p,ncol=2)
 
 
-if(trace) cat("Computing p-values",fill=T)
+if(trace & !compute.si) cat("Computing p-values",fill=T)
+    if(trace & compute.si) cat("Computing p-values and selection intervals",fill=T)
 for(kk in 1:length(which.steps)){
 if(trace) cat(c("step=",kk),fill=T)
 if(is.null(fixed.step)) pp=sum(stepind<=which.steps[kk])
@@ -217,7 +208,7 @@ if(!is.null(fixed.step)) kkk=kk
     bhat=sum(eta*y)
     if(one.sided) eta=eta*sign(bhat)
 flip=(one.sided & sign(bhat)==-1)
-junk=compute.vmvp(eta,A,b,pp,sigma)
+junk=compute.vmvp(y,eta,A,b,pp)
 vmm=junk$vm;vpp=junk$vp
    vmall[[kk]][kk]=vmm
    vpall[[kk]][kk]=vpp
@@ -231,7 +222,6 @@ if(!one.sided)  pv[kk]=2*min(pv[kk],1-pv[kk])
   
   if(compute.si)
       {
-          if(trace) cat("Computing selection interval",fill=T)
            vs=list(vm=vmm,vp=vpp)
           junk=selection.int(y,eta,sigma,vs,alpha,flip=flip)
 #     cat(c(vs$vm,sum(eta*y),vs$vp,sigma,sigma.eta,alpha),fill=T)
@@ -280,22 +270,6 @@ cat(c("Estimated stopping point from forwardStop rule=", x$forwardStopHat),fill=
 
 
 
-compute.vmvp=function(eta,A,b,pp,sigma,SMALL=1e-7){
- # we use first pp constraints
-    A=A[1:pp,,drop=F]
-    b=b[1:pp]
-  alp=as.vector(A%*%eta/sum(eta^2))
-  alp[abs(alp)<SMALL]=0
-  vp=rep(Inf,pp)
-  vm=rep(-Inf,pp)
-  for(j in 1:pp){
-   if(alp[j]<0) vm[j]=(b[j]-(A%*%y)[j]+alp[j]*sum(eta*y))/alp[j]
-   if(alp[j]>0) vp[j]=(b[j]-(A%*%y)[j]+alp[j]*sum(eta*y))/alp[j]
-   }
-   vmm=max(vm,na.rm=T)
-   vpp=min(vp,na.rm=T)
-  return(list(vm=vmm,vp=vpp))
-}
 
 forwardStop=function(pv,alpha=.10){
  val=-(1/(1:length(pv)))*cumsum(log(1-pv))

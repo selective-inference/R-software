@@ -8,7 +8,7 @@ Forward stepwise regression
 This function implements forward stepwise regression, for use in the selectiveInference package
 }
 \usage{
-forwardStep(x, y, nsteps = min(nrow(x), ncol(x)))
+forwardStep(x, y, sigma=NULL, nsteps = min(nrow(x)-1, ncol(x)),trace=FALSE)
 }
 \arguments{
   \item{x}{
@@ -17,9 +17,11 @@ Matrix of predictors (n by p)
   \item{y}{
 Vector of outcomes (length n)
 }
+\item{sigma}{Optional estimate of standard deviation of the noise, for AIC} 
   \item{nsteps}{
 Number of steps to take (default=min(n,p))
 }
+\item{trace}{Printout steps along the way? Default: FALSE}
 }
 \details{
 This function implements forward stepwise regression, adding the predictotr maximize the scaled inner product between the residual r and the 
@@ -36,22 +38,13 @@ The data x and y are first centered by the function.
 \item{aichat}{Step number minizing AIC (starting from the null model; first local minimum)}
 \item{call}{The call to forwardStep}
 }
-\references{
-%%
-}
+
 
 \author{
 Joshua Loftus, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 }
-\note{
-%%  ~~further notes~~
-}
 
-%% ~Make other sections like Warning with \section{Warning }{....} ~
 
-\seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
-}
 \examples{
 #NOT RUN
 #set.seed(43)

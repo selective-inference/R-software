@@ -2,7 +2,7 @@ require(genlasso)
 require(truncnorm)
 require(MASS)
 
-fixedLassoInf=function(x,y,bhat,lambda,sigma=NULL,alpha=.10,trace=F,compute.si=TRUE,tol=1e-5,one.sided=TRUE){
+fixedLassoInf=function(x,y,bhat,lambda,sigma=NULL,alpha=.10,trace=FALSE,compute.si=TRUE,tol=1e-5,one.sided=TRUE){
     # inference for fixed lam lasso
 #assumes data is centered
  # careful!  lambda is for usual lasso problem; glmnet uses lambda/n
@@ -38,7 +38,8 @@ eta=ginv(t(xe))[,k]
     flip=(one.sided & sign(bhat0)==-1)
 etaall[k,]=eta
    
-vs=tf.jonvs(y,a,b,eta)
+#vs=tf.jonvs(y,a,b,eta)
+vs=compute.vmvp(y,eta,a,b,nrow(a))    
 vpp=vs$vp;vmm=vs$vm
 vmall[k]=vmm
 vpall[k]=vpp
@@ -182,6 +183,8 @@ tf.jonab = function(y,X,beta,lambda,tol=1e-5) {
   return(list(A=A,b=b))
 }
 
+
+##NOT USED
 tf.jonvs = function(y,A,b,eta) {
   g = A %*% eta/sum(eta^2)
   f = b - A%*%y + g*sum(eta*y)
@@ -198,4 +201,4 @@ tf.jonint = function(y,eta,sigma2,vs,alpha,del=1e-3) {
   hi = bin.search(sum(eta*y),fun,1-alpha/2,inc=inc)
   return(c(lo,hi))
 }
-
+######
