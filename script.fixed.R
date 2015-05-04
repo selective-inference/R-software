@@ -1,12 +1,14 @@
-library(glmnet)
+
 
  library(selectiveInference,lib.loc="mylib")
 library(truncnorm)
 library(MASS)
 
+options(error=dump.frames)
+attach("/Users/tibs/dropbox/PAPERS/lasso/lasso3/.RData")
 
 set.seed(133)
-n=200
+n=20
 p=10
 sigma=1
 
@@ -20,15 +22,89 @@ y=x%*%beta+sigma*rnorm(n)
 y=y-mean(y)
 
 a=glmnet(x,y,standardize=F)
-lambda = .1
+lambda = 1
 bhat = coef(a, s=lambda/n)[-1]
 
 
 # compute fixed lambda p-values
 
-a4=fixedLassoInf(x,y,bhat,lambda,sigma,compute.si=T)
+a4=fixedLassoInf(x,y,bhat,lambda,sigma=1,compute.si=T)
 
 
+critf=function(b,lam,x,y){
+     yhat=x%*%b
+     .5*sum( (y-yhat)^2) + lam*sum(abs(b))
+ }
+
+
+
+n=15
+p=10
+sigma=1
+
+x=matrix(rnorm(n*p),n,p)
+x=scale(x,T,F)
+
+#generate y
+#beta=c(3,-2,0,0,rep(0,p-4))
+#beta=c(rep(2,10),rep(0,p-10))
+beta=c(rep(2,5),rep(0,p-5))
+y=x%*%beta+sigma*rnorm(n)
+
+y=y-mean(y)
+    
+
+    
+gfit=glmnet(x,y,standardize=F,lambda.min.ratio=1e-9)
+     lambda = 1.4
+     bhat = predict(gfit, s=lambda/n,type="coef",exact=T)[-1]
+   print(fixedLassoInf(x,y,bhat,lambda,sigma))
+# another example
+set.seed(13)
+
+n=15
+p=10
+sigma=1
+
+x=matrix(rnorm(n*p),n,p)
+x=scale(x,T,F)
+
+#generate y
+
+beta=c(5,1,-.5,-4,2,rep(0,p-5))
+   nsim=10
+seeds=sample(1:9999,size=nsim)
+for(ii in 1:nsim){
+    set.seed(seeds[ii])
+y=x%*%beta+sigma*rnorm(n)
+
+y=y-mean(y)
+    
+
+    
+gfit=glmnet(x,y,standardize=F,lambda.min.ratio=1e-9)
+     lambda = 9
+     bhat = predict(gfit, s=lambda/n,type="coef",exact=T)[-1]
+ 
+
+
+  #  a=lasso2lam(x,y,lambda,int=F,stand=F)
+  #  critf(bhat,lambda,x,y)
+# critf(a$coef,lambda,x,y)
+
+   print(fixedLassoInf(x,y,bhat,lambda,sigma))
+}
+
+junk=tf.jonab(y,x,bhat,lambda)
+junk$A%*%y-junk$b
+    o=bhat!=0
+    b=lsfit(x[,o],y)$coef[-1]
+    c(aa$vm[1],b[1],aa$vp[1])
+    eta=(solve(t(x[,o])%*%x[,o])%*%t(x[,o]))[1,]
+vs=list(vm=aa$vm[1],vp=aa$vp[1])
+alpha=.1
+
+##
 ## check of numerics for one case
  fun = function(x,etay,vm,vp,sigma.eta) return(1-ptruncnorm(etay,vm,vp,x,sigma.eta))
 xx=seq(-62,63,length=50000)

@@ -1,4 +1,4 @@
-export(lar,larInf,predict.lar,plot.lar,print.larInf,fixedLassoInf,print.fixedLassoInf,forwardStep,forwardStepInf,print.forwardStepInf,manyMeans,print.manyMeans)
+export(lar,larInf,predict.lar,plot.lar,print.larInf,fixedLassoInf,print.fixedLassoInf,forwardStep,forwardStepInf,print.forwardStepInf,manyMeans,print.manyMeans,estimateSigma)
 useDynLib("selectiveInference")
 import(MASS)
 import(glmnet)

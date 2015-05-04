@@ -6,8 +6,6 @@
 
 library(selectiveInference,lib.loc="mylib")
 
-library(polypath,lib.loc="/Users/tibs/dropbox/gamma/mylib")
-library(truncnorm)
 
 options(error=dump.frames)
 
@@ -28,6 +26,7 @@ y=x%*%beta+sigma*rnorm(n)
 y=y-mean(y)
 
 larfit=lar(x,y,verbose=TRUE)
+fit=predict.lar(larfit,x,type="fit")
                                       
 
 aa2=larInf(x,y,larfit,nsteps=20)
