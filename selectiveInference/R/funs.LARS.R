@@ -128,7 +128,7 @@ print.larInference=function(x,digits = max(3, getOption("digits") - 3),...){
       cat("",fill=T)
       nsteps=length(x$pv)
 tab=cbind(1:nsteps,x$act[1:nsteps],round(x$pv,3),round(x$ci,3),round(x$tailarea,3),round(x$pv.spacing,3),round(x$pv.cov,3))
-      dimnames(tab)=list(NULL,c("step","pred","exactPv","lowerConfPt","upperConfPt","lowerArea","upperArea","spacingPv","covtestPv"))
+      dimnames(tab)=list(NULL,c("step","pred","exactPv","lowConfPt","upConfPt","lowArea","upArea","spacingPv","covtestPv"))
       print(tab)
         cat("",fill=T)
 cat(c("Estimated standard deviation of noise sigma=", round(x$sigma,3)),fill=T)
