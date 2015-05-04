@@ -10,9 +10,10 @@ p=ncol(x)
 # first center x and y
 x=scale(x,T,F)
 y=y-mean(y)
-    if(is.null(sigma) & p>=n){cat("Warning: p ge n; sigma=1 used for AIC",fill=T); sigma=1}
+    if(is.null(sigma) & p>=n){cat("Warning: p ge n; the value sigma=1 used for AIC; you may want to estimate sigma using the estimateSigma function",fill=T); sigma=1}
   if(is.null(sigma) & n>p){
       sigma=sqrt(sum(lsfit(x,y)$res^2)/(n-p))
+      cat("Standard deviation of noise estimated from mean squared residual",fill=T)
   }
 pred=s=scor=bhat=rep(NA,nsteps)
    ip=t(x)%*%y/sqrt(diag(t(x)%*%x))
@@ -112,8 +113,9 @@ if(aic.stop & fsfit$aichat==0){
 
 
 # A=b=stepind=NULL
-    nr=2*(nsteps*p-sum(1:nsteps))+1
-    if(aic.stop) nr=nr+nsteps
+    nr=2*(nsteps*p-sum(1:nsteps))
+    if(is.null(fixed.step)) nr=nr+1
+    if(aic.stop) nr=nr+nsteps+1   
 A=matrix(NA,nrow=nr,ncol=n)
     b=stepind=rep(NA,nr)
 
@@ -126,8 +128,8 @@ if(trace) cat(c("step=",j),fill=T)
   mod=pred[1:(j-1)]
   notin[mod]=F
   xx[,-mod]=lsfit(xx[,mod],xx[,-mod])$res
-  vv=solve(t(xx[,mod,drop=F])%*%xx[,mod,drop=F])
-  proj=xx[,mod]%*%vv%*%t(xx[,mod])
+ # vv=solve(t(xx[,mod,drop=F])%*%xx[,mod,drop=F])
+ # proj=xx[,mod]%*%vv%*%t(xx[,mod])
   }
   jj=pred[j]
   rest=notin;rest[jj]=F
@@ -135,10 +137,14 @@ if(trace) cat(c("step=",j),fill=T)
   for(k in which(rest)){
  w2=sqrt(sum(xx[,k]^2))
   ii=ii+1
- A[ii,]=-(s[j]*xx[,jj]/w-xx[,k]/w2)%*%(diag(n)-proj)
+ #A[ii,]=-(s[j]*xx[,jj]/w-xx[,k]/w2)%*%(diag(n)-proj)
+ A[ii,]=-(s[j]*xx[,jj]/w-xx[,k]/w2)
+ if(j>1) A[ii,]=lsfit(xx[,mod],A[ii,],int=F)$res
  b[ii]=0;  stepind[ii]=j
  ii=ii+1
-  A[ii,]=-(s[j]*xx[,jj]/w+xx[,k]/w2)%*%(diag(n)-proj)
+ #A[ii,]=-(s[j]*xx[,jj]/w+xx[,k]/w2)%*%(diag(n)-proj)
+  A[ii,]=-(s[j]*xx[,jj]/w+xx[,k]/w2)
+ if(j>1) A[ii,]=lsfit(xx[,mod],A[ii,],int=F)$res
  b[ii]=0;  stepind[ii]=j
 }
  if(aic.stop){
@@ -165,6 +171,7 @@ A[ii,]=aa
 b[ii]=0
 stepind[ii]=nsteps
 }
+    
 #for aic stop, add constraint that diff in AIC is < 2sigma, so that it stops
  # (equiv to bhat/se < sqrt(2))
 if(aic.stop){
@@ -177,6 +184,7 @@ if(aic.stop){
    #  A=rbind(A, temp2)
 #  b=c(b,sqrt(2))
       #stepind=nsteps
+      ii=ii+1
       A[ii,]=temp2
 b[ii]=sqrt(2)
 stepind[ii]=nsteps

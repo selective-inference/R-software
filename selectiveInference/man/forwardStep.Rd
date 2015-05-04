@@ -34,14 +34,14 @@ The data x and y are first centered by the function.
 \item{bhat}{Partial regression coeficients of entered predictors}
 \item{rss}{Residual sum of squares after each predictor is entered}
 \item{sigma}{Estimate of noise standard deviation, used for AIC}
-\item{aic}{AIC criterion afetr each predictor is added}
+\item{aic}{AIC criterion after each predictor is added}
 \item{aichat}{Step number minizing AIC (starting from the null model; first local minimum)}
 \item{call}{The call to forwardStep}
 }
 
 
 \author{
-Joshua Loftus, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
+Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 }
 
 

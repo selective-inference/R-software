@@ -6,7 +6,7 @@ library(MASS)
 
 
 set.seed(133)
-n=20
+n=200
 p=10
 sigma=1
 

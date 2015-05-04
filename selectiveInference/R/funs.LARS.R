@@ -63,7 +63,7 @@ function (object, newx, s, type = c("fit", "coefficients"), mode = c("step",
 
 
 
-larInf=function(x,y,larfit,sigma,compute.si=TRUE,alpha=.10,one.sided=TRUE,nsteps = min(nrow(x), ncol(x))){
+larInf=function(x,y,larfit,sigma=NULL,compute.si=TRUE,alpha=.10,one.sided=TRUE,nsteps = min(nrow(x), ncol(x))){
     this.call=match.call()
     
        checkargs(x=x,y=y,larfit=larfit,sigma=sigma,alpha=alpha,nsteps=nsteps)
@@ -71,11 +71,12 @@ SMALL=1e-6
 p=ncol(x)
     n=nrow(x)
 nk=larfit$nk
-     if(is.null(sigma) & p>=n){cat("Warning: p ge n; sigma set to 1",fill=T)
-                           sigma=1}
+     if(is.null(sigma) & p>=n){cat("Warning: p ge n; the value sigma=1 is used; you may want to estimate sigma using the estimateSigma function",fill=T); sigma=1}
   if(is.null(sigma) & n>p){
       sigma=sqrt(sum(lsfit(x,y)$res^2)/(n-p))
-  }
+       cat("Standard deviation of noise estimated from mean squared residual",fill=T)
+    }
+     
 vmm=vpp=pv=sigma.eta=rep(NA,nsteps)
 ci=miscov=matrix(NA,nsteps,2)
 for(k in 1:nsteps){
@@ -129,6 +130,9 @@ print.larInference=function(x,digits = max(3, getOption("digits") - 3),...){
 tab=cbind(1:nsteps,x$act[1:nsteps],round(x$pv,3),round(x$ci,3),round(x$tailarea,3),round(x$pv.spacing,3),round(x$pv.cov,3))
       dimnames(tab)=list(NULL,c("step","pred","exactPv","lowerConfPt","upperConfPt","lowerArea","upperArea","spacingPv","covtestPv"))
       print(tab)
+        cat("",fill=T)
+cat(c("Estimated standard deviation of noise sigma=", round(x$sigma,3)),fill=T)
+         cat("",fill=T)
       cat("",fill=T)
 cat(c("Estimated stopping point from forwardStop rule=", x$forwardStopHat),fill=T)
          cat("",fill=T)

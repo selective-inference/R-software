@@ -2,26 +2,32 @@ require(genlasso)
 require(truncnorm)
 require(MASS)
 
-fixedLassoInf=function(x,y,bhat,lambda,sigma=NULL,alpha=.10,trace=FALSE,compute.si=TRUE,tol=1e-5,one.sided=TRUE){
+fixedLassoInf=function(x,y,bhat,lambda, coeftype=c("partial","full"), sigma=NULL,alpha=.10,trace=FALSE,compute.si=TRUE,tol=1e-5,one.sided=TRUE){
     # inference for fixed lam lasso
-#assumes data is centered
  # careful!  lambda is for usual lasso problem; glmnet uses lambda/n
     this.call=match.call()
-    
+    coeftype<- match.arg(coeftype)
     checkargs(x=x,y=y,bhat=bhat,lambda=lambda,sigma=sigma,alpha=alpha,tol=tol)
-    
+
+x=scale(x,T,F)
+y=y-mean(y)
+
 junk=tf.jonab(y,x,bhat,lambda,tol=tol)
 n=length(y)
     p=ncol(x)
-
-   if(is.null(sigma) & p>=n){cat("Warning: p ge n; sigma set to 1",fill=T)
-                         sigma=1}
+  
+      if(is.null(sigma) & p>=n){cat("Warning: p ge n; the value sigma=1 used for AIC; you may want to estimate sigma using the estimateSigma function",fill=T); sigma=1}
   if(is.null(sigma) & n>p){
       sigma=sqrt(sum(lsfit(x,y)$res^2)/(n-p))
+       cat("Standard deviation of noise estimated from mean squared residual",fill=T)
   }
     
 a=junk$A
 b=junk$b
+    if(max(a%*%y-b)>0){stop("Polyhedral constraints not satisfied; you need to recompute bhat more
+accurately. With glmnet, be sure to use exact=TRUE in coef() and also try decreasing lambda.min
+in call to glmnet. If p>N, the value of lambda specified may also be too small--- smaller than the value yielding zero training error")}
+    
 e=which(bhat!=0)
 xe=x[,e,drop=F]
 
@@ -30,9 +36,14 @@ pv=vmall=vpall=rep(NA,pp)
 ci=miscov=matrix(NA,pp,2)
 etaall=matrix(NA,nrow=pp,ncol=n)
 SMALL=1e-7
+    ttall=rep(NA,pp)  
 for(k in 1:pp){
     if(trace) cat(k,fill=T)
-eta=ginv(t(xe))[,k]
+    if (coeftype == "partial") 
+            eta = ginv(t(xe))[, k]
+        if (coeftype == "full") 
+            eta = ginv(t(x))[,e[k]]
+ 
     bhat0=sum(eta*y)
     if(one.sided) eta=eta*sign(bhat0)
     flip=(one.sided & sign(bhat0)==-1)
@@ -44,6 +55,7 @@ vpp=vs$vp;vmm=vs$vm
 vmall[k]=vmm
 vpall[k]=vpp
    tt=sum(eta*y)
+    ttall[k]=tt
    sigma.eta=sigma*sqrt(sum(eta^2))
    u=0  #null
 #  pv[k]= 1-mytruncnorm(tt, vmm, vpp, sigma.eta, u)
@@ -55,7 +67,7 @@ if(!one.sided)  pv[k]=2*min(pv[k],1-pv[k])
                 
                
 }}
-out=list(pv=pv,ci=ci,tailarea=miscov,eta=etaall,vm=vmall,vp=vpall,pred=e,alpha=alpha,sigma=sigma,one.sided=one.sided,lambda=lambda)
+out=list(pv=pv,ci=ci,tailarea=miscov,eta=etaall,vm=vmall,vp=vpall,pred=e,alpha=alpha,sigma=sigma,one.sided=one.sided,lambda=lambda,coeftype=coeftype)
 class(out)="fixedLassoInf"
     out$call=this.call
 return(out)

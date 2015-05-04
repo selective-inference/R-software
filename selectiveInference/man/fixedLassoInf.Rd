@@ -50,7 +50,8 @@ One-sided p-values? Default TRUE.}
 }
 \details{
 This function computes selective p-values and confidence intervals (selection intervals) for the lasso
-with a fixed value of the regularization parameter lambda. The selection interval estimation involves numerical search and can be fragile:
+with a fixed value of the regularization parameter lambda.
+The predictors and response variable are first centered. The selection interval estimation involves numerical search and can be fragile:
 if the observed statistics are too close to either end of the truncation interavls (Vm, Vp) (see ref), the interval of desired coverage
 cannot be computed and is set to (-Inf, +Inf). The output \code{tailarea} gives the achieved Gaussian tail area
 for reported  interval--- these should be close to alpha/2.
@@ -94,7 +95,7 @@ Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 #gfit=glmnet(x,y,standardize=F)
 #lam = .1
 #extract coef for a given lam; Note the 1/n factor!
-#bhat = coef(gfit, s=lam/n)[-1]
+#bhat = coef(gfit, s=lam/n, exact=TRUE)[-1]
 
 # compute fixed lambda p-values and selection intervals
 #aa=fixedLassoInf(x,y,bhat,lam,sigma)

@@ -5,28 +5,65 @@ set.seed(333)
 n=40
 p=16
 
-n=500
-p=50
+n=200
+p=20
 sigma=.7
 
 x=matrix(rnorm(n*p),n,p)
 x=scale(x,T,F)
 
 #generate y
-beta=c(-5,0,0,0,rep(0,p-4))
-beta=c(rep(2,10),rep(0,p-10))
-
+#beta=c(3,-2,0,0,rep(0,p-4))
+#beta=c(rep(2,10),rep(0,p-10))
+beta=c(rep(100,10),rep(0,p-10))
+    
 y=x%*%beta+sigma*rnorm(n)
 
 y=y-mean(y)
 
 a=forwardStep(x,y)
 
-aa=forwardStepInf(a,x,y,compute.si=F,trace=T)
+aa=forwardStepInf(a,x,y,compute.si=T,trace=T)
 
 aa2=forwardStepInf(a,x,y,sigma=sigma,compute.si=T,fixed.step=10)
 
 aa3=forwardStepInf(a,x,y,sigma=sigma,compute.si=T, aic.stop=T)
+
+x=state.x77[,-4]
+y=state.x77[,4]
+a=forwardStep(x,y)
+
+aa=forwardStepInf(a,x,y,compute.si=T,trace=T)
+
+
+sigmahat=estimateSigma(x,y)
+aa=forwardStepInf(a,x,y,sigma=sigmahat,compute.si=T,trace=T)
+
+
+n=20
+p=100
+sigma=.7
+
+x=matrix(rnorm(n*p),n,p)
+x=scale(x,T,F)
+
+#generate y
+#beta=c(3,-2,0,0,rep(0,p-4))
+#beta=c(rep(2,10),rep(0,p-10))
+beta=c(rep(10,10),rep(0,p-10))
+y=x%*%beta+sigma*rnorm(n)
+
+y=y-mean(y)
+
+
+a=forwardStep(x,y)
+
+aa=forwardStepInf(a,x,y,compute.si=T,trace=T)
+
+a=forwardStep(x,y,sigma=sigmahat)
+sigmahat=estimateSigma(x,y)
+aa=forwardStepInf(a,x,y,sigma=sigmahat,compute.si=T,trace=T)
+
 
 fsfit=a
 sigma=a$sigma
@@ -34,10 +71,9 @@ aic.stop=F
 trace=F
 alpha=.1
 fixed.step=NULL
-nsteps=10
-compute.ci=T
+nsteps=NULL
+compute.Si=T
 one.sided=T
-gridfac=50
 
 
 ###########
@@ -48,7 +84,7 @@ options(error=dump.frames)
 
 setting=1  # sequential steps
 #setting=2  #fixed stop
-#setting=3  #AIC stop
+setting=3  #AIC stop
 
 set.seed(333)
 n=100
@@ -106,3 +142,12 @@ for(ii in 1:nsim){
 
 
 #
+
+
+A=matrix(rnorm(100*20),ncol=20)
+y=rnorm(20)
+b=rep(0,100)
+eta=rnorm(20)
+pp=100
+sigma=1
+
