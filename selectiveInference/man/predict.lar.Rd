@@ -70,16 +70,23 @@ arXiv:1401.3889
 \author{
 Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 }
-\note{
-%%  ~~further notes~~
-}
-
 %% ~Make other sections like Warning with \section{Warning }{....} ~
 
-\seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
-}
 \examples{
+#NOT RUN
+#set.seed(33)
+#n=200
+#p=20
+#sigma=1
+#x=matrix(rnorm(n*p),n,p)
+#x=scale(x,T,T)/sqrt(n-1)
+#generate y
+#beta=c(3,-2,rep(0,p-2))
+#beta=c(rep(3,10),rep(0,p-10))
+#y=x%*%beta+sigma*rnorm(n)
+#y=y-mean(y)
+#larfit=lar(x,y)
+#fit=predict.lar(larfit,x,type="fit")#
 }
 \keyword{ ~kwd1 }
 \keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

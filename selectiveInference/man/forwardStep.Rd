@@ -17,7 +17,10 @@ Matrix of predictors (n by p)
   \item{y}{
 Vector of outcomes (length n)
 }
-\item{sigma}{Optional estimate of standard deviation of the noise, for AIC} 
+\item{sigma}{Optional estimate of standard deviation of the noise, for AIC.
+ If NULL (default), this is estimated from the mean squared residual
+of the full fit (when n>p). If n le p, user should supply a value, using, for example the estimateSigma
+function.} 
   \item{nsteps}{
 Number of steps to take (default=min(n,p))
 }

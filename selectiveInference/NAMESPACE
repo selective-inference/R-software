@@ -1,1 +1,7 @@
-exportPattern("^[[:alpha:]]+")
+export(lar,larInf,predict.lar,plot.lar,print.larInf,fixedLassoInf,print.fixedLassoInf,forwardStep,forwardStepInf,print.forwardStepInf,manyMeans,print.manyMeans)
+useDynLib("selectiveInference")
+import(MASS)
+import(glmnet)
+import(truncnorm)
+
+

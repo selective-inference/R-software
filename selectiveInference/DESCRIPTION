@@ -1,6 +1,6 @@
 Package: selectiveInference
 Type: Package
-Title: Selective inference for forward stepwise regression, lasso and ALR
+Title: Selective inference for forward stepwise regression, lasso and least angle regression
 Version: 1.0
 Date: 2015-04-08
 Author: Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani

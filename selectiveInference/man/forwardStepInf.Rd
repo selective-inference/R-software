@@ -20,7 +20,7 @@ Matrix of predictors (n by p)
 Vector of outcomes (length n)
 }
 \item{sigma}{
-Estimate of error standard deviation; default is value returned by forwardStep
+Estimate of error standard deviation; default is value returned by forwardStep.
 }
   \item{nsteps}{
 Number of steps to analyze. Default is min(k,20) where k is the  number used in forwardStep.
@@ -89,7 +89,7 @@ Joshua Loftus, Stephen Reid,  Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 %% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
+ \code{\link{forwardStep}}
 }
 \examples{
 #NOT RUN

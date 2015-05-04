@@ -9,7 +9,7 @@ Compute p-values and selection intervals for lasso fit with fixed value of regul
 lambda
 }
 \usage{
-fixedLassoInf(x, y, bhat, lambda, sigma=NULL, alpha = 0.1, trace = FALSE, compute.si = TRUE, tol = 1e-05, one.sided = TRUE)
+fixedLassoInf(x, y, bhat, lambda, coeftype = c("partial", "full"), sigma=NULL, alpha = 0.1, trace = FALSE, compute.si = TRUE, tol = 1e-05, one.sided = TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -31,8 +31,12 @@ where fit is the object returned by glmnet ([-1] removes the intercept).
   \item{lambda}{
 Value of lambda used to compute bhat
 }
+\item{coeftype}{Parameter type for selection intervals: default is "partial"--- the partial regression coefficients in the active set of predictors;
+the other option is "full"-- the population regression coefficients, assuming the model with all predictors in correct. The latter is not allowed when p>n.}
   \item{sigma}{
-Estimate of error standard deviation
+Estimate of error standard deviation. If NULL (default), this is estimated from the mean squared residual
+of the full fit (when n>p). If n le p, user should supply a value, using, for example the estimateSigma
+function.
 }
   \item{alpha}{
 Significance level for  selection intervals (target is miscoverage alpha/2 in each tail)

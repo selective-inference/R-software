@@ -1,6 +1,3 @@
-require(genlasso)
-require(truncnorm)
-require(MASS)
 
 fixedLassoInf=function(x,y,bhat,lambda, coeftype=c("partial","full"), sigma=NULL,alpha=.10,trace=FALSE,compute.si=TRUE,tol=1e-5,one.sided=TRUE){
     # inference for fixed lam lasso

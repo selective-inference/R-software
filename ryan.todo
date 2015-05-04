@@ -1,7 +1,3 @@
--cleanup lar function- see especially last step added by Rob
 
--cleanup the .Rd file for lar 
- -make Lar a separate package? 
- or just include function in this pkg. ?
 
--write more efficent code for computing A and b for FS?
+Nothing specific - test it out!

@@ -139,7 +139,7 @@ if(trace) cat(c("step=",j),fill=T)
   ii=ii+1
  #A[ii,]=-(s[j]*xx[,jj]/w-xx[,k]/w2)%*%(diag(n)-proj)
  A[ii,]=-(s[j]*xx[,jj]/w-xx[,k]/w2)
- if(j>1) A[ii,]=lsfit(xx[,mod],A[ii,],int=F)$res
+ if(j>1) A[ii,]=lsfit(xx[,mod],A[ii,],intercept=FALSE)$res
  b[ii]=0;  stepind[ii]=j
  ii=ii+1
  #A[ii,]=-(s[j]*xx[,jj]/w+xx[,k]/w2)%*%(diag(n)-proj)
