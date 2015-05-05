@@ -1,8 +1,6 @@
 
 
  library(selectiveInference,lib.loc="mylib")
-library(truncnorm)
-library(MASS)
 
 options(error=dump.frames)
 attach("/Users/tibs/dropbox/PAPERS/lasso/lasso3/.RData")
@@ -28,7 +26,7 @@ bhat = coef(a, s=lambda/n)[-1]
 
 # compute fixed lambda p-values
 
-a4=fixedLassoInf(x,y,bhat,lambda,sigma=1,compute.si=T)
+a4=fixedLassoInf(x,y,bhat,lambda,sigma=sigma,compute.si=T)
 
 
 critf=function(b,lam,x,y){

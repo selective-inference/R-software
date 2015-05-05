@@ -1,4 +1,4 @@
- library(selectiveInference,lib.loc="mylib")
+ library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
 options(error=dump.frames)
 set.seed(333)
@@ -55,6 +55,7 @@ y=x%*%beta+sigma*rnorm(n)
 
 y=y-mean(y)
 
+a=forwardStep(x,y)
 
 a=forwardStep(x,y)
 
@@ -151,3 +152,20 @@ eta=rnorm(20)
 pp=100
 sigma=1
 
+#####
+set.seed(40)
+ n=20
+ p=8
+sigma=1
+ nsteps=1
+ nsim=500
+ 
+ x=matrix(rnorm(n*p),ncol=p)
+x=scale(x,T,T)/sqrt(n-1)
+beta=c(1,rep(0,p-1))
+y=x%*%beta+sigma*rnorm(n)
+x=scale(x,T,F)/sqrt(n-1)
+y=y-mean(y)
+a=forwardStep(x,y,sigma=sigma)
+
+aa=forwardStepInf(a,x,y,compute.si=T,trace=T)
