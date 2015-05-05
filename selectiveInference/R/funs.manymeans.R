@@ -46,6 +46,9 @@ manyMeans = function(y, alpha=0.05, bh.q=NULL, k=NULL, sigma=1){
       print ("Please specify a bh.q value between 0 and 1.")
       return ()
     }
+    if (!is.null(k)){
+      warning ("Both bh.q and k have been specified. k ignored.")
+    }
     
     ### find the selected set and threshold
     p.vals = 2*pnorm (abs(y)/sigma, 0, 1, lower.tail=FALSE)
@@ -78,7 +81,7 @@ manyMeans = function(y, alpha=0.05, bh.q=NULL, k=NULL, sigma=1){
       return (out)
     }
     
-    order.abs.y = order (abs(y))
+    order.abs.y = order (-abs(y))
     sorted.abs.y = y[order.abs.y]
     
     selected.set = order.abs.y[1:k]
@@ -135,15 +138,28 @@ tn.cdf = function(y, mu, a, b, sigma=1){
   d_max = max(d_right, d_left)
   d_log = d_max + log(exp(d_left - d_max) + exp(d_right - d_max))
   
-  ## numerator
-  n_log = pnorm (y, mu, sigma, lower.tail=TRUE, log.p=TRUE)
-  if (y > b){
-    n_a = d_left
-    n_b = pnorm (b, mu, sigma, lower.tail=TRUE, log.p=TRUE)
-    n_log = n_log + log(1 - exp(n_b-n_log) + exp(n_a-n_log))
-  }
   
-  exp(n_log-d_log)
+  # numerator
+  if (y > a & y < b){
+    n_log = d_left
+    return (exp(n_log-d_log))
+  }else{
+    if (y > b){
+      # b and y
+      n_y_tilde = pnorm (y, mu, sigma, lower.tail=FALSE, log.p=TRUE)
+      n_b_tilde = pnorm (b, mu, sigma, lower.tail=FALSE, log.p=TRUE)
+      n_yb = n_b_tilde + log(1 - exp(n_y_tilde-n_b_tilde))
+      
+      # a
+      n_a = d_left
+      
+      # combine
+      return(exp(n_yb-d_log) + exp(n_a-d_log))
+    }else{
+      n_log = pnorm (y, mu, sigma, lower.tail=TRUE, log.p=TRUE)
+      return (exp(n_log-d_log))
+    }
+  }
 }
 
 
