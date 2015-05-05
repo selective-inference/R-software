@@ -102,7 +102,7 @@ Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 #bhat = coef(gfit, s=lam/n, exact=TRUE)[-1]
 
 # compute fixed lambda p-values and selection intervals
-#aa=fixedLassoInf(x,y,bhat,lam,sigma)
+#aa=fixedLassoInf(x,y,bhat,lam,sigma=sigma)
 
 }
 
