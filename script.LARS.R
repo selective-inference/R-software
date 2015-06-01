@@ -22,7 +22,7 @@ y=x%*%beta+sigma*rnorm(n)
 y=y-mean(y)
 
 larfit=lar(x,y,verbose=TRUE)
-fit=predict.lar(larfit,x,type="fit")
+fit=predict.lar(larfit,x,s=2,type="fit")
                                       
 
 aa2=larInf(x,y,larfit,nsteps=2)

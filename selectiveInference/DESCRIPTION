@@ -5,7 +5,7 @@ Version: 1.0
 Date: 2015-04-08
 Author: Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 Maintainer: Rob Tibshirani <tibs@stanford.edu>
-Depends: MASS,glmnet,truncnorm
+Depends: MASS,glmnet
 Description: A collection of functions that performs inference after selection
      for forward stepwise regression, the lasso, least angle regression
      and the many normal means problem. 

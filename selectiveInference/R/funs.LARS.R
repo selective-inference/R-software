@@ -233,7 +233,7 @@ if(n==2 & p==2) stop("number of obs must be >2 when number of predictors=2")
 beta=cbind(beta, ginv(x)%*%y) #ROB ADDED for compatibility with lars;
 beta=t(beta)# for compatibility with LARS function
 
-  out=list(lambda=lambda,action=action,df=df,beta=beta,
+  out=list(lambda=lambda,actions=action,df=df,beta=beta,
               completepath=completepath,Gamma=Gamma,nk=nk,mp=mp,mu=mu,meanx=meanx,normx=normx,normalize=normalize,intercept=intercept,type="LAR", call=this.call)
   class(out)="lar"
   return(out)
@@ -366,6 +366,24 @@ pv.spacing=spacing.pval.asymp.list(y,larfit,nsteps,sigma=sigma)
     out$call=this.call
    class(out)="larInf"
 return(out)
+}
+print.lar=
+function (x, ...) 
+{
+    cat("\nCall:\n")
+    dput(x$call)
+   # cat("R-squared:", format(round(rev(x$R2)[1], 3)), "\n")
+    actions <- x$actions
+    jactions <- unlist(actions)
+    jsteps <- rep(seq(along = actions), sapply(actions, length))
+    actmat <- rbind(jsteps, jactions)
+    vn <- names(jactions)
+    if (is.null(vn)) 
+        vn <- rep("", length(jactions))
+    dimnames(actmat) <- list(c("Step", "Var"), vn)
+    cat(paste("Sequence of", x$type, "moves:\n"))
+    print(actmat[2:1, ])
+    invisible(x)
 }
 
 
