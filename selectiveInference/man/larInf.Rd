@@ -89,7 +89,7 @@ Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 #
 #lar inference for each successive entry of a predictor; sigma estimated
 #  from mean squared residual from least squares fit
-# aa=larInf(larfit,x,y)
+# aa=larInf(x,y,larfit)
 }
 
 % Add one or more standard keywords, see file 'KEYWORDS' in the

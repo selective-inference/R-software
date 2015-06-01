@@ -15,9 +15,10 @@ x=scale(x,T,F)
 #generate y
 #beta=c(3,-2,0,0,rep(0,p-4))
 #beta=c(rep(2,10),rep(0,p-10))
-beta=c(rep(100,10),rep(0,p-10))
-    
-y=x%*%beta+sigma*rnorm(n)
+beta=c(rep(3,10),rep(0,p-10))
+mu=x%*%beta
+
+y=mu+sigma*rnorm(n)
 
 y=y-mean(y)
 
@@ -61,13 +62,14 @@ a=forwardStep(x,y)
 
 aa=forwardStepInf(a,x,y,compute.si=T,trace=T)
 
-a=forwardStep(x,y,sigma=sigmahat)
 sigmahat=estimateSigma(x,y)
+a=forwardStep(x,y,sigma=sigmahat)
+
 aa=forwardStepInf(a,x,y,sigma=sigmahat,compute.si=T,trace=T)
 
 
 fsfit=a
-sigma=a$sigma
+sigmahat=a$sigma
 aic.stop=F
 trace=F
 alpha=.1

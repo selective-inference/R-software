@@ -21,6 +21,7 @@ this.call=match.call()
   p = ncol(x)
   one <- rep(1, n)
 ######    # added by Rob
+if(n==2 & p==2) stop("number of obs must be >2 when number of predictors=2")
   if (intercept) {
         meanx <- drop(one %*% x)/n
         x <- scale(x, meanx, FALSE)
@@ -245,8 +246,13 @@ function (object, newx, s, type = c("fit", "coefficients"), mode = c("step",
 {
     mode <- match.arg(mode)
     type <- match.arg(type)
-
-   
+    if(is.null(s)) stop("s must be specified")
+if(mode=="step"){
+ if( min(s)<0 | max(s)>length(unlist(object$actions))) stop("s must be between 0 and total # of lar steps")
+}
+ if(mode=="lambda"){
+   if( s<0) stop("s must be ge 0")
+}
     if (missing(newx) & type == "fit") {
         warning("Type=fit with no newx argument; type switched to coefficients")
         type <- "coefficients"
@@ -339,7 +345,7 @@ for(k in 1:nsteps){
    
     sigma.eta=sigma*sqrt(sum(eta^2))
        u=0  #null
-pv[k]=1-rob.ptruncnorm(tt, vmm, vpp, u, sigma.eta)
+pv[k]=1-myptruncnorm(tt, vmm, vpp, u, sigma.eta)
 if(!one.sided)  pv[k]=2*min(pv[k],1-pv[k])
   if(compute.si)
       {
@@ -437,12 +443,10 @@ spacing.pval.asymp.list= function(y,out,k,sigma=1) {
     else if (i<length(out$lambda)) {
     #  pvals[i] = (pnorm(out$lambda[i-1]/denom)-pnorm(out$lambda[i]/denom))/
      #   (pnorm(out$lambda[i-1]/denom)-pnorm(out$lambda[i+1]/denom))
-        pvals[i]=1-ptruncnorm(out$lambda[i],out$lambda[i+1],out$lambda[i-1],0,denom)
+        pvals[i]=1-myptruncnorm(out$lambda[i],out$lambda[i+1],out$lambda[i-1],0,denom)
     }
     else {
-     # pvals[i] = (pnorm(out$lambda[i-1]/denom)-pnorm(out$lambda[i]/denom))/
-      #  (pnorm(out$lambda[i-1]/denom)-pnorm(0))
-         pvals[i]=1-ptruncnorm(out$lambda[i],out$lambda[i+1],0,0,denom)
+         pvals[i]=1-myptruncnorm(out$lambda[i],out$lambda[i+1],0,0,denom)
     }
   }
   return(pvals)

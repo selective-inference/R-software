@@ -1,11 +1,7 @@
 
 
 
-
-
-
-library(selectiveInference,lib.loc="mylib")
-
+library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
 options(error=dump.frames)
 
@@ -21,7 +17,7 @@ x=scale(x,T,T)/sqrt(n-1)
 
 #generate y
 beta=c(3,-2,rep(0,p-2))
-beta=c(rep(3,10),rep(0,p-10))
+beta=c(rep(3,trunc(p/2)),rep(0,p-trunc(p/2)))
 y=x%*%beta+sigma*rnorm(n)
 y=y-mean(y)
 
@@ -29,7 +25,7 @@ larfit=lar(x,y,verbose=TRUE)
 fit=predict.lar(larfit,x,type="fit")
                                       
 
-aa2=larInf(x,y,larfit,nsteps=20)
+aa2=larInf(x,y,larfit,nsteps=2)
 
 plot(larfit)
 

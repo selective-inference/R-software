@@ -8,5 +8,10 @@ Maintainer: Rob Tibshirani <tibs@stanford.edu>
 Depends: MASS,glmnet,truncnorm
 Description: A collection of functions that performs inference after selection
      for forward stepwise regression, the lasso, least angle regression
-     and the many normal means problem.
+     and the many normal means problem. 
+     Some of this code  is derived from python code from the developed by
+     the Selective Inference development team
+     (Jonathan Taylor and others at Stanford University)
+     http://github.com/selective-inference/selective-inference
 License: GPL-2
+

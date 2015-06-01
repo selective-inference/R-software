@@ -33,7 +33,7 @@ manyMeans = function(y, alpha=0.05, bh.q=NULL, k=NULL, sigma=1){
     this.call=match.call()
   #### error checks
     checkargs(y,alpha=alpha,bh.q=bh.q,k=k,sigma=sigma)
-    
+    if(!is.wholenumber(k) | k<1 | k>length(y)) stop("k must be an integer between 1 and length of y")
   if (is.null(bh.q) & is.null(k)){
     print ("Please set either the BH control parameter (bh.q) or the top-k parameter (k). They cannot both be NULL.")
     return ()

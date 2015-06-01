@@ -1,6 +1,6 @@
 
 
- library(selectiveInference,lib.loc="mylib")
+ library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
 options(error=dump.frames)
 attach("/Users/tibs/dropbox/PAPERS/lasso/lasso3/.RData")

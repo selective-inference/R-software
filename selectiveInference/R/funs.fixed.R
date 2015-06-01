@@ -5,7 +5,7 @@ fixedLassoInf=function(x,y,bhat,lambda, coeftype=c("partial","full"), sigma=NULL
     this.call=match.call()
     coeftype<- match.arg(coeftype)
     checkargs(x=x,y=y,bhat=bhat,lambda=lambda,sigma=sigma,alpha=alpha,tol=tol)
-
+     if(sum(bhat!=0)==0) stop("Value of lambda too large, bhat is zero")
 x=scale(x,T,F)
 y=y-mean(y)
 
@@ -55,8 +55,7 @@ vpall[k]=vpp
     ttall[k]=tt
    sigma.eta=sigma*sqrt(sum(eta^2))
    u=0  #null
-#  pv[k]= 1-mytruncnorm(tt, vmm, vpp, sigma.eta, u)
-  pv[k]=  1-rob.ptruncnorm(tt, vmm, vpp, u, sigma.eta)
+  pv[k]=  1-myptruncnorm(tt, vmm, vpp, u, sigma.eta)
    
 if(!one.sided)  pv[k]=2*min(pv[k],1-pv[k])
   if(compute.si) { junk=selection.int(y,eta,sigma,vs,alpha,flip=flip)
