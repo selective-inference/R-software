@@ -198,6 +198,7 @@ stepind[ii]=nsteps
     
 # pv tests
 
+vall = matrix(NA,n,nsteps)
 vmall=vpall=vector("list",nsteps)
 pv=rep(NA,nsteps)
 ci=miscov=matrix(NA,nrow=p,ncol=2)
@@ -223,6 +224,8 @@ if(!is.null(fixed.step)) kkk=kk
 flip=(one.sided & sign(bhat)==-1)
 junk=compute.vmvp(y,eta,A,b,pp)
 vmm=junk$vm;vpp=junk$vp
+
+vall[,kk] = eta
    vmall[[kk]][kk]=vmm
    vpall[[kk]][kk]=vpp
    tt=sum(eta*y)
@@ -245,10 +248,10 @@ if(!one.sided)  pv[kk]=2*min(pv[kk],1-pv[kk])
 }
     
 forwardStopHat=NULL
-if(is.null(fixed.step)) forwardStopHat=forwardStop(pv,alpha)
+#if(is.null(fixed.step)) forwardStopHat=forwardStop(pv,alpha)
         
         
-out=list(pv=pv,vm=vmall,vp=vpall,ci=ci,tailarea=miscov,pred=pred,which.steps=which.steps,stepind=stepind,forwardStopHat=forwardStopHat,alpha=alpha,sigma=sigma,one.sided=one.sided,A=A,b=b,call=this.call)
+out=list(pv=pv,v=vall,vm=vmall,vp=vpall,ci=ci,tailarea=miscov,pred=pred,which.steps=which.steps,stepind=stepind,forwardStopHat=forwardStopHat,alpha=alpha,sigma=sigma,one.sided=one.sided,A=A,b=b,call=this.call)
 
     class(out)="forwardStepInf"
 return(out)
