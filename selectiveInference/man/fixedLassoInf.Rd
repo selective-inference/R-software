@@ -9,7 +9,7 @@ Compute p-values and selection intervals for lasso fit with fixed value of regul
 lambda
 }
 \usage{
-fixedLassoInf(x, y, bhat, lambda, coeftype = c("partial", "full"), sigma=NULL, alpha = 0.1, trace = FALSE, compute.si = TRUE, tol = 1e-05, one.sided = TRUE)
+fixedLassoInf(x, y, bhat, lambda, coeftype = c("partial", "full"), sigma=NULL, alpha = 0.1, trace = FALSE, compute.si = TRUE, tol = 0.001, one.sided = TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -47,7 +47,7 @@ Print out more details along the way.}
 Compute selection intervals? Default TRUE. Can slow down the computation, if only p-values are desired. 
 }
   \item{tol}{
-Tolerance for constraints (default 1e-5)
+Tolerance for determining if a solution or gradient is zero (default 1e-3)
 }
   \item{one.sided}{
 One-sided p-values? Default TRUE.}

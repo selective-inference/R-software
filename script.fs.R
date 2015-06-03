@@ -6,7 +6,7 @@ n=40
 p=16
 
 n=200
-p=20
+p=50
 sigma=.7
 
 x=matrix(rnorm(n*p),n,p)
@@ -15,6 +15,7 @@ x=scale(x,T,F)
 #generate y
 #beta=c(3,-2,0,0,rep(0,p-4))
 #beta=c(rep(2,10),rep(0,p-10))
+beta=c(rep(3,10),rep(0,p-10))
 beta=c(rep(3,10),rep(0,p-10))
 mu=x%*%beta
 

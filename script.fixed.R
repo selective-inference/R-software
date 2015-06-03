@@ -3,10 +3,10 @@
  library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
 options(error=dump.frames)
-attach("/Users/tibs/dropbox/PAPERS/lasso/lasso3/.RData")
+#attach("/Users/tibs/dropbox/PAPERS/lasso/lasso3/.RData")
 
 set.seed(133)
-n=20
+n=45
 p=10
 sigma=1
 
@@ -14,7 +14,7 @@ x=matrix(rnorm(n*p),n,p)
 x=scale(x,T,T)/sqrt(n-1)
 
 #generate y
-beta=c(-20,3,rep(0,p-2))
+beta=c(-6,3,2,-1,rep(0,p-4))
 y=x%*%beta+sigma*rnorm(n)
 
 y=y-mean(y)
@@ -26,8 +26,7 @@ bhat = coef(a, s=lambda/n)[-1]
 
 # compute fixed lambda p-values
 
-a4=fixedLassoInf(x,y,bhat,lambda,sigma=sigma,compute.si=T)
-
+a4=fixedLassoInf(x,y,bhat,lambda,compute.si=T)
 
 critf=function(b,lam,x,y){
      yhat=x%*%b

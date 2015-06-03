@@ -1,5 +1,5 @@
 
-fixedLassoInf=function(x,y,bhat,lambda, coeftype=c("partial","full"), sigma=NULL,alpha=.10,trace=FALSE,compute.si=TRUE,tol=1e-5,one.sided=TRUE){
+fixedLassoInf=function(x,y,bhat,lambda, coeftype=c("partial","full"), sigma=NULL,alpha=.10,trace=FALSE,compute.si=TRUE,tol=1e-3,one.sided=TRUE){
     # inference for fixed lam lasso
  # careful!  lambda is for usual lasso problem; glmnet uses lambda/n
     this.call=match.call()
@@ -8,17 +8,26 @@ fixedLassoInf=function(x,y,bhat,lambda, coeftype=c("partial","full"), sigma=NULL
      if(sum(bhat!=0)==0) stop("Value of lambda too large, bhat is zero")
 x=scale(x,T,F)
 y=y-mean(y)
-
+##check KKT
+   g0=t(x)%*%(y-x%*%bhat)
+   g=g0-lambda*sign(bhat)
+    gg=g0/lambda
+    oo=abs(bhat)>tol
+    if(max(abs(g[oo]))>tol) stop("Solution bhat does not satisfy the KKT conditions")
+    if(sum(!oo)>0){
+     if(min(gg[!oo])< -1 | max(gg[!oo])>1 ) stop("Solution bhat does not satisfy the KKT conditions")
+ }
+##       
 junk=tf.jonab(y,x,bhat,lambda,tol=tol)
 n=length(y)
     p=ncol(x)
   
-      if(is.null(sigma) & p>=n){cat("Warning: p ge n; the value sigma=1 used for AIC; you may want to estimate sigma using the estimateSigma function",fill=T); sigma=1}
+      if(is.null(sigma) & p>=n){cat("Warning: p ge n; the value sigma=1 used for error standard deviation; you may want to estimate sigma using the estimateSigma function",fill=T); sigma=1}
   if(is.null(sigma) & n>p){
       sigma=sqrt(sum(lsfit(x,y)$res^2)/(n-p))
        cat("Standard deviation of noise estimated from mean squared residual",fill=T)
   }
-    
+ 
 a=junk$A
 b=junk$b
     if(max(a%*%y-b)>0){stop("Polyhedral constraints not satisfied; you need to recompute bhat more
@@ -76,6 +85,8 @@ print.fixedLassoInf=function(x,digits = max(3, getOption("digits") - 3),...){
 tab=cbind(x$pred,x$pv,x$ci,x$tailarea)
       dimnames(tab)=list(NULL,c("predictor","p-value","lowerConfPt","upperConfPt","lowerArea","upperArea"))
       print(tab)
+       cat("",fill=T)
+    cat(c("Value used for error standard deviation (sigma)=",round(x$sigma,6)),fill=T)
   }
 
 
