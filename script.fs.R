@@ -172,3 +172,17 @@ y=y-mean(y)
 a=forwardStep(x,y,sigma=sigma)
 
 aa=forwardStepInf(a,x,y,compute.si=T,trace=T)
+
+# ryan's example
+library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+
+
+set.seed(0)
+n = 30
+p = 15
+
+x = matrix(rnorm(n*p),n,p)
+theta = rep(0,p)
+y = theta + rnorm(n)
+a = forwardStep(x,y,nsteps=4)
+b = forwardStepInf(a,x,y,nsteps=4,sigma=1,compute.si=FALSE)

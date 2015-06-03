@@ -24,6 +24,8 @@ scor[1]=ip[pred[1]]
 bhat[1]=ip[pred[1]]/sqrt(sum(x[,pred[1]]^2))
 
 r=lsfit(x[,pred[1]],y)$res
+    
+ if(nsteps>1){
 for(j in 2:nsteps){
      if(trace) cat(c("step=",j),fill=T)
   mod=pred[1:(j-1)]
@@ -35,7 +37,8 @@ for(j in 2:nsteps){
   scor[j]=ip[pred[j]]
   s[j]=sign(sum(xr[,pred[j]]*r))
  bhat[j]=ip[pred[j]]/sqrt(sum(xr[,pred[j]]^2))
-}
+}}
+    
 #compute AIC
     aic=rss=val=rep(NA,nsteps+1)
 rss[1]=sum( (y-mean(y))^2)
