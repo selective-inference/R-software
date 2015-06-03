@@ -1,4 +1,4 @@
- library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+library(selectiveInference)#,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
 options(error=dump.frames)
 set.seed(333)
@@ -16,7 +16,7 @@ x=scale(x,T,F)
 #beta=c(3,-2,0,0,rep(0,p-4))
 #beta=c(rep(2,10),rep(0,p-10))
 beta=c(rep(100,10),rep(0,p-10))
-    
+theta = x%*%beta
 y=x%*%beta+sigma*rnorm(n)
 
 y=y-mean(y)
@@ -25,7 +25,7 @@ a=forwardStep(x,y)
 
 aa=forwardStepInf(a,x,y,compute.si=T,trace=T)
 
-aa2=forwardStepInf(a,x,y,sigma=sigma,compute.si=T,fixed.step=10)
+aa2=forwardStepInf(a,x,y,sigma=sigma,compute.si=T,fixed.step=12)
 
 aa3=forwardStepInf(a,x,y,sigma=sigma,compute.si=T, aic.stop=T)
 
