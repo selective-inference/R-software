@@ -84,7 +84,7 @@ n=nrow(x)
 p=ncol(x)
     
   if(is.null(sigma)) sigma=fsfit$sigma
-    
+    if(aic.stop & !is.null(fixed.step)) stop("Only one of fixed.step and aic.stop can be specified")
     if(aic.stop){fixed.step=fsfit$aichat}
 if(is.null(nsteps)){ nsteps=min(length(fsfit$pred),20)}
     if(!is.null(fixed.step))  nsteps=fixed.step
@@ -101,7 +101,12 @@ s=sign(fsfit$scor)
 a=NULL
 proj=0
 which.steps=1:nsteps
+    if(!is.null(fixed.step)){
+     if(!is.wholenumber(fixed.step)) stop("fixed.step must be an integer")
+     if(fixed.step<1 | fixed.step>ncol(x)) stop("fixed.step must be between 1 and number of predictors")
+ }
 if(!is.null(fixed.step)){ which.steps=rep(fixed.step,fixed.step)}
+
 if(aic.stop & fsfit$aichat==0){
     out=list(pv=rep(NA,p),ci=NA,A=NA,b=NA)
     cat("Null model picked by AIC; no  results returned",fill=T)
@@ -115,7 +120,7 @@ if(aic.stop & fsfit$aichat==0){
 # A=b=stepind=NULL
     nr=2*(nsteps*p-sum(1:nsteps))
     if(is.null(fixed.step)) nr=nr+1
-    if(aic.stop) nr=nr+nsteps+1   
+    if(aic.stop & fsfit$aichat<ncol(x)) nr=nr+nsteps+1   
 A=matrix(NA,nrow=nr,ncol=n)
     b=stepind=rep(NA,nr)
 
@@ -174,7 +179,7 @@ stepind[ii]=nsteps
     
 #for aic stop, add constraint that diff in AIC is < 2sigma, so that it stops
  # (equiv to bhat/se < sqrt(2))
-if(aic.stop){
+if(aic.stop & fsfit$aichat<ncol(x)){
       mod2=pred[1:(nsteps+1)]
  vv=solve(t(xx[,mod2,drop=F])%*%xx[,mod2,drop=F])
      pp=length(mod2)
@@ -194,7 +199,7 @@ stepind[ii]=nsteps
 # pv tests
 
 vmall=vpall=vector("list",nsteps)
-pv=rep(NA,p)
+pv=rep(NA,nsteps)
 ci=miscov=matrix(NA,nrow=p,ncol=2)
 
 
@@ -224,7 +229,7 @@ vmm=junk$vm;vpp=junk$vp
    sigma.eta=sigma*sqrt(sum(eta^2))
    u=0  #null
   # pv[kk]=1-(pnorm((tt-u)/sigma.eta)-pnorm((vmm-u)/sigma.eta))/(pnorm((vpp-u)/sigma.eta)-pnorm((vmm-u)/sigma.
-  pv[kk]= 1-rob.ptruncnorm(tt, vmm, vpp, u,sigma.eta)
+  pv[kk]= 1-myptruncnorm(tt, vmm, vpp, u,sigma.eta)
 if(!one.sided)  pv[kk]=2*min(pv[kk],1-pv[kk])
 
   
@@ -259,7 +264,7 @@ print.forwardStepInf=function(x,digits = max(3, getOption("digits") - 3),...){
 cat("",fill=T)
 cat("",fill=T)
       nn=length(x$which.steps)
-tab=cbind(x$which.steps,x$pred[1:nn],round(x$pv[1:nn],6),round(x$ci[1:nn,],6),round(x$tailarea[1:nn,],6))
+tab=cbind(x$which.steps,x$pred[1:nn],round(x$pv[1:nn],6),round(x$ci[1:nn,,drop=FALSE],6),round(x$tailarea[1:nn,,drop=FALSE],6))
       
       
         dimnames(tab)=list(NULL,c("step","predictor","p-value","lowerConfPt","upperConfPt","lowerArea","upperArea"))
@@ -280,6 +285,8 @@ cat(c("Estimated stopping point from forwardStop rule=", x$forwardStopHat),fill=
 
 
 forwardStop=function(pv,alpha=.10){
+    if(alpha<=0 | alpha>=1) stop("alpha must be in [0,1]")
+    if(min(pv,na.rm=T)<0 | max(pv,na.rm=T)>1) stop("pvalues must be in [0,1]")
  val=-(1/(1:length(pv)))*cumsum(log(1-pv))
  oo=which(val <= alpha)
  if(length(oo)==0) out=0

@@ -21,6 +21,10 @@ the lasso, least angle regression and the many normal means problem.
 The functions compute p-values and selection intervals that properly account for the inherence slection
 carried out by the procedure. These have exact finite sample  type I error and coverage
 under Gaussian errors.
+Some of this code  is derived from python code from the developed by
+the Selective Inference development team
+(Jonathan Taylor and others at Stanford University):
+http://github.com/selective-inference/selective-inference
 
 The following functions are included in the package:
 
@@ -88,7 +92,7 @@ Exact Post-selection Inference for Forward Stepwise and Least Angle Regression. 
 #bhat = coef(gfit, s=lam/n, exact=TRUE)[-1]
 
 # compute fixed lambda p-values and selection intervals
-#aa=fixedLassoInf(x,y,bhat,lam,sigma)
+#aa=fixedLassoInf(x,y,bhat,lam,sigma=sigma)
 
 ##least angle regression
 #set.seed(43)

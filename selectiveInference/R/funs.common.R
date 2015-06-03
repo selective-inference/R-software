@@ -1,12 +1,13 @@
 
-
 selection.int = function(y,eta,sigma,vs,alpha,del=1e-4,flip=F) {
   # compute selection intervals
     #Rob's version using grid search
     gridfac=50 
     etay=sum(eta*y)
      vm=vs$vm; vp=vs$vp
-    fun = function(x,etay,vm,vp,sigma.eta) return(1-ptruncnorm(etay,vm,vp,x,sigma.eta))
+    fun = function(x,etay,vm,vp,sigma.eta)
+       return(1-myptruncnorm(etay,a=vm,b=vp,mean=x,sd=sigma.eta))
+  #  fun = function(x,etay,vm,vp,sigma.eta) return(1-ptruncnorm(etay,vm,vp,x,sigma.eta))
 lo=-Inf
 hi=Inf
 covlo=covhi=0
@@ -21,6 +22,7 @@ if( min(etay-vm,vp-etay)>0.05*sigma.eta){
   hi = grid.search(fun,1-alpha/2,xL,xR,inc=inc,etay=etay,vm=vm,vp=vp,sigma.eta=sigma.eta)
     covlo=fun(lo,etay,vm,vp,sigma.eta)
     covhi=1-fun(hi,etay,vm,vp,sigma.eta)
+ 
 }
     if(flip){temp=hi;hi=-lo;lo=-temp;  temp2=covlo;covlo=covhi;covhi=temp2}
   return(list(ci=c(lo,hi), miscov=c(covlo,covhi)))
@@ -84,20 +86,6 @@ rob.ptruncnorm=function(etay, vneg,vpos, etamu, sigma){
         }
     }
 
-mytruncnorm = function(etay, vneg,vpos, etamu, sigma){
-    # From Sam Gross- uses exp approximation in extreme tails
-	# if range is too many sds away from mu, then there
-	# will be numerical errors from using truncnorm
-	if(max(vneg-etamu,etamu-vpos)/sigma < 7){
-		     return(ptruncnorm(etay, vneg, vpos, etamu, sigma))
-                 }
-		   
-	else{
-	   
-	      return(1 - pexp(vpos-etay, etamu-vpos)/ pexp(vpos-vneg, etamu-vpos))
-	        
-          }
-    }
 
 compute.vmvp=function(y,eta, A, b, pp,  SMALL = 1e-07){
 alp = as.vector(A %*% eta/sum(eta^2))
@@ -112,6 +100,10 @@ alp = as.vector(A %*% eta/sum(eta^2))
    return(list(vm = vmm, vp = vpp))
 
 }
+
+is.wholenumber <-
+         function(x, tol = .Machine$double.eps^0.5)  abs(x - round(x)) < tol
+
 checkargs=function(y,x=NULL,bhat=NULL,sigma=NULL,lambda=0,alpha=.1,tol=1e-5,nsteps=NULL
 ,larfit=NULL, fsfit=NULL, k=NULL,bh.q=NULL){
     # checks arguments for all user-callable functions.
@@ -121,6 +113,7 @@ checkargs=function(y,x=NULL,bhat=NULL,sigma=NULL,lambda=0,alpha=.1,tol=1e-5,nste
     if(ncol(x)<2) stop("x must have at least 2 columns")
     if(length(y)!=nrow(x)) stop("Number of rows of x must equal length of y")
 }
+ 
     if(!is.null(bhat)){
          if(length(bhat)!=ncol(x))  stop("bhat must have length equal to the number of cols of x")
      }
@@ -132,7 +125,9 @@ checkargs=function(y,x=NULL,bhat=NULL,sigma=NULL,lambda=0,alpha=.1,tol=1e-5,nste
       if(tol<=0) stop("tol must be gt 0")
     if(!is.null(nsteps)){
         if(nsteps<1 | nsteps> min(nrow(x),ncol(x))) stop("nsteps must be between 1 and min(nrow(x),ncol(x))")
-    } 
+        if(!is.wholenumber(nsteps)) stop("nsteps must be an integer")
+    }
+  
        if(!is.null(larfit)){
              if(class(larfit)!="lar") stop("larfit must be a lar object returned by lar (not lars)")
          }
@@ -148,6 +143,7 @@ if(!is.null(bh.q)){
 }
 
 estimateSigma=function(x,y){
+    if(nrow(x)<10) stop("Number of observations must be at least 10 to run estimateSigma")
     cvfit=cv.glmnet(x,y,standardize=F)
     lamhat=cvfit$lambda.min
     fit=glmnet(x,y,standardize=F)
@@ -155,4 +151,42 @@ estimateSigma=function(x,y){
     nz=sum(predict(fit,s=lamhat, type="coef")!=0)
     sigma=sqrt(sum((y-yhat)^2)/(length(y)-nz-1))
     return(list(sigmahat=sigma, df=nz))
+}
+
+myptruncnorm=function(z,a,b,mean=0,sd=1){
+ # return Prob(Z<z | Z in [a,b])
+ #"mean" can be a vector
+#uses 
+# A UNIFORM APPROXIMATION TO THE RIGHT NORMAL TAIL INTEGRAL
+# W Bryc
+#Applied Mathematics and Computation
+#Volume 127, Issues 2–3, 15 April 2002, Pages 365–374
+#https://math.uc.edu/~brycw/preprint/z-tail/z-tail.pdf
+    
+f=function(z){
+(z^2+5.575192695*z+12.7743632)/(z^3*sqrt(2*pi)+ 14.38718147*z*z+31.53531977*z+2*12.77436324)
+}
+#first try standard  formula
+a=(a-mean)/sd
+b=(b-mean)/sd
+z=(z-mean)/sd
+term1=1-pnorm(a)
+term2=1-pnorm(b)
+term3=1-pnorm(z)
+out=(term1-term3)/(term1-term2)
+o=is.na(out)
+#if any are NAs, apply modified method
+if(sum(o)>0){
+     zz=z[o]
+aa=a[o]
+bb=b[o]
+   term1=exp(zz*zz)
+    oo=aa>-Inf
+   term1[oo]=f(aa[oo])*exp(-(aa[oo]^2-zz[oo]^2)/2)
+   term2=0
+ooo=bb<Inf
+  term2[ooo]=f(bb[ooo])*exp(-(bb[ooo]^2-zz[ooo]^2)/2)
+   out[o]= (term1-f(zz))/ (term1-term2)
+}
+return(out)
 }

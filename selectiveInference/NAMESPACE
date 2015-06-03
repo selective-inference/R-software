@@ -1,7 +1,7 @@
-export(lar,larInf,predict.lar,plot.lar,print.larInf,fixedLassoInf,print.fixedLassoInf,forwardStep,forwardStepInf,print.forwardStepInf,manyMeans,print.manyMeans,estimateSigma)
+export(lar,larInf,predict.lar,plot.lar,print.lar,print.larInf,fixedLassoInf,print.fixedLassoInf,forwardStep,print.forwardStep,forwardStepInf,print.forwardStepInf,manyMeans,print.manyMeans,estimateSigma,forwardStop,compute.vmvp,myptruncnorm,selection.int)
 useDynLib("selectiveInference")
 import(MASS)
 import(glmnet)
-import(truncnorm)
+
 
 
