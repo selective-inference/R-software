@@ -6,22 +6,22 @@ n=40
 p=16
 
 n=200
-p=50
+p=20
 sigma=.7
 
 x=matrix(rnorm(n*p),n,p)
-x=scale(x,T,F)
+#x=scale(x,T,F)
 
 #generate y
 #beta=c(3,-2,0,0,rep(0,p-4))
 #beta=c(rep(2,10),rep(0,p-10))
 beta=c(rep(3,10),rep(0,p-10))
-beta=c(rep(3,10),rep(0,p-10))
+beta=c(rep(0,10),rep(0,p-10))
 mu=x%*%beta
 
 y=mu+sigma*rnorm(n)
 
-y=y-mean(y)
+#y=y-mean(y)
 
 a=forwardStep(x,y)
 
@@ -88,16 +88,16 @@ options(error=dump.frames)
 
 setting=1  # sequential steps
 #setting=2  #fixed stop
-setting=3  #AIC stop
+#setting=3  #AIC stop
 
 set.seed(333)
 n=100
-p=50
+p=10
 nsim=500
 
 
 x=matrix(rnorm(n*p),n,p)
-x=scale(x,T,T)/sqrt(n-1)
+#x=scale(x,T,T)/sqrt(n-1)
 
 #generate y
 beta=c(0,0,rep(0,p-2))
@@ -110,9 +110,9 @@ for(ii in 1:nsim){
     set.seed(seeds[ii])
     cat(ii)
 y=x%*%beta+sigma*rnorm(n)
-y=y-mean(y)
+#y=y-mean(y)
 
-fsfit=forwardStep(x,y,sigma=sigma)
+fsfit=forwardStep(x,y,sigma=sigma,int=F)
 if(setting==1) aa=forwardStepInf(fsfit,x,y,sigma=sigma,compute.si=F,nsteps=2)
 if(setting==2) aa=forwardStepInf(fsfit,x,y,sigma=sigma,compute.si=F,fixed.step=2)
 if(setting==3) aa=forwardStepInf(fsfit,x,y,sigma=sigma,compute.si=F, aic.stop=T)
