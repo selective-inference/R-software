@@ -1,5 +1,5 @@
 
-forwardStep=function(x,y,sigma=NULL,nsteps=min(nrow(x)-1,ncol(x)),trace=FALSE){
+forwardStep=function(x,y,sigma=NULL,intercept=TRUE,nsteps=min(nrow(x)-1,ncol(x)),trace=FALSE){
     this.call=match.call()
     checkargs(x=x,y=y,nsteps=nsteps,sigma=sigma)
     BIG=10e9
@@ -7,12 +7,14 @@ forwardStep=function(x,y,sigma=NULL,nsteps=min(nrow(x)-1,ncol(x)),trace=FALSE){
 p=ncol(x)
     
 # fs by minimizing scaled ip
-# first center x and y
-x=scale(x,T,F)
-y=y-mean(y)
+# first center x and y if specified
+    if(intercept){
+      x=scale(x,T,F)
+      y=y-mean(y)
+     }
     if(is.null(sigma) & p>=n){cat("Warning: p ge n; the value sigma=1 used for AIC; you may want to estimate sigma using the estimateSigma function",fill=T); sigma=1}
   if(is.null(sigma) & n>p){
-      sigma=sqrt(sum(lsfit(x,y)$res^2)/(n-p))
+      sigma=sqrt(sum(lsfit(x,y,intercept=FALSE)$res^2)/(n-p-1*intercept))
       cat("Standard deviation of noise estimated from mean squared residual",fill=T)
   }
 pred=s=scor=bhat=rep(NA,nsteps)
@@ -23,14 +25,14 @@ pred=s=scor=bhat=rep(NA,nsteps)
 scor[1]=ip[pred[1]]
 bhat[1]=ip[pred[1]]/sqrt(sum(x[,pred[1]]^2))
 
-r=lsfit(x[,pred[1]],y)$res
+r=lsfit(x[,pred[1]],y,intercept=FALSE)$res
     
  if(nsteps>1){
 for(j in 2:nsteps){
      if(trace) cat(c("step=",j),fill=T)
   mod=pred[1:(j-1)]
-  r= lsfit(x[,mod],r)$res
-  xr= lsfit(x[,mod],x)$res
+  r= lsfit(x[,mod],r,intercept=FALSE)$res
+  xr= lsfit(x[,mod],x,intercept=FALSE)$res
   ip=t(xr)%*%r/sqrt(diag(t(xr)%*%xr))
   ip[mod]=0
   pred[j]=which.max(abs(ip))
@@ -45,14 +47,14 @@ rss[1]=sum( (y-mean(y))^2)
     aic[1]=rss[1]
 for(j in 1:nsteps){
       xx=x[,pred[1:j],drop=F]
-  rss[j+1]=sum(lsfit(xx,y)$res^2)
+  rss[j+1]=sum(lsfit(xx,y,intercept=FALSE)$res^2)
   aic[j+1]=rss[j+1]+2*j*sigma^2
  }
  d=diff(aic)
 o=which(d>0)
     if(length(o)>0) aichat=o[1]-1
     if(length(o)==0) aichat=length(aic)-1
-    out=list(pred=pred,scor=scor,bhat=bhat,rss=rss,sigma=sigma,aic=aic,aichat=aichat,call=this.call)
+    out=list(pred=pred,scor=scor,bhat=bhat,rss=rss,sigma=sigma,intercept=intercept,aic=aic,aichat=aichat,call=this.call)
     class(out)="forwardStep"
 return(out)
 }
@@ -85,17 +87,20 @@ function(fsfit,x,y,sigma=NULL,nsteps=NULL,alpha=.10,fixed.step=NULL,aic.stop=FAL
     
 n=nrow(x)
 p=ncol(x)
+    intercept=fsfit$intercept
     
   if(is.null(sigma)) sigma=fsfit$sigma
     if(aic.stop & !is.null(fixed.step)) stop("Only one of fixed.step and aic.stop can be specified")
     if(aic.stop){fixed.step=fsfit$aichat}
 if(is.null(nsteps)){ nsteps=min(length(fsfit$pred),20)}
     if(!is.null(fixed.step))  nsteps=fixed.step
-# first center x and y
+    
+# first center x and y if specified in original call
 
-x=scale(x,TRUE,FALSE)
-y=y-mean(y)
-
+    if(intercept){
+ x=scale(x,TRUE,FALSE)
+  y=y-mean(y)
+}
 xx=x
  
 SMALL=1e-7
@@ -135,7 +140,7 @@ if(trace) cat(c("step=",j),fill=T)
   if(j>1) {
   mod=pred[1:(j-1)]
   notin[mod]=F
-  xx[,-mod]=lsfit(xx[,mod],xx[,-mod])$res
+  xx[,-mod]=lsfit(xx[,mod],xx[,-mod],intercept=FALSE)$res
  # vv=solve(t(xx[,mod,drop=F])%*%xx[,mod,drop=F])
  # proj=xx[,mod]%*%vv%*%t(xx[,mod])
   }
@@ -152,7 +157,7 @@ if(trace) cat(c("step=",j),fill=T)
  ii=ii+1
  #A[ii,]=-(s[j]*xx[,jj]/w+xx[,k]/w2)%*%(diag(n)-proj)
   A[ii,]=-(s[j]*xx[,jj]/w+xx[,k]/w2)
- if(j>1) A[ii,]=lsfit(xx[,mod],A[ii,],int=F)$res
+ if(j>1) A[ii,]=lsfit(xx[,mod],A[ii,],intercept=FALSE)$res
  b[ii]=0;  stepind[ii]=j
 }
  if(aic.stop){

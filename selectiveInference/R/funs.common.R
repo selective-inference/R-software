@@ -13,7 +13,7 @@ hi=Inf
 covlo=covhi=0
      sigma.eta=sqrt(sum(eta^2))*sigma
 #  cat(c(vm,etay,vp,sigma.eta),fill=T)
-if( min(etay-vm,vp-etay)>0.001*sigma.eta){
+if( min(etay-vm,vp-etay)>0.05*sigma.eta){
   inc = sqrt(sum(eta^2)*sigma)*del
    
     xL=etay-gridfac*sigma.eta
@@ -178,13 +178,13 @@ o=is.na(out)
 #if any are NAs, apply modified method
 if(sum(o)>0){
      zz=z[o]
-     aa=a[o]
-    bb=b[o]
+aa=a[o]
+bb=b[o]
    term1=exp(zz*zz)
     oo=aa>-Inf
    term1[oo]=f(aa[oo])*exp(-(aa[oo]^2-zz[oo]^2)/2)
    term2=0
-   ooo=bb<Inf
+ooo=bb<Inf
   term2[ooo]=f(bb[ooo])*exp(-(bb[ooo]^2-zz[ooo]^2)/2)
    out[o]= (term1-f(zz))/ (term1-term2)
 }
