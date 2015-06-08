@@ -27,7 +27,7 @@ Number of steps to analyze. Default is min(k,20) where k is the  number used in 
 
 }
   \item{alpha}{
-Significance level for  selection intervals (target is miscoverage alpha/2 in each tail)
+Significance level for  selection intervals (target is miscoverage alpha/2 in each tail). Eg alpha=.10 or .05.
 }
   \item{fixed.step}{
 If an integer k, results for model after step k are computed. If NULL and aic.stop is FALSE (default),

@@ -78,9 +78,9 @@ tab=cbind(1:length(x$pred),x$pred,x$bhat,x$scor)
 forwardStepInf=
 function(fsfit,x,y,sigma=NULL,nsteps=NULL,alpha=.10,fixed.step=NULL,aic.stop=FALSE,trace=F,compute.si=TRUE,one.sided=TRUE){
 # pvalues for forward stepwise
-#  returns pval and interval for predictor just entered (default with which.pred=1:nsteps) 
-# otherwise which.pred is a vector of length nsteps, and it returns 
-#  info for which.pred[k]th pred at step k
+#  returns pval and interval for predictor just entered (default with fixed.step=NULL) 
+# otherwise if fixed.step=k, returns results for all predictors at step k
+#  
     this.call=match.call()
     
       checkargs(x=x,y=y,nsteps=nsteps,sigma=sigma,alpha=alpha, fsfit=fsfit)
@@ -211,26 +211,33 @@ vmall=vpall=vector("list",nsteps)
 pv=rep(NA,nsteps)
 ci=miscov=matrix(NA,nrow=p,ncol=2)
 
-
+ 
 if(trace & !compute.si) cat("Computing p-values",fill=T)
     if(trace & compute.si) cat("Computing p-values and selection intervals",fill=T)
 for(kk in 1:length(which.steps)){
 if(trace) cat(c("step=",kk),fill=T)
 if(is.null(fixed.step)) pp=sum(stepind<=which.steps[kk])
 if(!is.null(fixed.step)) pp=nrow(A)
-mod=pred[1:which.steps[kk]]
+  mod=pred[1:which.steps[kk]]
 
- temp=(solve(t(x[,mod,drop=F])%*%x[,mod,drop=F])%*%t(x[,mod,drop=F]))
+ contr=(solve(t(x[,mod,drop=F])%*%x[,mod,drop=F])%*%t(x[,mod,drop=F]))
 
 # compute pvalues and CIs  
-kkk=nrow(temp)
+kkk=nrow(contr)
+A2=A;b2=b
 if(!is.null(fixed.step)) kkk=kk
-  eta=as.vector(temp[kkk,])
+  eta=as.vector(contr[kkk,])
 
     bhat=sum(eta*y)
     if(one.sided) eta=eta*sign(bhat)
 flip=(one.sided & sign(bhat)==-1)
-junk=compute.vmvp(y,eta,A,b,pp)
+
+if(!is.null(fixed.step)){  #add sign constraint for predictor being tested
+  A2=rbind(A2,-1*contr[kkk,]*sign(bhat))
+  b2=c(b2,0)
+  }
+    
+junk=compute.vmvp(y,eta,A2,b2,pp)
 vmm=junk$vm;vpp=junk$vp
 
 vall[,kk] = eta

@@ -7,7 +7,7 @@ Prediction from a LAR fit
 Make predictions or extract coefficients from a fitted lar model
 }
 \usage{
-predict.lar(object, newx, s, type = c("fit", "coefficients"), mode = c("step", "fraction", "norm", "lambda"), ...)
+\method{predict}{lar}(object, newx, s, type = c("fit", "coefficients"), mode = c("step", "fraction", "norm", "lambda"), ...)
 }
 
 \arguments{
@@ -43,7 +43,7 @@ Mode="step" means the s= argument indexes the lars step
           sense for lars/stepwise models). Abbreviations allowed.
 }
   \item{\dots}{
-Any arguments for ‘predict.lar’ should work for ‘coef.lars’
+Any arguments for predict.lar should work for coef.lars.
         }
 }
 \details{
@@ -57,8 +57,8 @@ Either a vector/matrix of fitted values, or a vector/matrix of
 \references{
 Efron, Hastie, Johnstone and Tibshirani (2002) "Least Angle
      Regression" (with discussion) _Annals of Statistics_; see also
-     <URL:
-     http://www-stat.stanford.edu/~hastie/Papers/LARS/LeastAngle_2002.pdf>.
+  
+     http://www-stat.stanford.edu/~hastie/Papers/LARS/LeastAngle_2002.pdf
 
      Hastie, Tibshirani and Friedman (2002) Elements of Statistical
      Learning, Springer, NY.
@@ -70,7 +70,6 @@ arXiv:1401.3889
 \author{
 Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 }
-%% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \examples{
 #NOT RUN
@@ -86,7 +85,5 @@ Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 #y=x%*%beta+sigma*rnorm(n)
 #y=y-mean(y)
 #larfit=lar(x,y)
-#fit=predict.lar(larfit,x,type="fit")#
+#fit=predict.lar(larfit,x,type="fit")
 }
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

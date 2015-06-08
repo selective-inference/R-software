@@ -8,7 +8,7 @@ Forward stepwise regression
 This function implements forward stepwise regression, for use in the selectiveInference package
 }
 \usage{
-forwardStep(x, y, sigma=NULL, nsteps = min(nrow(x)-1, ncol(x)),trace=FALSE)
+forwardStep(x, y, sigma=NULL, intercept=TRUE, nsteps = min(nrow(x)-1, ncol(x)),trace=FALSE)
 }
 \arguments{
   \item{x}{
@@ -21,6 +21,7 @@ Vector of outcomes (length n)
  If NULL (default), this is estimated from the mean squared residual
 of the full fit (when n>p). If n le p, user should supply a value, using, for example the estimateSigma
 function.} 
+\item{intercept}{Should an intercept be included on the model? Default TRUE}
   \item{nsteps}{
 Number of steps to take (default=min(n,p))
 }
@@ -34,9 +35,10 @@ The data x and y are first centered by the function.
 \value{
 \item{pred}{Predictors entered in order}
 \item{scor}{Scaled inner products of entered predictors}
-\item{bhat}{Partial regression coeficients of entered predictors}
+\item{bhat}{Partial regression coefficients of predictors entered at each step}
 \item{rss}{Residual sum of squares after each predictor is entered}
 \item{sigma}{Estimate of noise standard deviation, used for AIC}
+\item{intercept}{The value of argument "intercept" specified in the call}
 \item{aic}{AIC criterion after each predictor is added}
 \item{aichat}{Step number minizing AIC (starting from the null model; first local minimum)}
 \item{call}{The call to forwardStep}

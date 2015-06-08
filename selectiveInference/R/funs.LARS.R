@@ -34,6 +34,7 @@ if(n==2 & p==2) stop("number of obs must be >2 when number of predictors=2")
         y <- drop(y)
     }
 
+  im <- inactive <- seq(p)
   if (normalize) {
         normx <- sqrt(drop(one %*% (x^2)))
         nosignal <- normx/sqrt(n) < eps
@@ -362,7 +363,7 @@ pv.spacing=spacing.pval.asymp.list(y,larfit,nsteps,sigma=sigma)
     pv.cov=1-pexp(junk,1)
 
      forwardStopHat=forwardStop(pv,alpha)
-    out=list(pv=pv,ci=ci,tailarea=miscov,vm=vmm,vp=vpp,sigma=sigma,alpha=alpha,act=larfit$act,pv.spacing=pv.spacing, pv.cov=pv.cov, forwardStopHat= forwardStopHat)
+    out=list(pv=pv,ci=ci,tailarea=miscov,vm=vmm,vp=vpp,sigma=sigma,alpha=alpha,act=larfit$act,pv.spacing=pv.spacing, pv.cov=pv.cov, forwardStopHat= forwardStopHat,call=this.call)
     out$call=this.call
    class(out)="larInf"
 return(out)

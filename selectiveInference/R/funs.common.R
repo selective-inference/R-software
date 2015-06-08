@@ -74,17 +74,17 @@ bin.search = function(x, fun, val, inc=0.01, tol=1e-2) {
   return(xg[which.min(abs(vals-val))])
  
 }
-rob.ptruncnorm=function(etay, vneg,vpos, etamu, sigma){
-    	if(max(vneg-etamu,etamu-vpos)/sigma < 7){
-		     return(ptruncnorm(etay, vneg, vpos, etamu, sigma))
-                 }
+#rob.ptruncnorm=function(etay, vneg,vpos, etamu, sigma){
+#    	if(max(vneg-etamu,etamu-vpos)/sigma < 7){
+#		     return(ptruncnorm(etay, vneg, vpos, etamu, sigma))
+#                 }
 		   
-	else{
-            if(etay > etamu) return(1)
-            if(etay < etamu) return(0)
-             if(etay== etamu) return(.5)
-        }
-    }
+#	else{
+  #          if(etay > etamu) return(1)
+ #           if(etay < etamu) return(0)
+ #            if(etay== etamu) return(.5)
+#        }
+ #   }
 
 
 compute.vmvp=function(y,eta, A, b, pp,  SMALL = 1e-07){

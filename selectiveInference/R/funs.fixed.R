@@ -91,39 +91,39 @@ tab=cbind(x$pred,x$pv,x$ci,x$tailarea)
 
 
 ### functions from Ryan
-tf.jonbands = function(y,x,beta,k,lambda,alpha,sigma2,verb=FALSE) {
-  ht = tf.ht(y,x,beta,k)
-  H = ht$H
-  theta = ht$theta
-  if (verb) cat(sprintf("Approx error: %f\n",max(abs(H%*%theta-beta))))
+#tf.jonbands = function(y,x,beta,k,lambda,alpha,sigma2,verb=FALSE) {
+ # ht = tf.ht(y,x,beta,k)
+ # H = ht$H
+ # theta = ht$theta
+ # if (verb) cat(sprintf("Approx error: %f\n",max(abs(H%*%theta-beta))))
 
-  H1 = H[,1:(k+1),drop=FALSE]
-  H2 = H[,(k+2):n,drop=FALSE]
-  P = diag(1,nrow(H1)) - H1 %*% solve(t(H1) %*% H1) %*% t(H1)
-  yP = P %*% y
-  HP = P %*% H2
-  thetaP = theta[(k+2):n]
+ # H1 = H[,1:(k+1),drop=FALSE]
+ # H2 = H[,(k+2):n,drop=FALSE]
+  #P = diag(1,nrow(H1)) - H1 %*% solve(t(H1) %*% H1) %*% t(H1)
+ # yP = P %*% y
+ # HP = P %*% H2
+ # thetaP = theta[(k+2):n]
   
-  ab = tf.jonab(yP,HP,thetaP,lambda)
-  A = ab$A %*% P ## Important! Multiply by P here
-  b = ab$b
+ # ab = tf.jonab(yP,HP,thetaP,lambda)
+#  A = ab$A %*% P ## Important! Multiply by P here
+#  b = ab$b
 
-  if (verb) cat(sprintf("Poly error: %f\n",min(b - A%*%y)))
+ # if (verb) cat(sprintf("Poly error: %f\n",min(b - A%*%y)))
 
-  n = length(y)
-  bands = cover = matrix(0,n,2)
-  for (i in 1:n) {
-    if (verb) cat(sprintf("%i...",i))
-    eta = rep(0,n); eta[i] = 1
+ # n = length(y)
+#  bands = cover = matrix(0,n,2)
+#  for (i in 1:n) {
+ #   if (verb) cat(sprintf("%i...",i))
+  #  eta = rep(0,n); eta[i] = 1
     #eta[pmin(pmax(i+(-2):2,1),n)] = 1/5
-    vs = tf.jonvs(y,A,b,eta)
-    bc = tf.jonint(y,eta,sigma2,vs,alpha)
-    bands[i,] = bc[1:2]
-    cover[i,] = bc[3:4]
-  }
+ #   vs = tf.jonvs(y,A,b,eta)
+#    bc = tf.jonint(y,eta,sigma2,vs,alpha)
+ #   bands[i,] = bc[1:2]
+ #   cover[i,] = bc[3:4]
+#  }
 
-  return(list(bands=bands,cover=cover))
-}
+#  return(list(bands=bands,cover=cover))
+#}
 
 
 
@@ -144,32 +144,32 @@ tf.h = function(n,k,x=1:n) {
   return(H)
 }
 
-tf.theta = function(y,x,beta,k) {
-  n = length(y)
-  D = getDtfPos(n,k,x)
-  theta2 = D %*% beta / factorial(k)
+#tf.theta = function(y,x,beta,k) {
+#  n = length(y)
+#  D = getDtfPos(n,k,x)
+#  theta2 = D %*% beta / factorial(k)
 
-  alpha = beta[Seq(1,k+1)]
-  theta1 = numeric(k+1)
-  theta1[1] = alpha[1]
-  for (j in Seq(2,k+1)) {
-    delta = x[Seq(j,k+1)]-x[Seq(1,k+1-j+1)]
-    alpha = diff(alpha)/delta
-    theta1[j] = alpha[1]
-  }
+#  alpha = beta[Seq(1,k+1)]
+#  theta1 = numeric(k+1)
+#  theta1[1] = alpha[1]
+#  for (j in Seq(2,k+1)) {
+#   delta = x[Seq(j,k+1)]-x[Seq(1,k+1-j+1)]
+#    alpha = diff(alpha)/delta
+#   theta1[j] = alpha[1]
+# }
   
-  if (FALSE) {
-  alpha = beta[Seq(1,k+1)]
-  for (j in Seq(1,k)) {
-    for (l in rev(Seq(k+1,j+1))) {
-      alpha[l] = (alpha[l]-alpha[l-1])/(x[l]-x[l-j])
-    }
-  }
-  theta1 = alpha
-  }
+#  if (FALSE) {
+# alpha = beta[Seq(1,k+1)]
+#  for (j in Seq(1,k)) {
+#   for (l in rev(Seq(k+1,j+1))) {
+#     alpha[l] = (alpha[l]-alpha[l-1])/(x[l]-x[l-j])
+#    }
+# }
+# theta1 = alpha
+#  }
   
-  return(c(theta1,theta2))
-}
+#return(c(theta1,theta2))
+#}
 
 Seq = function(a,b,...) {
   if (a<=b) return(seq(a,b,...))
