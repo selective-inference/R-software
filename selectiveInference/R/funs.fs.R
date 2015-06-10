@@ -98,8 +98,8 @@ if(is.null(nsteps)){ nsteps=min(length(fsfit$pred),20)}
 # first center x and y if specified in original call
 
     if(intercept){
- x=scale(x,TRUE,FALSE)
-  y=y-mean(y)
+    x=scale(x,TRUE,FALSE)
+    y=y-mean(y)
 }
 xx=x
  
@@ -229,6 +229,8 @@ if(!is.null(fixed.step)) kkk=kk
   eta=as.vector(contr[kkk,])
 
     bhat=sum(eta*y)
+vall[,kk] = eta
+
     if(one.sided) eta=eta*sign(bhat)
 flip=(one.sided & sign(bhat)==-1)
 
@@ -240,7 +242,6 @@ if(!is.null(fixed.step)){  #add sign constraint for predictor being tested
 junk=compute.vmvp(y,eta,A2,b2,pp)
 vmm=junk$vm;vpp=junk$vp
 
-vall[,kk] = eta
    vmall[[kk]][kk]=vmm
    vpall[[kk]][kk]=vpp
    tt=sum(eta*y)

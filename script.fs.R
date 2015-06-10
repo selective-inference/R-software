@@ -87,7 +87,7 @@ library(truncnorm)
 options(error=dump.frames)
 
 setting=1  # sequential steps
-#setting=2  #fixed stop
+setting=2  #fixed stop
 #setting=3  #AIC stop
 
 set.seed(333)
