@@ -57,6 +57,7 @@ for reported  interval--- these should be close to alpha/2.
 
 \value{
   \item{pv}{p-values for each predictor}
+  \item{v}{Matrix of contrast vectors; with mu=E(y), parameters of interest are sum(v[,j])*mu), for j in 1...ncol(v) }
   \item{vm}{Lower bounds for functionals}
  \item{vp}{Upper bounds for functionals}
 \item{ci}{Selection intervals}
