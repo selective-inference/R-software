@@ -256,7 +256,6 @@ if(!one.sided)  pv[kk]=2*min(pv[kk],1-pv[kk])
   if(compute.si)
       {
            vs=list(vm=vmm,vp=vpp)
-           flip=F  # line added!
           junk=selection.int(y,eta,sigma,vs,alpha,flip=flip)
 #     cat(c(vs$vm,sum(eta*y),vs$vp,sigma,sigma.eta,alpha),fill=T)
           ci[kk,]=junk$ci;miscov[kk,]=junk$miscov

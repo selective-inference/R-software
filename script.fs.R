@@ -15,8 +15,8 @@ x=matrix(rnorm(n*p),n,p)
 #generate y
 #beta=c(3,-2,0,0,rep(0,p-4))
 #beta=c(rep(2,10),rep(0,p-10))
-beta=c(rep(3,10),rep(0,p-10))
-beta=c(rep(0,10),rep(0,p-10))
+beta=c(3,-3,rep(0,p-2))
+
 mu=x%*%beta
 
 y=mu+sigma*rnorm(n)
