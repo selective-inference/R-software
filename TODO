@@ -1,0 +1,4 @@
+
+
+-add for FS and lar, add argument inference.mode=c("prep","fast","none")
+     add  computation of basic A matrix into fitting functions-  Ryan
