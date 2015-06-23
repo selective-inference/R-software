@@ -207,7 +207,7 @@ stepind[ii]=nsteps
 # pv tests
 
 vall = matrix(NA,n,nsteps)
-vmall=vpall=vector("list",nsteps)
+vmall=vpall=rep(NA,nsteps)
 pv=rep(NA,nsteps)
 ci=miscov=matrix(NA,nrow=p,ncol=2)
 
@@ -243,8 +243,8 @@ if(!is.null(fixed.step)){  #add sign constraint for predictor being tested
 junk=compute.vmvp(y,eta,A2,b2,pp)
 vmm=junk$vm;vpp=junk$vp
 
-   vmall[[kk]][kk]=vmm
-   vpall[[kk]][kk]=vpp
+   vmall[kk]=vmm
+   vpall[kk]=vpp
    tt=sum(eta*y)
    sigma.eta=sigma*sqrt(sum(eta^2))
    u=0  #null

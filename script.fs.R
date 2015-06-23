@@ -24,7 +24,7 @@ y=mu+sigma*rnorm(n)
 #y=y-mean(y)
 
 a=forwardStep(x,y)
-
+a=forwardStep(x,y,int=F)
 aa=forwardStepInf(a,x,y,compute.si=T,trace=T)
 
 aa2=forwardStepInf(a,x,y,sigma=sigma,compute.si=T,fixed.step=10)
@@ -38,8 +38,8 @@ a=forwardStep(x,y)
 aa=forwardStepInf(a,x,y,compute.si=T,trace=T)
 
 
-sigmahat=estimateSigma(x,y)
-aa=forwardStepInf(a,x,y,sigma=sigmahat,compute.si=T,trace=T)
+out=estimateSigma(x,y)
+aa=forwardStepInf(a,x,y,sigma=out$sigmahat,compute.si=T,trace=T)
 
 
 n=20

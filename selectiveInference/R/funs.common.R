@@ -104,7 +104,7 @@ alp = as.vector(A %*% eta/sum(eta^2))
 is.wholenumber <-
          function(x, tol = .Machine$double.eps^0.5)  abs(x - round(x)) < tol
 
-checkargs=function(y,x=NULL,bhat=NULL,sigma=NULL,lambda=0,alpha=.1,tol=1e-5,nsteps=NULL
+checkargs=function(y,x=NULL,bhat=NULL,sigma=NULL,lambda=0,alpha=.1,tol.beta=1e-5,tol.kkt=0.01,nsteps=NULL
 ,larfit=NULL, fsfit=NULL, k=NULL,bh.q=NULL){
     # checks arguments for all user-callable functions.
   
@@ -122,7 +122,8 @@ checkargs=function(y,x=NULL,bhat=NULL,sigma=NULL,lambda=0,alpha=.1,tol=1e-5,nste
      }
     if(lambda<0) stop("lambda must be non-negative")
     if(alpha<=0 | alpha >=1) stop("alpha must be between 0 and 1")
-      if(tol<=0) stop("tol must be gt 0")
+      if(tol.beta<=0) stop("tol.beta must be gt 0")
+    if(tol.kkt<=0) stop("tol.kkt must be gt 0")
     if(!is.null(nsteps)){
         if(nsteps<1 | nsteps> min(nrow(x),ncol(x))) stop("nsteps must be between 1 and min(nrow(x),ncol(x))")
         if(!is.wholenumber(nsteps)) stop("nsteps must be an integer")

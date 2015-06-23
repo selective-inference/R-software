@@ -29,8 +29,9 @@ Number of steps to take (default=min(n,p))
 }
 \details{
 This function implements forward stepwise regression, adding the predictotr maximize the scaled inner product between the residual r and the 
-orthogonalized predictors at each step. That is, argmax t(xr) %*% r/sqrt(diag(t(xr) %*% xr)).
-The data x and y are first centered by the function.
+orthogonalized predictors at each step. That is, argmax t(xr) %*% r/sqrt(diag(t(xr) %*% xr)),
+where xr is lsfit(x,y)$res.
+If interecept is TRUE, the data x and y are first centered by the function.
 }
 \value{
 \item{pred}{Predictors entered in order}

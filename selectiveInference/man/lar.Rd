@@ -63,16 +63,15 @@ Efron, Hastie, Johnstone and Tibshirani (2002) "Least Angle
      <URL:
      http://www-stat.stanford.edu/~hastie/Papers/LARS/LeastAngle_2002.pdf>.
 
-     Hastie, Tibshirani and Friedman (2002) Elements of Statistical
+     Hastie, Tibshirani and Friedman (2002, 2009) Elements of Statistical
      Learning, Springer, NY.
 }
 \author{
 Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 }
-%% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \seealso{
- \code{\link{lar}}
+ \code{\link{predict.lar}}
 }
 \examples{
 #NOT RUN
@@ -87,7 +86,5 @@ Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 #y=y-mean(y)
 #run lar
 #larfit=lar(x,y,verbose=TRUE)
-                                      
+#plot(larfit)                                      
 }
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

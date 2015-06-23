@@ -1,24 +1,25 @@
 
-fixedLassoInf=function(x,y,bhat,lambda, coeftype=c("partial","full"), sigma=NULL,alpha=.10,trace=FALSE,compute.si=TRUE,tol=1e-3,one.sided=TRUE){
+fixedLassoInf=function(x,y,bhat,lambda, coeftype=c("partial","full"), sigma=NULL,alpha=.10,trace=FALSE,compute.si=TRUE,tol.beta=1e-5,tol.kkt=0.05,one.sided=TRUE){
     # inference for fixed lam lasso
  # careful!  lambda is for usual lasso problem; glmnet uses lambda/n
     this.call=match.call()
     coeftype<- match.arg(coeftype)
-    checkargs(x=x,y=y,bhat=bhat,lambda=lambda,sigma=sigma,alpha=alpha,tol=tol)
+    checkargs(x=x,y=y,bhat=bhat,lambda=lambda,sigma=sigma,alpha=alpha,tol.beta=tol.beta,tol.kkt=tol.kkt)
      if(sum(bhat!=0)==0) stop("Value of lambda too large, bhat is zero")
 x=scale(x,T,F)
 y=y-mean(y)
+    tol.poly=0.01 # tolerancefor checking polye
 ##check KKT
    g0=t(x)%*%(y-x%*%bhat)
    g=g0-lambda*sign(bhat)
     gg=g0/lambda
-    oo=abs(bhat)>tol
-    if(max(abs(g[oo]))>tol) stop("Solution bhat does not satisfy the KKT conditions")
+    oo=abs(bhat)>tol.beta
+    if(max(abs(g[oo]))>tol.kkt) stop("Solution bhat does not satisfy the KKT conditions")
     if(sum(!oo)>0){
-     if(min(gg[!oo])< -1 | max(gg[!oo])>1 ) stop("Solution bhat does not satisfy the KKT conditions")
+     if(min(gg[!oo])< -1-tol.kkt | max(gg[!oo])>1 +tol.kkt) stop("Solution bhat does not satisfy the KKT conditions")
  }
 ##       
-junk=tf.jonab(y,x,bhat,lambda,tol=tol)
+junk=tf.jonab(y,x,bhat,lambda,tol=tol.beta)
 n=length(y)
     p=ncol(x)
   
@@ -30,9 +31,10 @@ n=length(y)
  
 a=junk$A
 b=junk$b
-    if(max(a%*%y-b)>0){stop("Polyhedral constraints not satisfied; you need to recompute bhat more
+    if(max(a%*%y-b)>tol.poly*sqrt(var(y))){
+stop("Polyhedral constraints not satisfied; you need to recompute bhat more
 accurately. With glmnet, be sure to use exact=TRUE in coef() and also try decreasing lambda.min
-in call to glmnet. If p>N, the value of lambda specified may also be too small--- smaller than the value yielding zero training error")}
+in call to glmnet. If p>N, the value of lambda specified may also be too small--- smaller than the val#ue yielding zero training error")}
     
 e=which(bhat!=0)
 xe=x[,e,drop=F]

@@ -34,28 +34,45 @@ critf=function(b,lam,x,y){
  }
 
 
+##check coverage
+set.seed(3)
 
 n=15
 p=10
-sigma=1
+sigma=2.3
 
 x=matrix(rnorm(n*p),n,p)
 x=scale(x,T,F)
 
-#generate y
-#beta=c(3,-2,0,0,rep(0,p-4))
-#beta=c(rep(2,10),rep(0,p-10))
 beta=c(rep(2,5),rep(0,p-5))
-y=x%*%beta+sigma*rnorm(n)
+     lambda = 2
+nsim=500
+seeds=sample(1:9999,size=nsim)
+
+ci=matrix(NA,nsim,2)
+btrue=rep(NA,nsim)
+for(ii in 1:nsim){
+    cat(ii)
+    set.seed(seeds[ii])
+    mu=x%*%beta
+y=mu+sigma*rnorm(n)
 
 y=y-mean(y)
     
 
     
 gfit=glmnet(x,y,standardize=F,lambda.min.ratio=1e-9)
-     lambda = 1.4
+
      bhat = predict(gfit, s=lambda/n,type="coef",exact=T)[-1]
-   print(fixedLassoInf(x,y,bhat,lambda,sigma))
+#bhat2=lasso2lam(x,y,lambda,int=F,stand=F)
+ junk= fixedLassoInf(x,y,bhat,lambda,sigma=sigma)
+ci[ii,]=junk$ci[1,]
+    xx=x[,junk$pred]
+    btrue[ii]=(solve(t(xx)%*%xx)%*%t(xx)%*%mu)[1]
+}
+
+sum(ci[,1]< btrue & ci[,]> btrue)/nsim
+
 # another example
 set.seed(13)
 

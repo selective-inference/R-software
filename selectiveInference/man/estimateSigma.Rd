@@ -50,6 +50,11 @@ Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 #y=y-mean(y)
 
 #out=estimateSigma(x,y)
+#a=forwardStep(x,y)
+#out2=forwardStepInf(a,x,y,sigma=out$sigmahat,compute.si=T,trace=T)
+
+
+
 }
 
 

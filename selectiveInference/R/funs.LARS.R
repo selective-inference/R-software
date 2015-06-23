@@ -234,6 +234,8 @@ if(n==2 & p==2) stop("number of obs must be >2 when number of predictors=2")
 beta=cbind(beta, ginv(x)%*%y) #ROB ADDED for compatibility with lars;
 beta=t(beta)# for compatibility with LARS function
 
+ beta <- scale(beta, FALSE, normx)
+
   out=list(lambda=lambda,actions=action,df=df,beta=beta,
               completepath=completepath,Gamma=Gamma,nk=nk,mp=mp,mu=mu,meanx=meanx,normx=normx,normalize=normalize,intercept=intercept,type="LAR", call=this.call)
   class(out)="lar"
@@ -319,13 +321,14 @@ SMALL=1e-6
 p=ncol(x)
     n=nrow(x)
 nk=larfit$nk
+    sigma.arg=sigma
      if(is.null(sigma) & p>=n){cat("Warning: p ge n; the value sigma=1 is used; you may want to estimate sigma using the estimateSigma function",fill=T); sigma=1}
   if(is.null(sigma) & n>p){
       sigma=sqrt(sum(lsfit(x,y)$res^2)/(n-p))
        cat("Standard deviation of noise estimated from mean squared residual",fill=T)
     }
      
-vmm=vpp=pv=sigma.eta=rep(NA,nsteps)
+vmall=vpall=pv=sigma.eta=rep(NA,nsteps)
 ci=miscov=matrix(NA,nsteps,2)
 for(k in 1:nsteps){
     mod=larfit$act[1:k]
@@ -343,7 +346,8 @@ for(k in 1:nsteps){
     vs = compute.vmvp(y, eta, A, b, pp)
      vpp = vs$vp
      vmm = vs$vm
-   
+   vpall[k]=vpp
+   vmall[k]=vmm    
     sigma.eta=sigma*sqrt(sum(eta^2))
        u=0  #null
 pv[k]=1-myptruncnorm(tt, vmm, vpp, u, sigma.eta)
@@ -360,10 +364,11 @@ if(!one.sided)  pv[k]=2*min(pv[k],1-pv[k])
 
 pv.spacing=spacing.pval.asymp.list(y,larfit,nsteps,sigma=sigma)
    junk=covtest(larfit,x,y,sigma,nsteps)
-    pv.cov=1-pexp(junk,1)
+   if(!is.null(sigma.arg))  pv.cov=1-pexp(junk,1)
+    if(is.null(sigma.arg))  pv.cov=1-pf(junk,2,n-p)
 
      forwardStopHat=forwardStop(pv,alpha)
-    out=list(pv=pv,ci=ci,tailarea=miscov,vm=vmm,vp=vpp,sigma=sigma,alpha=alpha,act=larfit$act,pv.spacing=pv.spacing, pv.cov=pv.cov, forwardStopHat= forwardStopHat,call=this.call)
+    out=list(pv=pv,ci=ci,tailarea=miscov,vm=vmall,vp=vpall,sigma=sigma,alpha=alpha,act=larfit$act,pv.spacing=pv.spacing, pv.cov=pv.cov, forwardStopHat= forwardStopHat,call=this.call)
     out$call=this.call
    class(out)="larInf"
 return(out)
@@ -430,13 +435,9 @@ covtest=function(fitobj,x,y,sigma,nsteps = min(nrow(x), ncol(x))) {
             }
             if (j > 1) {
                 tt0 = which(betas[j, ] != 0)
-             #     aa = update(fitobj, x = x[, tt0, drop = F])
-          # aa=lar(y, x = x[, tt0, drop = F], normalize=fitobj$normalize)# use this once ryan adds the option to lar
+            
                  aa=lar(x[, tt0, drop = F], y,normalize=fitobj$normalize,intercept=fitobj$intercept)
-       #         aa$beta=cbind(aa$beta,lsfit(x[,tt0,drop=F],y)$coef[-1]) # NOTE these and next few  only needed until ryans fixes lar
-    #           aa$meanx=colMeans(x[,tt0,drop=F]);aa$normx=rep(1,length(tt0))
-    #            aa$mu=mean(y)
-   #             aa$normalize=FALSE
+       
                   yhat0 = predict.lar(aa, x[, tt0,drop=F], type = "fit", s = lambda, mode = "lam")$fit
                 cov0[j] = sum(yy * yhat0)
             }}
@@ -456,8 +457,8 @@ spacing.pval.asymp.list= function(y,out,k,sigma=1) {
     v = out$Gamma[out$nk[i],]
     denom = sigma*sqrt(sum(v*v))
     if (i==1 && i<length(out$lambda)) {
-      pvals[1] = (1-pnorm(out$lambda[i]/denom))/
-        (1-pnorm(out$lambda[i+1]/denom))
+     # pvals[1] = (1-pnorm(out$lambda[i]/denom))/(1-pnorm(out$lambda[i+1]/denom))
+       pvals[i]=1-myptruncnorm(out$lambda[i],out$lambda[i+1],Inf,0,denom)
     }
     else if (i<length(out$lambda)) {
     #  pvals[i] = (pnorm(out$lambda[i-1]/denom)-pnorm(out$lambda[i]/denom))/

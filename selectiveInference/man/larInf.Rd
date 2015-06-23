@@ -52,7 +52,7 @@ for reported  interval--- these should be close to alpha/2.}
 \item{alpha}{Desired coverage (alpha/2 in each tail)}
 \item{act}{Predictors entered at each step of LAR}
 \item{pv.spacing}{p-values from asymptotic spacing test}
-\item{pv.cov}{p-values from covariance (exponential) rtest}
+\item{pv.cov}{p-values from covariance test. The reference distribution is Exp(1) if sigma is unknown; otherwise it is F (2,n-p)}
 \item{ForwardStopHat}{Estimated stopping point from forwardStop rule, approximately controlling FDR at alpha}
 \item{call}{The call to forwardStepInf}
 }
