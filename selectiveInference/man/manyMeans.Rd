@@ -2,14 +2,15 @@
 \alias{manyMeans}
 
 \title{
-Inference for fixed lambda lasso
+P-values and selection intervals  for the  largest k
+among many normal means
 }
 \description{
-Compute p-values and selection intervals for lasso fit with fixed value of regularization parameter
-lambda
+This function compute p-values and selection intervals  for the  largest k
+among many normal means.
 }
 \usage{
-manyMeans( y,  alpha = 0.05, bh.q=NULL, k=NULL,sigma=1)
+manyMeans(y,  alpha = 0.05, bh.q=NULL, k=NULL,sigma=1)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

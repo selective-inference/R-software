@@ -16,12 +16,12 @@ Version: \tab 1.0\cr
 Date: \tab 2015-01-05\cr
 License: \tab GPL-2\cr
 }
-Ths collection of functions  performs inference after selection for forward stepwise regression,
+This collection of functions  performs inference after selection for forward stepwise regression,
 the lasso, least angle regression and the many normal means problem.
-The functions compute p-values and selection intervals that properly account for the inherence slection
+The functions compute p-values and selection intervals that properly account for the inherence selection
 carried out by the procedure. These have exact finite sample  type I error and coverage
 under Gaussian errors.
-Some of this code  is derived from python code from the developed by
+Some of this code  is derived from python code developed by
 the Selective Inference development team
 (Jonathan Taylor and others at Stanford University):
 http://github.com/selective-inference/selective-inference

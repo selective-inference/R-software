@@ -28,10 +28,10 @@ Number of steps to take (default=min(n,p))
 \item{trace}{Printout steps along the way? Default: FALSE}
 }
 \details{
-This function implements forward stepwise regression, adding the predictotr maximize the scaled inner product between the residual r and the 
+This function implements forward stepwise regression, adding the predictor that  maximizes the scaled inner product between the residual r and the 
 orthogonalized predictors at each step. That is, argmax t(xr) %*% r/sqrt(diag(t(xr) %*% xr)),
-where xr is lsfit(x,y)$res.
-If interecept is TRUE, the data x and y are first centered by the function.
+where xr is the matrix of predictors with the current model removed.
+If intercept is TRUE, the data x and y are first centered by the function.
 }
 \value{
 \item{pred}{Predictors entered in order}
@@ -50,7 +50,7 @@ If interecept is TRUE, the data x and y are first centered by the function.
 Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 }
 
-
+\seealso{forwardStepInf}
 \examples{
 #NOT RUN
 #set.seed(43)
@@ -64,6 +64,8 @@ Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 #y=y-mean(y)
 
 #fsfit=forwardStep(x,y)
+#
+#out=forwardStepInf(fsfit,x,y)
 }
 
 
