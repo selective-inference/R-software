@@ -232,6 +232,7 @@ if(n==2 & p==2) stop("number of obs must be >2 when number of predictors=2")
   if (verbose) cat("\n")
 
 beta=cbind(beta, ginv(x)%*%y) #ROB ADDED for compatibility with lars;
+                              #RYAN: please fix this!!! will be a problem if maxsteps< min(n,p)!!
 beta=t(beta)# for compatibility with LARS function
 
  beta <- scale(beta, FALSE, normx)
@@ -328,6 +329,8 @@ nk=larfit$nk
        cat("Standard deviation of noise estimated from mean squared residual",fill=T)
     }
      
+nsteps=min(nsteps,length(larfit$lambda))   # use fewer steps, if fewer were used in call tolar 
+
 vmall=vpall=pv=sigma.eta=rep(NA,nsteps)
 ci=miscov=matrix(NA,nsteps,2)
 for(k in 1:nsteps){
