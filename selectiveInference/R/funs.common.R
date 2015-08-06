@@ -1,111 +1,122 @@
+# Special linear time order function, works only when x
+# is a scrambled vector of integers.
 
-selection.int = function(y,eta,sigma,vs,alpha,del=1e-4,flip=F) {
-  # compute selection intervals
-    #Rob's version using grid search
-    gridfac=50 
-    etay=sum(eta*y)
-     vm=vs$vm; vp=vs$vp
-    fun = function(x,etay,vm,vp,sigma.eta)
-       return(1-myptruncnorm(etay,a=vm,b=vp,mean=x,sd=sigma.eta))
-  #  fun = function(x,etay,vm,vp,sigma.eta) return(1-ptruncnorm(etay,vm,vp,x,sigma.eta))
-lo=-Inf
-hi=Inf
-covlo=covhi=0
-     sigma.eta=sqrt(sum(eta^2))*sigma
-#  cat(c(vm,etay,vp,sigma.eta),fill=T)
-if( min(etay-vm,vp-etay)>0.05*sigma.eta){
-  inc = sqrt(sum(eta^2)*sigma)*del
-   
-    xL=etay-gridfac*sigma.eta
-    xR=etay+gridfac*sigma.eta
-  lo = grid.search(fun,alpha/2,xL,xR,inc=inc,etay=etay,vm=vm,vp=vp,sigma.eta=sigma.eta)
-  hi = grid.search(fun,1-alpha/2,xL,xR,inc=inc,etay=etay,vm=vm,vp=vp,sigma.eta=sigma.eta)
-    covlo=fun(lo,etay,vm,vp,sigma.eta)
-    covhi=1-fun(hi,etay,vm,vp,sigma.eta)
- 
-}
-    if(flip){temp=hi;hi=-lo;lo=-temp;  temp2=covlo;covlo=covhi;covhi=temp2}
-  return(list(ci=c(lo,hi), miscov=c(covlo,covhi)))
+Order <- function(x) {
+  n = length(x)
+  o = numeric(n)
+  o[x] = Seq(1,n)
+  return(o)
 }
 
-grid.search=function(fun, val, xL,xR, inc=0.01, tol=1e-2,etay=etay,vm=vm,vp=vp,sigma.eta=sigma.eta) {
-#
-G = 50000
-  xg = seq(xL,xR,length=G)
- # vals = numeric(G)
-#  for (i in 1:G) vals[i] = fun(xg[i],etay,vm,vp,sigma.eta)
-vals = fun(xg,etay,vm,vp,sigma.eta)
-o=vals<=val
-v=abs(vals-val)
-  return(xg[which.min(v)])
+# Returns a sequence of integers from a to b if a <= b,
+# otherwise nothing. You have no idea how important this
+# function is...
 
+Seq <- function(a, b, ...) {
+  if (a<=b) return(seq(a,b,...))
+  else return(numeric(0))
 }
 
+# Returns the sign of x, with Sign(0)=1.
 
-tnorm.cdf = function(x,mean,sd,a,b) {
-  return((pnorm(x,mean,sd)-pnorm(a,mean,sd))/
-         (pnorm(b,mean,sd)-pnorm(a,mean,sd)))
+Sign <- function(x) {
+  return(-1+2*(x>=0))
 }
 
-tnorm.surv = function(x,mean,sd,a,b) {
-    #prob(X>x)
-  return((pnorm(b,mean,sd)-pnorm(x,mean,sd))/
-         (pnorm(b,mean,sd)-pnorm(a,mean,sd)))
-}
+##############################
 
+# Centering and scaling convenience function
 
-#NOT CURRENTLY USED
-bin.search = function(x, fun, val, inc=0.01, tol=1e-2) {  
-  # Find left and right bounds
-  xl = x
-  while (fun(xl)>val) xl = xl-inc
-  if (xl==x) {
-    xr = x
-    while (fun(xr)<val) xr = xr+inc
-    xl = xr-inc
-  }
-  else xr = xl+inc
+standardize <- function(x, y, intercept, normalize) {
+  x = as.matrix(x)
+  y = as.numeric(y)
+  n = nrow(x)
+  p = ncol(x)
   
-  # Grid search
-  G = 100
-  xg = seq(xl,xr,length=G)
-  vals = numeric(G)
-  for (i in 1:G) vals[i] = fun(xg[i])
-  return(xg[which.min(abs(vals-val))])
- 
-}
-#rob.ptruncnorm=function(etay, vneg,vpos, etamu, sigma){
-#    	if(max(vneg-etamu,etamu-vpos)/sigma < 7){
-#		     return(ptruncnorm(etay, vneg, vpos, etamu, sigma))
-#                 }
-		   
-#	else{
-  #          if(etay > etamu) return(1)
- #           if(etay < etamu) return(0)
- #            if(etay== etamu) return(.5)
-#        }
- #   }
+  if (intercept) {
+    bx = colMeans(x)
+    by = mean(y)
+    x = scale(x,bx,FALSE)
+    y = y-mean(y)
+  } else {
+    bx = rep(0,p)
+    by = 0
+  }
+  if (normalize) {
+    sx = sqrt(colSums(x^2))
+    x = scale(x,FALSE,sx)
+  } else {
+    sx = rep(1,p)
+  }
 
-
-compute.vmvp=function(y,eta, A, b, pp,  SMALL = 1e-07){
-alp = as.vector(A %*% eta/sum(eta^2))
-    alp[abs(alp) < SMALL] = 0
-    vp = rep(Inf, pp)
-    vm = rep(-Inf, pp)
-    temp = (b - (A %*% y) + alp * sum(eta * y))/alp
-    vm[alp<0]=temp[alp<0]
-    vp[alp>0]=temp[alp>0]
-    vmm = max(vm, na.rm = T)
-    vpp = min(vp, na.rm = T)
-   return(list(vm = vmm, vp = vpp))
-
+  return(list(x=x,y=y,bx=bx,by=by,sx=sx))
 }
 
-is.wholenumber <-
-         function(x, tol = .Machine$double.eps^0.5)  abs(x - round(x)) < tol
+##############################
 
-checkargs=function(y,x=NULL,bhat=NULL,sigma=NULL,lambda=0,alpha=.1,tol.beta=1e-5,tol.kkt=0.01,nsteps=NULL
+# Interpolation function to get coefficients
+
+coef.interpolate <- function(betas, s, knots, dec=TRUE) {
+  # Sort the s values 
+  o = order(s,dec=dec)
+  s = s[o]
+        
+  k = length(s)
+  mat = matrix(rep(knots,each=k),nrow=k)
+  if (dec) b = s >= mat
+  else b = s <= mat
+  blo = max.col(b,ties.method="first")
+  bhi = pmax(blo-1,1)
+
+  i = bhi==blo
+  p = numeric(k)
+  p[i] = 0
+  p[!i] = ((s-knots[blo])/(knots[bhi]-knots[blo]))[!i]
+  
+  beta = t((1-p)*t(betas[,blo,drop=FALSE]) + p*t(betas[,bhi,drop=FALSE]))
+  colnames(beta) = as.character(round(s,3))
+  rownames(beta) = NULL
+
+  # Return in original order
+  o = order(o)
+  return(beta[,o,drop=FALSE])
+}
+
+##############################
+
+is.wholenumber <- function(x, tol = .Machine$double.eps^0.5)  abs(x - round(x)) < tol
+
+checkargs.xy <- function(x, y) {
+  if (missing(x)) stop("x is missing.")
+  if (is.null(x) || !is.matrix(x)) stop("x must be a matrix.")
+  if (missing(y)) stop("y is missing.")
+  if (is.null(y) || !is.numeric(y)) stop("y must be numeric.")
+  if (ncol(x) == 0) stop("There must be at least one predictor [must have ncol(x) > 0].")
+  if (checkcols(x)) stop("x cannot have duplicate columns.")
+  if (length(y) == 0) stop("There must be at least one data point [must have length(y) > 0].")
+  if (length(y)!=nrow(x)) stop("Dimensions don't match [length(y) != nrow(x)].")
+}
+
+checkargs.misc <- function(sigma=NULL, alpha=NULL, lambda=NULL, k=NULL) {
+  if (!is.null(sigma) && sigma<=0) stop("sigma must be > 0")
+  if (!is.null(lambda) && lambda<0) stop("lambda must be >= 0")
+  if (!is.null(alpha) && (alpha <=0 || alpha >= 1)) stop("alpha must be between 0 and 1")
+  if (!is.null(k) && (k < 1 || k!=floor(k))) stop("k must be an integer >= 1")
+}
+
+# Make sure that no two columms of A are the same
+# (this works with probability one).
+
+checkcols <- function(A) {
+  b = rnorm(nrow(A))
+  a = sort(t(A)%*%b)
+  if (any(diff(a)==0)) return(TRUE)
+  return(FALSE)
+}
+
+checkargs2= function(y,x=NULL,bhat=NULL,sigma=NULL,lambda=0,alpha=.1,tol.beta=1e-5,tol.kkt=0.01,nsteps=NULL
 ,larfit=NULL, fsfit=NULL, k=NULL,bh.q=NULL){
+  
     # checks arguments for all user-callable functions.
   
  if(!is.null(x)){
@@ -154,40 +165,3 @@ estimateSigma=function(x,y){
     return(list(sigmahat=sigma, df=nz))
 }
 
-myptruncnorm=function(z,a,b,mean=0,sd=1){
- # return Prob(Z<z | Z in [a,b])
- #"mean" can be a vector
-#uses 
-# A UNIFORM APPROXIMATION TO THE RIGHT NORMAL TAIL INTEGRAL
-# W Bryc
-#Applied Mathematics and Computation
-#Volume 127, Issues 2–3, 15 April 2002, Pages 365–374
-#https://math.uc.edu/~brycw/preprint/z-tail/z-tail.pdf
-    
-f=function(z){
-(z^2+5.575192695*z+12.7743632)/(z^3*sqrt(2*pi)+ 14.38718147*z*z+31.53531977*z+2*12.77436324)
-}
-#first try standard  formula
-a=(a-mean)/sd
-b=(b-mean)/sd
-z=(z-mean)/sd
-term1=1-pnorm(a)
-term2=1-pnorm(b)
-term3=1-pnorm(z)
-out=(term1-term3)/(term1-term2)
-o=is.na(out)
-#if any are NAs, apply modified method
-if(sum(o)>0){
-     zz=z[o]
-aa=a[o]
-bb=b[o]
-   term1=exp(zz*zz)
-    oo=aa>-Inf
-   term1[oo]=f(aa[oo])*exp(-(aa[oo]^2-zz[oo]^2)/2)
-   term2=0
-ooo=bb<Inf
-  term2[ooo]=f(bb[ooo])*exp(-(bb[ooo]^2-zz[ooo]^2)/2)
-   out[o]= (term1-f(zz))/ (term1-term2)
-}
-return(out)
-}

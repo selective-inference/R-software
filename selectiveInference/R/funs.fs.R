@@ -304,12 +304,3 @@ cat(c("Estimated stopping point from forwardStop rule=", x$forwardStopHat),fill=
 
 
 
-forwardStop=function(pv,alpha=.10){
-    if(alpha<=0 | alpha>=1) stop("alpha must be in [0,1]")
-    if(min(pv,na.rm=T)<0 | max(pv,na.rm=T)>1) stop("pvalues must be in [0,1]")
- val=-(1/(1:length(pv)))*cumsum(log(1-pv))
- oo=which(val <= alpha)
- if(length(oo)==0) out=0
- if(length(oo)>0) out=oo[length(oo)]
-return(out)
-}
