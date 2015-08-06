@@ -1,31 +1,33 @@
-# Main p value function
+# Main function to compute vlo, vup
 
-Gv.pval <- function(y, G, v, sigma) {
+# Main p-value function
+
+poly.pval <- function(y, G, u, v, sigma) {
   z = sum(v*y)
   vv = sum(v^2)
   sd = sigma*sqrt(vv)
   
-  r = G %*% v
-  vec = -G %*% (y - v*sum(v*y)/vv) / r * vv
-  vlo = suppressWarnings(max(vec[r>0]))
-  vup = suppressWarnings(min(vec[r<0]))
-  
+  rho = G %*% v / vv
+  vec = (u - G %*% y + rho*z) / rho
+  vlo = suppressWarnings(max(vec[rho>0]))
+  vup = suppressWarnings(min(vec[rho<0]))
+
   pv = tnorm.surv(z,0,sd,vlo,vup)
   return(list(pv=pv,vlo=vlo,vup=vup))
 }
 
 # Main confidence interval function
 
-Gv.int <- function(y, G, v, sigma, alpha, gridfac=25, gridpts=1000,
-                   flip=FALSE) {
+poly.int <- function(y, G, u, v, sigma, alpha, gridfac=25,
+                     gridpts=1000, flip=FALSE) {
   z = sum(v*y)
   vv = sum(v^2)
   sd = sigma*sqrt(vv)
   
-  r = G %*% v
-  vec = -G %*% (y - v*sum(v*y)/vv) / r * vv
-  vlo = suppressWarnings(max(vec[r>0]))
-  vup = suppressWarnings(min(vec[r<0]))
+  rho = G %*% v / vv
+  vec = (u - G %*% y + rho*z) / rho
+  vlo = suppressWarnings(max(vec[rho>0]))
+  vup = suppressWarnings(min(vec[rho<0]))
 
   fun = function(mu) return(tnorm.surv(z,mu,sd,vlo,vup))
   xl = z-gridfac*sd
@@ -96,7 +98,12 @@ rob.tnorm.surv <- function(z, mean=0, sd=1, a, b){
   oo = b < Inf
   term2[oo] = ff(b[oo])*exp(-(b[oo]^2-z[oo]^2)/2)
   p = (ff(z)-term2)/(term1-term2)
-  return(pmax(pmin(p,1),0))
+
+  # Sometimes the approximation can give wacky p-values,
+  # outside of [0,1] ... and simply truncating them to
+  # [0,1] doesn't work!
+  p[p<0 | p>1] = NA
+  return(p)
 }
 
 rob.tnorm.surv.old <- function(z ,mean=0, sd=1, a, b){
@@ -141,3 +148,43 @@ forwardStop <- function(pv, alpha=.10){
   return(out)
 }
 
+##############################
+
+aicStop <- function(x, y, action, df, sigma, mult=2, ntimes=2) {
+  n = length(y)
+  k = length(action)
+  aic = numeric(k)
+  G = matrix(0,nrow=0,ncol=n)
+  u = numeric(0)
+  count = 0
+  
+  for (i in 1:k) {
+    A = action[1:i]
+    aic[i] = sum(lsfit(x[,A],y,intercept=F)$res^2) + mult*sigma^2*df[i]
+
+    j = action[i]
+    if (i==1) xtil = x[,j]
+    else xtil = lsfit(x[,action[1:(i-1)]],x[,j],intercept=F)$res
+    s = sign(sum(xtil*y))
+    
+    if (i==1 || aic[i] <= aic[i-1]) {
+      G = rbind(G,s*xtil/sqrt(sum(xtil^2)))
+      u = c(u,sqrt(mult)*sigma)
+      count = 0
+    }
+
+    else {
+      G = rbind(G,-s*xtil/sqrt(sum(xtil^2)))
+      u = c(u,-sqrt(mult)*sigma)
+      count = count+1
+      if (count == ntimes) break
+    }
+  }
+
+  if (i < k) {
+    khat = i - ntimes
+    aic = aic[1:i]
+  }
+  else khat = k
+  return(list(khat=khat,G=G,u=u,aic=aic))
+}

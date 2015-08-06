@@ -8,9 +8,11 @@ export(lar,
        fixedLassoInf,
        print.fixedLassoInf,
        forwardStep,
+       forwardStop,
+       aicStop,
        print.forwardStep,
-       forwardStepInf,print.forwardStepInf,manyMeans,print.manyMeans,estimateSigma,forwardStop,
-       Gv.pval,Gv.int,tnorm.surv)
+       forwardStepInf,print.forwardStepInf,manyMeans,print.manyMeans,estimateSigma,
+       poly.pval,poly.int,tnorm.surv)
 useDynLib("selectiveInference")
 import(MASS)
 import(glmnet)

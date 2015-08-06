@@ -335,7 +335,7 @@ predict.lar <- function(obj, newx, s, mode=c("step","lambda")) {
 # Lar inference function
 
 larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic"), 
-                   gridfac=25, gridpts=1000) {
+                   gridfac=25, gridpts=1000, mult=2, ntimes=2) {
   
   this.call = match.call()
   type = match.arg(type)
@@ -354,7 +354,7 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
 
   if (is.null(sigma)) {
     if (n < 2*p) sigma = sd(y)
-    else sigma = sqrt(sum(lm(y~x+0)$res^2)/(n-p))
+    else sigma = sqrt(sum(lsfit(x,y,intercept=F)$res^2)/(n-p))
   }
 
   pv.spacing = pv.asymp = pv.covtest = khat = NULL
@@ -364,21 +364,22 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
     vmat = matrix(0,k,n)
     ci = tailarea = matrix(0,k,2)
     pv.spacing = pv.asymp = pv.covtest = numeric(k)
-    s = obj$sign[1:k]
+    sign = obj$sign[1:k]
     vars = obj$action[1:k]
 
     for (j in 1:k) {
       Gj = G[1:nk[j],]
+      uj = rep(0,nk[j])
       vj = G[nk[j],]
       vj = vj / sqrt(sum(vj^2))
-      a = Gv.pval(y,Gj,vj,sigma)
+      a = poly.pval(y,Gj,uj,vj,sigma)
       pv[j] = a$pv
       vlo[j] = a$vlo
       vup[j] = a$vup
       vmat[j,] = vj
     
-      a = Gv.int(y,Gj,vj,sigma,alpha,gridfac=gridfac,gridpts=gridpts,
-        flip=(s[j]==-1))
+      a = poly.int(y,Gj,uj,vj,sigma,alpha,gridfac=gridfac,gridpts=gridpts,
+        flip=(sign[j]==-1))
       ci[j,] = a$int
       tailarea[j,] = a$tailarea
       
@@ -391,41 +392,56 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
   }
   
   else {
-    pv = vlo = vup = numeric(k) 
-    vmat = matrix(0,k,n)
-    ci = tailarea = matrix(0,k,2)
-    s = numeric(k)
-    vars = obj$action[1:k]
+    if (type == "aic") {
+      out = aicStop(x,y,obj$action[1:k],obj$df[1:k],sigma,mult,ntimes)
+      khat = out$khat
+      GG = out$G
+      uu = out$u
+      kk = khat
+    }
+    else {
+      GG = matrix(0,0,n)
+      uu = c()
+      kk = k
+    }
+    
+    pv = vlo = vup = numeric(kk) 
+    vmat = matrix(0,kk,n)
+    ci = tailarea = matrix(0,kk,2)
+    sign = numeric(kk)
+    vars = obj$action[1:kk]
 
-    G = G[1:nk[k],]
+    G = rbind(GG,G[1:nk[kk],])
+    u = c(uu,rep(0,nk[kk]))
     xa = x[,vars]
     M = solve(crossprod(xa),t(xa))
     
-    for (j in 1:k) {
+    for (j in 1:kk) {
       vj = M[j,]
-      s[j] = sign(sum(vj*y))
+      sign[j] = sign(sum(vj*y))
       
       vj = vj / sqrt(sum(vj^2))
-      vj = s[j] * vj
+      vj = sign[j] * vj
       Gj = rbind(G,vj)
+      uj = c(u,0)
 
-      a = Gv.pval(y,Gj,vj,sigma)
+      a = poly.pval(y,Gj,uj,vj,sigma)
       pv[j] = a$pv
       vlo[j] = a$vlo
       vup[j] = a$vup
       vmat[j,] = vj
 
-      a = Gv.int(y,Gj,vj,sigma,alpha,gridfac=gridfac,gridpts=gridpts,
-        flip=(s[j]==-1))
+      a = poly.int(y,Gj,uj,vj,sigma,alpha,gridfac=gridfac,gridpts=gridpts,
+        flip=(sign[j]==-1))
       ci[j,] = a$int
       tailarea[j,] = a$tailarea
     }
   }
   
-  out = list(type=type,k=k,pv=pv,ci=ci,
-    tailarea=tailarea,vlo=vlo,vup=vup,vmat=vmat,
+  out = list(type=type,k=k,khat=khat,pv=pv,ci=ci,
+    tailarea=tailarea,vlo=vlo,vup=vup,vmat=vmat,y=y,
     pv.spacing=pv.spacing,pv.asymp=pv.asymp,pv.covtest=pv.covtest,
-    vars=vars,sign=s,khat=khat,sigma=sigma,alpha=alpha,
+    vars=vars,sign=sign,sigma=sigma,alpha=alpha,
     call=this.call)
   class(out) = "larInf"
   return(out)
@@ -507,10 +523,11 @@ print.larInf <- function(obj) {
 
   if (obj$type == "active") {
     cat(sprintf("\nSequential testing results with alpha = %f\n",obj$alpha))
-    tab = cbind(1:length(obj$pv),obj$vars,round(obj$pv,3),round(obj$ci,3),
+    tab = cbind(1:length(obj$pv),obj$vars,
+      round(obj$sign*obj$vmat%*%obj$y,3),round(obj$pv,3),round(obj$ci,3),
       round(obj$tailarea,3),round(obj$pv.spacing,3),round(obj$pv.cov,3)) 
-    colnames(tab) = c("Step", "Var", "P-value", "Lo Conf Pt", "Up Conf Pt",
-              "Lo Area", "Up Area", "Spacing", "Cov Test")
+    colnames(tab) = c("Step", "Var", "Stdz Coef", "P-value", "Lo Conf Pt",
+              "Up Conf Pt", "Lo Area", "Up Area", "Spacing", "Cov Test")
     rownames(tab) = rep("",nrow(tab))
     print(tab)
 
@@ -519,9 +536,9 @@ print.larInf <- function(obj) {
 
   else if (obj$type == "all") {
     cat(sprintf("\nTesting results at step = %i\n",obj$k))
-    tab = cbind(obj$vars,round(obj$pv,3),round(obj$ci,3),
-      round(obj$tailarea,3))
-    colnames(tab) = c("Var", "P-value", "Lo Conf Pt", "Up Conf Pt",
+    tab = cbind(obj$vars,round(obj$sign*obj$vmat%*%obj$y,3),
+      round(obj$pv,3),round(obj$ci,3),round(obj$tailarea,3))
+    colnames(tab) = c("Var", "Stdz Coef", "P-value", "Lo Conf Pt", "Up Conf Pt",
               "Lo Area", "Up Area")
     rownames(tab) = rep("",nrow(tab))
     print(tab)
@@ -529,9 +546,9 @@ print.larInf <- function(obj) {
 
   else if (obj$type == "aic") {
     cat(sprintf("\nTesting results at step = %i\n",obj$khat))
-    tab = cbind(obj$vars,round(obj$pv,3),round(obj$ci,3),
-      round(obj$tailarea,3))
-    colnames(tab) = c("Var", "P-value", "Lo Conf Pt", "Up Conf Pt",
+    tab = cbind(obj$vars,round(obj$sign*obj$vmat%*%obj$y,3),
+      round(obj$pv,3),round(obj$ci,3),round(obj$tailarea,3))
+    colnames(tab) = c("Var", "Stdz Coef", "P-value", "Lo Conf Pt", "Up Conf Pt",
               "Lo Area", "Up Area")
     rownames(tab) = rep("",nrow(tab))
     print(tab)
