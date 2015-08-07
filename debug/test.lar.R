@@ -18,27 +18,17 @@ obj2 = lars(x,y,intercept=T,norm=T,type="lar")
 
 # Checks
 max(abs(obj$lambda - obj$Gamma[obj$nk,] %*% obj$y))
-
 max(abs(obj$lambda - obj2$lambda))
-
-max(abs(coef.lar(obj,s=(obj$lambda[4]+obj$lambda[5])/2,mode="lam")-
+max(abs(coef(obj,s=(obj$lambda[4]+obj$lambda[5])/2,mode="lam")-
         lars::predict.lars(obj2,s=(obj$lambda[4]+obj$lambda[5])/2,type="coef",mode="lam")$coef))
-
-max(abs(predict.lar(obj,s=4.5,mode="step")-
+max(abs(predict(obj,s=4.5,mode="step")-
         lars::predict.lars(obj2,s=4.5,newx=x,mode="step")$fit))
 
 # Sequential inference
-out = larInf(obj,sigma=sigma)
+out = fsInf(obj,sigma=sigma)
 out
 sum(out$ci[,1]>out$ci[,2])
-
 plot(out$pv,ylim=c(0,1))
-points(out$pv.spacing,col=2)
-points(out$pv.asymp,col=3)
-points(out$pv.covtest,col=4)
-legend("topleft",
-       legend=c("Exact","Spacing","Asymp","Cov test"),
-       pch=21,col=1:4)
 
 # AIC  inference
 k = 15

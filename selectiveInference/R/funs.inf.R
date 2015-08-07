@@ -1,5 +1,3 @@
-# Main function to compute vlo, vup
-
 # Main p-value function
 
 poly.pval <- function(y, G, u, v, sigma) {

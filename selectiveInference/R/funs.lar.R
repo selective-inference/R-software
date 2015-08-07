@@ -2,15 +2,18 @@
 # a response vector y and predictor matrix x.  We assume
 # that x has columns in general position.
 
+# NOTE: the df estimates at each lambda_k can be thought of as the df
+# for all solutions corresponding to lambda in (lambda_k,lambda_{k-1}),
+# the open interval to the *right* of the current lambda_k.
+
 # NOTE: x having columns in general position implies that the
 # centered x satisfies a modified version of the general position
 # condition, where we replace k < min(n,p) by k < min(n-1,p) in
-# the definition.
-# This is still sufficient to imply the uniqueness of the lasso
-# solution, on the centered x
+# the definition. This is still sufficient to imply the uniqueness
+# of the lasso solution, on the centered x
 
 lar <- function(x, y, maxsteps=2000, minlam=0, verbose=FALSE,
-                intercept=TRUE, normalize=TRUE, eps=.Machine$double.eps) {
+                intercept=TRUE, normalize=TRUE) {
 
   this.call = match.call()
   checkargs.xy(x=x,y=y)
@@ -24,7 +27,6 @@ lar <- function(x, y, maxsteps=2000, minlam=0, verbose=FALSE,
   sx = obj$sx
   n = nrow(x)
   p = ncol(x)
-  #if (n<=2 & p==2) stop("Number of obs must be > 2, with 2 predictors")
 
   #####
   # Find the first variable to enter and its sign
@@ -32,7 +34,6 @@ lar <- function(x, y, maxsteps=2000, minlam=0, verbose=FALSE,
   ihit = which.max(abs(uhat))   # Hitting coordinate
   hit = abs(uhat[ihit])         # Critical lambda
   s = Sign(uhat[ihit])          # Sign
-  hit = abs(uhat[ihit])
 
   if (verbose) {
     cat(sprintf("1. lambda=%.3f, adding variable %i, |A|=%i...",
@@ -51,7 +52,7 @@ lar <- function(x, y, maxsteps=2000, minlam=0, verbose=FALSE,
   
   lambda[1] = hit
   action[1] = ihit
-  df[1] = 1
+  df[1] = 0
   beta[,1] = 0
 
   # Gamma matrix!
@@ -126,13 +127,13 @@ lar <- function(x, y, maxsteps=2000, minlam=0, verbose=FALSE,
       shit = shits[ihit]
     }
 
-     # Stop if the next critical point is negative
+    # Stop if the next critical point is negative
     if (hit<=0) break
     
     # Record the critical lambda and solution
     lambda[k] = hit
     action[k] = I[ihit]
-    df[k] = r+1
+    df[k] = r
     beta[A,k] = a-hit*b
         
     # Gamma matrix!
@@ -310,12 +311,10 @@ coef.lar <- function(obj, s, mode=c("step","lambda")) {
     if (min(s)<0 || max(s)>k) stop(sprintf("s must be between 0 and %i",k))
     knots = 1:k
     dec = FALSE
-  } else if (mode=="lambda") {
+  } else {
     if (min(s)<min(lambda)) stop(sprintf("s must be >= %0.3f",min(lambda)))
     knots = lambda
     dec = TRUE
-  } else {
-    stop("mode must be one of step, lambda")
   }
   
   return(coef.interpolate(beta,s,knots,dec))
@@ -329,6 +328,9 @@ predict.lar <- function(obj, newx, s, mode=c("step","lambda")) {
   else newx = scale(newx,obj$bx,FALSE)
   return(newx %*% beta + obj$by)
 }
+
+coef.lasso <- coef.lar
+predict.lasso <- predict.lar
 
 ##############################
 
@@ -447,6 +449,8 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
   return(out)
 }
 
+##############################
+
 spacing.pval <- function(obj, sigma, k) {
   v = obj$Gamma[obj$nk[k],]
   sd = sigma*sqrt(sum(v^2))
@@ -522,7 +526,7 @@ print.larInf <- function(obj) {
               obj$sigma))
 
   if (obj$type == "active") {
-    cat(sprintf("\nSequential testing results with alpha = %f\n",obj$alpha))
+    cat(sprintf("\nSequential testing results with alpha = %0.3f\n",obj$alpha))
     tab = cbind(1:length(obj$pv),obj$vars,
       round(obj$sign*obj$vmat%*%obj$y,3),round(obj$pv,3),round(obj$ci,3),
       round(obj$tailarea,3),round(obj$pv.spacing,3),round(obj$pv.cov,3)) 
@@ -535,7 +539,7 @@ print.larInf <- function(obj) {
   }
 
   else if (obj$type == "all") {
-    cat(sprintf("\nTesting results at step = %i\n",obj$k))
+    cat(sprintf("\nTesting results at step = %i, with alpha = %0.3f\n",obj$k,obj$alpha))
     tab = cbind(obj$vars,round(obj$sign*obj$vmat%*%obj$y,3),
       round(obj$pv,3),round(obj$ci,3),round(obj$tailarea,3))
     colnames(tab) = c("Var", "Stdz Coef", "P-value", "Lo Conf Pt", "Up Conf Pt",
@@ -545,7 +549,7 @@ print.larInf <- function(obj) {
   }
 
   else if (obj$type == "aic") {
-    cat(sprintf("\nTesting results at step = %i\n",obj$khat))
+    cat(sprintf("\nTesting results at step = %i, with alpha = %0.3f\n",obj$k,obj$alpha))
     tab = cbind(obj$vars,round(obj$sign*obj$vmat%*%obj$y,3),
       round(obj$pv,3),round(obj$ci,3),round(obj$tailarea,3))
     colnames(tab) = c("Var", "Stdz Coef", "P-value", "Lo Conf Pt", "Up Conf Pt",
@@ -560,7 +564,7 @@ print.larInf <- function(obj) {
 }
 
 plot.lar <- function(obj, xvar=c("norm","step","lambda"), breaks=TRUE,
-                     omit.zeros=TRUE, epsilon=.Machine$double.eps) {
+                     omit.zeros=TRUE) {
   
   if (obj$completepath) {
     k = length(obj$action)+1
@@ -585,7 +589,7 @@ plot.lar <- function(obj, xvar=c("norm","step","lambda"), breaks=TRUE,
   }
 
   if (omit.zeros) {
-    jj = which(rowSums(abs(beta))>epsilon)
+    jj = which(rowSums(abs(beta))==0)
     if (length(jj)>0) beta = beta[jj,]
     else beta = rep(0,k)
   }
