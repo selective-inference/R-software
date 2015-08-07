@@ -208,11 +208,3 @@ print.manyMeans = function(x, ...){
   pretty.out = summary(x)
   print (pretty.out)
 }
-
-
-
-
-
-
-
-

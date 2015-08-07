@@ -1,5 +1,31 @@
-export(lar,larInf,predict.lar,
-plot.lar,print.lar,print.larInf,fixedLassoInf,print.fixedLassoInf,forwardStep,print.forwardStep,forwardStepInf,print.forwardStepInf,manyMeans,print.manyMeans,estimateSigma,forwardStop,compute.vmvp,myptruncnorm,selection.int)
+export(lar,fs,
+       larInf,fsInf,
+       coef.lar,coef.fs,
+       predict.lar,predict.fs,
+       print.lar,print.fs,
+       print.larInf,print.fsInf,
+       plot.lar,plot.fs,
+       fixedLassoInf,
+       print.fixedLassoInf,
+       forwardStep,
+       forwardStop,
+       aicStop,
+       print.forwardStep,
+       forwardStepInf,print.forwardStepInf,manyMeans,print.manyMeans,estimateSigma,
+       poly.pval,poly.int,tnorm.surv)
+
+S3method("coef", "lar")
+S3method("predict", "lar")
+S3method("print", "lar")
+S3method("plot", "lar")
+S3method("print", "larInf")
+
+S3method("coef", "fs")
+S3method("predict", "fs")
+S3method("print", "fs")
+S3method("plot", "fs")
+S3method("print", "fsInf")
+
 useDynLib("selectiveInference")
 import(MASS)
 import(glmnet)
