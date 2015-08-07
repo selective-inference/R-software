@@ -30,10 +30,7 @@ a4=fixedLassoInf(x,y,bhat,lambda,compute.si=T)
 
 critf=function(b,lam,x,y){
      yhat=x%*%b
- library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
-options(error=dump.frames)
-attach("/Users/tibs/dropbox/PAPERS/lasso/lasso3/.RData")
 
      .5*sum( (y-yhat)^2) + lam*sum(abs(b))
  }
@@ -79,3 +76,49 @@ ci[ii,]=junk$ci[3,]
 sum(ci[,1]< btrue & ci[,]> btrue)/nsim
 
 
+## BIG example
+ library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+
+options(error=dump.frames)
+attach("/Users/tibs/dropbox/PAPERS/lasso/lasso3/.RData")
+critf=function(b,lam,x,y){
+     yhat=x%*%b
+     .5*sum( (y-yhat)^2) + lam*sum(abs(b))
+ }
+set.seed(4)
+n=100
+p=1000
+sigma=1
+x=matrix(rnorm(n*p),ncol=p)
+x=scale(x,T,F)
+beta=c(rep(2.5,10),rep(0,p-10))
+y=x%*%beta+sigma*rnorm(n)
+y=y-mean(y)
+    
+
+    
+gfit=glmnet(x,y,standardize=F)
+cvf=cv.glmnet(x,y)
+
+lambda=n*cvf$lambda.min
+#lambda=10
+     bhat = as.numeric(predict(gfit, s=lambda/n,type="coef",exact=T))[-1]
+
+bhat2=lasso2lam(x,y,lambda,int=F,stand=F)$coef
+plot(bhat,bhat2)
+
+critf(bhat,lambda,x,y)
+critf(bhat2,lambda,x,y)
+ junk= fixedLassoInf(x,y,bhat2,lambda,sigma=sigma,mingap=0.01)
+
+
+ # check of KKT
+ch=function(bhat,tol.beta=1e-5,tol.kkt=0.1){
+    xx=cbind(1,x)
+    bhatt=c(0,bhat)
+   g0=t(xx)%*%(y-xx%*%bhatt)
+   g=g0-lambda*sign(bhatt)
+    gg=g0/lambda
+    oo=abs(bhatt)>tol.beta
+    cat(c(max(abs(g[oo]))>tol.kkt,min(gg[!oo])< -1-tol.kkt,max(gg[!oo])>1 +tol.kkt),fill=T)
+}
