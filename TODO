@@ -1,6 +1,5 @@
 
 
--add for FS and lar, add argument inference.mode=c("prep","fast","none")
-     add  computation of basic A matrix into fitting functions-  Ryan
-
--checking of  KKT conditions in fixedLassoInf seems fragile
+-arrange for fs to print out betahat and  z score
+-avoid rbind in formation of gamma matrix 
+-leave name k alone in fsInf- now that I understand what it does
