@@ -26,7 +26,7 @@ out
 sum(out$ci[,1]>out$ci[,2])
 plot(out$pv,ylim=c(0,1))
 
-# AIC  inference
+# AIC inference
 k = 15
 out2 = fsInf(obj,sigma=sigma,k=k,type="aic")
 out2
