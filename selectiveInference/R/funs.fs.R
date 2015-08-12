@@ -324,72 +324,72 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
 
 ##############################
 
-print.fs <- function(obj, ...) {
+print.fs <- function(x, ...) {
   cat("\nCall:\n")
-  dput(obj$call)
+  dput(x$call)
   
   cat("\nSequence of FS moves:\n")
-  nsteps = length(obj$action)
-  tab = cbind(1:nsteps,obj$action,obj$sign)
+  nsteps = length(x$action)
+  tab = cbind(1:nsteps,x$action,x$sign)
   colnames(tab) = c("Step","Var","Sign")
   rownames(tab) = rep("",nrow(tab))
   print(tab)
   invisible()
 }
 
-print.fsInf <- function(obj) {
+print.fsInf <- function(x) {
   cat("\nCall:\n")
-  dput(obj$call)
+  dput(x$call)
 
   cat(sprintf("\nStandard deviation of noise (specified or estimated) sigma = %0.3f\n",
-              obj$sigma))
+              x$sigma))
 
-  if (obj$type == "active") {
-    cat(sprintf("\nSequential testing results with alpha = %0.3f\n",obj$alpha))
-    tab = cbind(1:length(obj$pv),obj$vars,
-      round(obj$sign*obj$vmat%*%obj$y,3),round(obj$pv,3),round(obj$ci,3),
-      round(obj$tailarea,3))
+  if (x$type == "active") {
+    cat(sprintf("\nSequential testing results with alpha = %0.3f\n",x$alpha))
+    tab = cbind(1:length(x$pv),x$vars,
+      round(x$sign*x$vmat%*%x$y,3),round(x$pv,3),round(x$ci,3),
+      round(x$tailarea,3))
     colnames(tab) = c("Step", "Var", "Stdz Coef", "P-value", "LowConfPt",
               "UpConfPt", "LowArea", "UpArea")
     rownames(tab) = rep("",nrow(tab))
     print(tab)
 
-    cat(sprintf("\nEstimated stopping point from ForwardStop rule = %i\n",obj$khat))
+    cat(sprintf("\nEstimated stopping point from ForwardStop rule = %i\n",x$khat))
   }
 
-  else if (obj$type == "all") {
-    cat(sprintf("\nTesting results at step = %i, with alpha = %0.3f\n",obj$k,obj$alpha))
-    tab = cbind(obj$vars,round(obj$sign*obj$vmat%*%obj$y,3),
-      round(obj$pv,3),round(obj$ci,3),round(obj$tailarea,3))
+  else if (x$type == "all") {
+    cat(sprintf("\nTesting results at step = %i, with alpha = %0.3f\n",x$k,x$alpha))
+    tab = cbind(x$vars,round(x$sign*x$vmat%*%x$y,3),
+      round(x$pv,3),round(x$ci,3),round(x$tailarea,3))
     colnames(tab) = c("Var", "Stdz Coef", "P-value", "LowConfPt", "UpConfPt",
               "LowArea", "UpArea")
     rownames(tab) = rep("",nrow(tab))
     print(tab)
   }
 
-  else if (obj$type == "aic") {
-    cat(sprintf("\nTesting results at step = %i, with alpha = %0.3f\n",obj$k,obj$alpha))
-    tab = cbind(obj$vars,round(obj$sign*obj$vmat%*%obj$y,3),
-      round(obj$pv,3),round(obj$ci,3),round(obj$tailarea,3))
+  else if (x$type == "aic") {
+    cat(sprintf("\nTesting results at step = %i, with alpha = %0.3f\n",x$k,x$alpha))
+    tab = cbind(x$vars,round(x$sign*x$vmat%*%x$y,3),
+      round(x$pv,3),round(x$ci,3),round(x$tailarea,3))
     colnames(tab) = c("Var", "Stdz Coef", "P-value", "LowConfPt", "UpConfPt",
               "LowArea", "UpArea")
     rownames(tab) = rep("",nrow(tab))
     print(tab)
     
-    cat(sprintf("\nEstimated stopping point from AIC rule = %i\n",obj$khat))
+    cat(sprintf("\nEstimated stopping point from AIC rule = %i\n",x$khat))
   }
 
   invisible()
 }
 
-plot.fs <- function(obj, breaks=TRUE, omit.zeros=TRUE) {
+plot.fs <- function(x, breaks=TRUE, omit.zeros=TRUE) {
   
-  if (obj$completepath) {
-    k = length(obj$action)+1
-    beta = cbind(obj$beta,obj$bls)
+  if (x$completepath) {
+    k = length(x$action)+1
+    beta = cbind(x$beta,x$bls)
   } else {
-    k = length(obj$action)
-    beta = obj$beta
+    k = length(x$action)
+    beta = x$beta
   }
  
   x = 1:k
