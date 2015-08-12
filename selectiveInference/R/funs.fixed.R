@@ -15,15 +15,16 @@ fixedLassoInf=function(x,y,bhat,lambda, sigma=NULL,coeftype=c("partial","full"),
       y=y-mean(y)
     
     tol.poly=0.01 # tolerance for checking polyedral lemma
+    
 ##check KKT
- 
    g0=t(x)%*%(y-x%*%bhat)
    g=g0-lambda*sign(bhat)
     gg=g0/lambda
     oo=abs(bhat)>tol.beta
     if(max(abs(g[oo]))>tol.kkt) cat(c("Warning: Solution bhat may not satisfy the KKT conditions"),fill=T)
     if(sum(!oo)>0){
-     if(min(gg[!oo])< -1-tol.kkt | max(gg[!oo])>1 +tol.kkt) cat(c("Warning: Solution bhat may not satisfy the KKT conditions"),fill=T)
+     if(min(gg[!oo])< -1-tol.kkt | max(gg[!oo])>1 +tol.kkt)
+         cat(c("Warning: Solution bhat may not satisfy the KKT conditions"),fill=T)
  }
 ##       
 junk=tf.jonab(y,x,bhat,lambda,tol=tol.beta)
@@ -39,9 +40,9 @@ b=junk$b
  
 
     if(max(a%*%y-b)>tol.poly*sqrt(var(y))){
-  stop("Polyhedral constraints not satisfied; you need to recompute bhat more
-   accurately. With glmnet, be sure to use exact=TRUE in coef() and also try decreasing lambda.min
-   in call to glmnet. If p>N, the value of lambda specified may also be too small---
+     stop("Polyhedral constraints not satisfied; you need to recompute bhat more
+     accurately. With glmnet, be sure to use exact=TRUE in coef() and also try decreasing lambda.min
+       in call to glmnet. If p>N, the value of lambda specified may also be too small---
       smaller than the value yielding zero training error")}
     
 e=which(bhat!=0)

@@ -1,4 +1,5 @@
-library(selectiveInference)
+#library(selectiveInference)
+library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 library(lars)
 
 set.seed(0)

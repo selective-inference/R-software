@@ -7,11 +7,9 @@ export(lar,fs,
        plot.lar,plot.fs,
        fixedLassoInf,
        print.fixedLassoInf,
-       forwardStep,
        forwardStop,
        aicStop,
-       print.forwardStep,
-       forwardStepInf,print.forwardStepInf,manyMeans,print.manyMeans,estimateSigma,
+      manyMeans,print.manyMeans,estimateSigma,
        poly.pval,poly.int,tnorm.surv)
 
 S3method("coef", "lar")

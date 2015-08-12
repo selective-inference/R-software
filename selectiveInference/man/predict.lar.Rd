@@ -15,7 +15,7 @@ Make predictions or extract coefficients from a fitted lar model
 Object returned by a call to \code{lar} function (Not the \code{lars} function)
 }
   \item{newx}{
-If type="fit", then newx should be the x values at which the
+If type="fit", then newx is  the matrix of x values at which the
           fit is required. If type="coefficients", then newx can be
           omitted.
 }

@@ -10,6 +10,7 @@ the lasso, least angle regression and the many normal means problem.
 }
 \details{
 \tabular{ll}{
+
 Package: \tab selectiveInference\cr
 Type: \tab Package\cr
 Version: \tab 1.0\cr
@@ -32,7 +33,7 @@ The following functions are included in the package:
 \code{\link{forwardStepInf}},
 \code{\link{fixedLassoInf}},
 \code{\link{lar}},
-\code{\link{predict.lar}},
+\code{\link{predict.lar}}
 \code{\link{larInf}},
 \code{\link{forwardStop}},
 \code{\link{manyMeans}}
@@ -55,6 +56,7 @@ arXiv:1405.3340
 Jonathan Taylor, Richard Lockhart, Ryan Tibshirani, Rob Tibshirani (2014).
 Exact Post-selection Inference for Forward Stepwise and Least Angle Regression. arXiv:1401.3889
 }
+\author{Ryan Tibshirani, Rob Tibshirani,  Jonathan Taylor, Max G'Sell, Stephen Reid}
 \examples{
 #NOT RUN
 # forward stepwise:
