@@ -40,12 +40,10 @@ The following functions are included in the package:
 
 }
 
-\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Max G'Sell, Stephen Reid}
-
-
-
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Max G'Sell, Stephen Reid
 Maintainer: Rob Tibshirani <tibs@stanford.edu>
 }
+ 
 
 \references{
 Jason D. Lee, Dennis L. Sun, Yuekai Sun, Jonathan E. Taylor (2014). Exact post-selection inference, with application to the lasso. arXiv:1311.6238

@@ -52,8 +52,8 @@ for reported  interval--- these should be close to alpha/2.}
  \item{vup}{Upper bounds for functionals}
 \item{vmat}{Matrix of linear functionals used for inference}
 \item{y}{Vector of outcomes}
-\item{pv.spacing}{p-values from the spacing test (where we use M^+ as V^{lo})}
- \item{pv.asymp}{p-values from the asymptotic form of the spacing test (where we use \lambda_{k-1} (previous knot) in place of M^+)}
+\item{pv.spacing}{p-values from the spacing test (where we use M^+ as V^lo)}
+\item{pv.asymp}{p-values from the asymptotic form of the spacing test (where we use lambda_(k-1) (previous knot) in place of M^+)}
 \item{pv.cov}{p-values from covariance test. The reference distribution is Exp(1) if sigma is unknown; otherwise it is F_(2,n-p)}
 \item{vars}{Predictors entered at each step of forward stepwise}
 \item{sign}{Signs of coefficients for predictors entered at each step of forward stepwise}
