@@ -1,8 +1,9 @@
-#library(selectiveInference)
- library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+library(selectiveInference)
+#library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+
 set.seed(0)
-n = 25
-p = 50
+n = 100
+p = 1000
 s = 3
 size = 10
 
@@ -17,12 +18,14 @@ obj = fs(x,y,verb=T,intercept=T,norm=T)
 # NOTE this does not line up with lars' stepwise function,
 # but that's OK, because they used different update rules
 
-
+# Sequential inference
+out = fsInf(obj,sigma=sigma,k=20)
+out
 sum(out$ci[,1]>out$ci[,2])
 plot(out$pv,ylim=c(0,1))
 
 # AIC inference
-k = 15
+k = 20
 out2 = fsInf(obj,sigma=sigma,k=k,type="aic")
 out2
 

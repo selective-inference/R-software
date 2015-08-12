@@ -49,10 +49,13 @@ fs <- function(x, y, maxsteps=2000, verbose=FALSE, intercept=TRUE,
   beta[,1] = 0
 
   # Gamma matrix!
-  Gamma = matrix(0,0,n)
-  if (p>1) Gamma = rbind(Gamma,t(s*xx[,ihit]+xx[,-ihit]),t(s*xx[,ihit]-xx[,-ihit]))
-  Gamma = rbind(Gamma,t(s*xx[,ihit]))
-  nk = nrow(Gamma)
+  gbuf = max(2*p*3,2000)     # Space for 3 steps, at least
+  gi = 0
+  Gamma = matrix(0,gbuf,n)
+  Gamma[gi+Seq(1,p-1),] = t(s*xx[,ihit]+xx[,-ihit]); gi = gi+p-1
+  Gamma[gi+Seq(1,p-1),] = t(s*xx[,ihit]-xx[,-ihit]); gi = gi+p-1
+  Gamma[gi+1,] = t(s*xx[,ihit]); gi = gi+1
+  nk = gi
 
   # Other things to keep track of, but not return
   r = 1                      # Size of active set
@@ -109,11 +112,12 @@ fs <- function(x, y, maxsteps=2000, verbose=FALSE, intercept=TRUE,
     beta[A,k] = a
         
     # Gamma matrix!
+    if (gi + 2*p > nrow(Gamma)) Gamma = rbind(Gamma,matrix(0,2*p+gbuf,n))
     xx = t(shits*t(xx))
-    Gamma = rbind(Gamma,t(xx))
-    if (ncol(xx)>1) Gamma = rbind(Gamma,t(xx[,ihit]-xx[,-ihit]))
-    Gamma = rbind(Gamma,t(xx[,ihit]))
-    nk = c(nk,nrow(Gamma))
+    Gamma[gi+Seq(1,p-r),] = t(xx); gi = gi+p-r
+    Gamma[gi+Seq(1,p-r-1),] = t(xx[,ihit]-xx[,-ihit]); gi = gi+p-r-1
+    Gamma[gi+1,] = t(xx[,ihit]); gi = gi+1
+    nk = c(nk,gi)
 
     # Update all of the variables
     r = r+1
@@ -141,6 +145,7 @@ fs <- function(x, y, maxsteps=2000, verbose=FALSE, intercept=TRUE,
   action = action[Seq(1,k-1)]
   df = df[Seq(1,k-1),drop=FALSE]
   beta = beta[,Seq(1,k-1),drop=FALSE]
+  Gamma = Gamma[Seq(1,gi),,drop=FALSE]
   
   # If we reached the maximum number of steps
   if (k>maxsteps) {
@@ -368,7 +373,7 @@ print.fsInf <- function(x, ...) {
   }
 
   else if (x$type == "aic") {
-    cat(sprintf("\nTesting results at step = %i, with alpha = %0.3f\n",x$k,x$alpha))
+    cat(sprintf("\nTesting results at step = %i, with alpha = %0.3f\n",x$khat,x$alpha))
     tab = cbind(x$vars,round(x$sign*x$vmat%*%x$y,3),
       round(x$pv,3),round(x$ci,3),round(x$tailarea,3))
     colnames(tab) = c("Var", "Stdz Coef", "P-value", "LowConfPt", "UpConfPt",
@@ -382,7 +387,7 @@ print.fsInf <- function(x, ...) {
   invisible()
 }
 
-plot.fs <- function(x, breaks=TRUE, omit.zeros=TRUE, ...) {
+plot.fs <- function(x, breaks=TRUE, omit.zeros=TRUE, var.labels=TRUE, ...) {
   if (x$completepath) {
     k = length(x$action)+1
     beta = cbind(x$beta,x$bls)
@@ -390,18 +395,25 @@ plot.fs <- function(x, breaks=TRUE, omit.zeros=TRUE, ...) {
     k = length(x$action)
     beta = x$beta
   }
- 
+  p = nrow(beta)
+  
   x = 1:k
   xlab = "Step"
-
+  
   if (omit.zeros) {
-    jj = which(rowSums(abs(beta))==0)
-    if (length(jj)>0) beta = beta[jj,]
-    else beta = rep(0,k)
+    inds = matrix(FALSE,p,k)
+    for (i in 1:k) {
+      inds[i,] = beta[i,]!=0 | c(diff(beta[i,]!=0),F) | c(F,diff(beta[i,]!=0))
+    }
+    beta[!inds] = NA
   }
 
-  matplot(x,t(beta),xlab=xlab,ylab="Coefficients",type="l",lty=1)
+  plot(c(),c(),xlim=range(x,na.rm=T),ylim=range(beta,na.rm=T),
+       xlab=xlab,ylab="Coefficients",main="Forward stepwise path",...)
+  abline(h=0,lwd=2)
+  matplot(x,t(beta),type="l",lty=1,add=TRUE)
   if (breaks) abline(v=x,lty=2)
+  if (var.labels) axis(4,at=beta[,k],labels=1:p,cex=0.8,adj=0) 
   invisible()
 }
 

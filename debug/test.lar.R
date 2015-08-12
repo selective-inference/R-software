@@ -1,10 +1,10 @@
-#library(selectiveInference)
-library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+library(selectiveInference)
+#library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 library(lars)
 
 set.seed(0)
-n = 25
-p = 50
+n = 100
+p = 1000
 s = 3
 size = 10
 
@@ -28,19 +28,19 @@ max(abs(predict(obj,s=4.5,mode="step")-
         lars::predict.lars(obj2,s=4.5,newx=x,mode="step")$fit))
 
 # Sequential inference
-out = larInf(obj,sigma=sigma)
+out = larInf(obj,sigma=sigma,k=20)
 out
 sum(out$ci[,1]>out$ci[,2])
 plot(out$pv,ylim=c(0,1))
 
-# AIC  inference
-k = 15
+# AIC inference
+k = 20
 out2 = larInf(obj,sigma=sigma,k=k,type="aic")
 out2
 
 # Fixed step inference
 k = out2$khat
-out3 = larInf(obj,sigma=sigma,k=k,type="all")
+out3 = larInf(obj,sigma=sigma,k=5,type="all")
 out3
 
 # Least squares inference
