@@ -1,11 +1,11 @@
 
-fixedLassoInf=function(x,y,bhat,lambda, sigma=NULL,coeftype=c("partial","full"),alpha=.10,verbose=FALSE,compute.si=TRUE,tol.beta=1e-5,tol.kkt=0.1,one.sided=TRUE,mingap=0.05){
+fixedLassoInf=function(x,y,bhat,lambda, sigma=NULL,coeftype=c("partial","full"),alpha=.10,verbose=FALSE,tol.beta=1e-5,tol.kkt=0.1,one.sided=TRUE,mingap=0.05,gridfac = 25, gridpts = 1000){
     # inference for fixed lam lasso
     # careful!  lambda is for usual lasso problem; glmnet uses lambda/n
     #assumes glmnet (or lasso solver)  is run with intercept=T and standardize=F
     this.call=match.call()
     coeftype=match.arg(coeftype)
-    checkargs(x=x,y=y,bhat=bhat,lambda=lambda,sigma=sigma,alpha=alpha,tol.beta=tol.beta,tol.kkt=tol.kkt)
+    checkargs2(x=x,y=y,bhat=bhat,lambda=lambda,sigma=sigma,alpha=alpha,tol.beta=tol.beta,tol.kkt=tol.kkt)
      if(sum(bhat!=0)==0) stop("Value of lambda too large, bhat is zero")
 
     n=length(y)
@@ -40,7 +40,8 @@ b=junk$b
  
 
     if(max(a%*%y-b)>tol.poly*sqrt(var(y))){
-     stop("Polyhedral constraints not satisfied; you need to recompute bhat more
+     stop("Polyhedral constraints not satisfied;
+      you need to recompute bhat more
      accurately. With glmnet, be sure to use exact=TRUE in coef() and also try decreasing lambda.min
        in call to glmnet. If p>N, the value of lambda specified may also be too small---
       smaller than the value yielding zero training error")}
@@ -50,7 +51,7 @@ xe=x[,e,drop=F]
 
 pp=length(e)
 pv=vmall=vpall=rep(NA,pp)
-ci=miscov=matrix(NA,pp,2)
+ci=tailarea=matrix(NA,pp,2)
 etaall=matrix(NA,nrow=pp,ncol=n)
 SMALL=1e-7
 ttall=rep(NA,pp)
@@ -69,25 +70,34 @@ for(k in 1:pp){
     flip=(one.sided & sign(bhat0)==-1)
     etaall[k,]=eta
  #compute truncation limits
-    vs=compute.vmvp(y,eta,a,b,nrow(a))    
-    vpp=vs$vp;vmm=vs$vm
-    vmall[k]=vmm
-    vpall[k]=vpp
+  #  vs=compute.vmvp(y,eta,a,b,nrow(a))    
+  #  vpp=vs$vp;vmm=vs$vm
+  #  vmall[k]=vmm
+  #  vpall[k]=vpp
    tt=sum(eta*y)
     ttall[k]=tt
-   sigma.eta=sigma*sqrt(sum(eta^2))
+ #  sigma.eta=sigma*sqrt(sum(eta^2))
     #compute p-values
-   u=0  #null
-  pv[k]=  1-myptruncnorm(tt, vmm, vpp, u, sigma.eta)
-   
+ #  u=0  #null
+#  pv[k]=  1-myptruncnorm(tt, vmm, vpp, u, sigma.eta)
+    junk= poly.pval(y,-a,-b,eta,sigma) 
+    pv[k] = junk$pv
+    vmall[k]=junk$vlo
+    vpall[k]=junk$vup
     if(!one.sided)  pv[k]=2*min(pv[k],1-pv[k])
-    #compute slection intervals
-    if(compute.si) { junk=selection.int(y,eta,sigma,vs,alpha,flip=flip,mingap=mingap)
-                   ci[k,]=junk$ci;miscov[k,]=junk$miscov              
-                 }
+    #compute selection intervals
+    #  junk2=selection.int(y,eta,sigma,vs,alpha,flip=flip,mingap=mingap)
+    #   ci[k,]=junk2$ci;miscov[k,]=junk2$miscov  
+   junk2= poly.int(y,-a,-b,eta,sigma,alpha,gridfac=gridfac,gridpts=gridpts,
+        flip=flip)
+
+       ci[k,] = junk2$int
+      tailarea[k,] = junk2$tailarea
+                  
+                
 }
     
-out=list(pv=pv,ci=ci,tailarea=miscov,eta=etaall,vm=vmall,vp=vpall,pred=e,alpha=alpha,sigma=sigma,one.sided=one.sided,lambda=lambda,coeftype=coeftype)
+out=list(pv=pv,ci=ci,tailarea=tailarea,eta=etaall,vlo=vmall,vup=vpall,pred=e,alpha=alpha,sigma=sigma,one.sided=one.sided,lambda=lambda,coeftype=coeftype)
 class(out)="fixedLassoInf"
     out$call=this.call
 return(out)
