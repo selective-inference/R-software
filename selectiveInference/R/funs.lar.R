@@ -294,17 +294,17 @@ updateQR <- function(Q1,Q2,R,col) {
 
 # Coefficient function for lar
 
-coef.lar <- function(obj, s, mode=c("step","lambda")) {
+coef.lar <- function(object, s, mode=c("step","lambda"),...) {
   mode = match.arg(mode)
 
-  if (obj$completepath) {
-    k = length(obj$action)+1
-    lambda = c(obj$lambda,0)
-    beta = cbind(obj$beta,obj$bls)
+  if (object$completepath) {
+    k = length(object$action)+1
+    lambda = c(object$lambda,0)
+    beta = cbind(object$beta,object$bls)
   } else {
-    k = length(obj$action)
-    lambda = obj$lambda
-    beta = obj$beta
+    k = length(object$action)
+    lambda = object$lambda
+    beta = object$beta
   }
   
   if (mode=="step") {
@@ -322,11 +322,11 @@ coef.lar <- function(obj, s, mode=c("step","lambda")) {
 
 # Prediction function for lar
 
-predict.lar <- function(obj, newx, s, mode=c("step","lambda")) {
-  beta = coef.lar(obj,s,mode)
-  if (missing(newx)) newx = scale(obj$x,FALSE,1/obj$sx)
-  else newx = scale(newx,obj$bx,FALSE)
-  return(newx %*% beta + obj$by)
+predict.lar <- function(object, newx, s, mode=c("step","lambda"), ...) {
+  beta = coef.lar(object,s,mode)
+  if (missing(newx)) newx = scale(object$x,FALSE,1/object$sx)
+  else newx = scale(newx,object$bx,FALSE)
+  return(newx %*% beta + object$by)
 }
 
 coef.lasso <- coef.lar
@@ -518,7 +518,7 @@ print.lar <- function(x, ...) {
   invisible()
 }
 
-print.larInf <- function(x) {
+print.larInf <- function(x, ...) {
   cat("\nCall:\n")
   dput(x$call)
 
@@ -567,7 +567,7 @@ print.larInf <- function(x) {
 }
 
 plot.lar <- function(x, xvar=c("norm","step","lambda"), breaks=TRUE,
-                     omit.zeros=TRUE) {
+                     omit.zeros=TRUE, ...) {
   
   if (x$completepath) {
     k = length(x$action)+1

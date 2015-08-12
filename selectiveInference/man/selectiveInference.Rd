@@ -29,8 +29,8 @@ http://github.com/selective-inference/selective-inference
 
 The following functions are included in the package:
 
-\code{\link{forwardStep}},
-\code{\link{forwardStepInf}},
+\code{\link{fs}},
+\code{\link{fsInf}},
 \code{\link{fixedLassoInf}},
 \code{\link{lar}},
 \code{\link{predict.lar}}
@@ -55,7 +55,7 @@ arXiv:1405.3340
 Jonathan Taylor, Richard Lockhart, Ryan Tibshirani, Rob Tibshirani (2014).
 Exact Post-selection Inference for Forward Stepwise and Least Angle Regression. arXiv:1401.3889
 }
-\author{Ryan Tibshirani, Rob Tibshirani,  Jonathan Taylor, Max G'Sell, Stephen Reid}
+
 \examples{
 #NOT RUN
 # forward stepwise:

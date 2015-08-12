@@ -184,13 +184,13 @@ fs <- function(x, y, maxsteps=2000, verbose=FALSE, intercept=TRUE,
 
 # Coefficient function for fs
 
-coef.fs <- function(obj, s) {
-  if (obj$completepath) {
-    k = length(obj$action)+1
-    beta = cbind(obj$beta,obj$bls)
+coef.fs <- function(object, s, ...) {
+  if (object$completepath) {
+    k = length(object$action)+1
+    beta = cbind(object$beta,object$bls)
   } else {
-    k = length(obj$action)
-    beta = obj$beta
+    k = length(object$action)
+    beta = object$beta
   }
   
   if (min(s)<0 || max(s)>k) stop(sprintf("s must be between 0 and %i",k))
@@ -201,11 +201,11 @@ coef.fs <- function(obj, s) {
 
 # Prediction function for fs
 
-predict.fs <- function(obj, newx, s) {
-  beta = coef.fs(obj,s)
-  if (missing(newx)) newx = scale(obj$x,FALSE,1/obj$sx)
-  else newx = scale(newx,obj$bx,FALSE)
-  return(newx %*% beta + obj$by)
+predict.fs <- function(object, newx, s, ...) {
+  beta = coef.fs(object,s)
+  if (missing(newx)) newx = scale(object$x,FALSE,1/object$sx)
+  else newx = scale(newx,object$bx,FALSE)
+  return(newx %*% beta + object$by)
 }
 
 ##############################
@@ -337,7 +337,7 @@ print.fs <- function(x, ...) {
   invisible()
 }
 
-print.fsInf <- function(x) {
+print.fsInf <- function(x, ...) {
   cat("\nCall:\n")
   dput(x$call)
 
@@ -382,8 +382,7 @@ print.fsInf <- function(x) {
   invisible()
 }
 
-plot.fs <- function(x, breaks=TRUE, omit.zeros=TRUE) {
-  
+plot.fs <- function(x, breaks=TRUE, omit.zeros=TRUE, ...) {
   if (x$completepath) {
     k = length(x$action)+1
     beta = cbind(x$beta,x$bls)

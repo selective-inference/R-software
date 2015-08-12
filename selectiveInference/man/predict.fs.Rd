@@ -7,7 +7,7 @@ Prediction from forward stepwise fit
 Make predictions or extract coefficients from a fitted forward stepwise model
 }
 \usage{
-\method{predict}{fs}(object, newx, s)
+\method{predict}{fs}(object, newx, s, ...)
 }
 
 \arguments{
@@ -21,6 +21,7 @@ Object returned by a call to \code{fs} function
   \item{s}{
         a step number, or vector of step values, indexing the path.
 }
+\item{\dots}{Any additional arguments for fs}
 }
   
 \value{

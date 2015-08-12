@@ -7,7 +7,7 @@ Prediction from a LAR fit
 Make predictions or extract coefficients from a fitted lar model
 }
 \usage{
-\method{predict}{lar}(object, newx, s, type = c("fit", "coefficients"), mode = c("step", "fraction", "norm", "lambda"), ...)
+\method{predict}{lar}(object, newx, s, mode = c("step", "lambda"), ...)
 }
 
 \arguments{
@@ -25,11 +25,7 @@ If type="fit", then newx is  the matrix of x values at which the
           should take on values between 0 and p (e.g., a step of 1.3
           means .3 of the way between step 1 and 2.)
 }
-  \item{type}{
-If type="fit", predict returns the fitted values. If
-          type="coefficients", predict returns the coefficients.
-          Abbreviations allowed.
-}
+ 
   \item{mode}{
 Mode="step" means the s= argument indexes the lars step
           number, and the coefficients will be returned corresponding

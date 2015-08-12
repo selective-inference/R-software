@@ -17,9 +17,9 @@
 selection.int(y, eta, sigma, vs, alpha, del = 1e-04, flip = F)
 compute.vmvp(y, eta, A, b, pp, SMALL = 1e-07)
 myptruncnorm(z, a, b, mean = 0, sd = 1)
-\method{plot}{lar}(x, xvar = c("norm", "df", "arc.length", "step"),
-                 breaks = TRUE, plottype = c("coefficients", "Cp"),
-                 omit.zeros = TRUE, eps = 1e-10, ...)
+\method{plot}{lar}(x, xvar = c("norm", "step", "lambda"), breaks = TRUE,
+                 omit.zeros = TRUE, ...)
+\method{plot}{larInf}{x, ...}
 \method{print}{fixedLassoInf}(x, digits = max(3, getOption("digits") - 3), ...)
 \method{print}{forwardStep}(x, digits = max(3, getOption("digits") - 3), ...)
 \method{print}{forwardStepInf}(x, digits = max(3, getOption("digits") - 3), ...)
