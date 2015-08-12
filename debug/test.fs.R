@@ -1,6 +1,5 @@
 #library(selectiveInference)
-library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
-
+ library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 set.seed(0)
 n = 25
 p = 50
@@ -18,12 +17,7 @@ obj = fs(x,y,verb=T,intercept=T,norm=T)
 # NOTE this does not line up with lars' stepwise function,
 # but that's OK, because they used different update rules
 
-coef(obj,s=4.5)
-predict(obj,s=4.5)
 
-# Sequential inference
-out = fsInf(obj,sigma=sigma)
-out
 sum(out$ci[,1]>out$ci[,2])
 plot(out$pv,ylim=c(0,1))
 

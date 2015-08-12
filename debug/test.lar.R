@@ -17,6 +17,8 @@ y = mu + sigma*rnorm(n)
 obj = lar(x,y,verb=T,intercept=T,norm=T)
 obj2 = lars(x,y,intercept=T,norm=T,type="lar")
 
+plot(obj)
+
 # Checks
 max(abs(obj$lambda - obj$Gamma[obj$nk,] %*% obj$y))
 max(abs(obj$lambda - obj2$lambda))
