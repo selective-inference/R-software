@@ -1,40 +1,48 @@
 
-fixedLassoInf=function(x,y,bhat,lambda, coeftype=c("partial","full"), sigma=NULL,alpha=.10,trace=FALSE,compute.si=TRUE,tol.beta=1e-5,tol.kkt=0.05,one.sided=TRUE){
+fixedLassoInf=function(x,y,bhat,lambda, sigma=NULL,coeftype=c("partial","full"),alpha=.10,trace=FALSE,compute.si=TRUE,tol.beta=1e-5,tol.kkt=0.1,one.sided=TRUE,mingap=0.05){
     # inference for fixed lam lasso
- # careful!  lambda is for usual lasso problem; glmnet uses lambda/n
+    # careful!  lambda is for usual lasso problem; glmnet uses lambda/n
+    #assumes glmnet (or lasso solver)  is run with intercept=T and standardize=F
     this.call=match.call()
-    coeftype<- match.arg(coeftype)
+    coeftype=match.arg(coeftype)
     checkargs(x=x,y=y,bhat=bhat,lambda=lambda,sigma=sigma,alpha=alpha,tol.beta=tol.beta,tol.kkt=tol.kkt)
      if(sum(bhat!=0)==0) stop("Value of lambda too large, bhat is zero")
-x=scale(x,T,F)
-y=y-mean(y)
-    tol.poly=0.01 # tolerancefor checking polye
+
+    n=length(y)
+    p=ncol(x)
+    # Center predictors and ouctome
+      x=scale(x,T,F)
+      y=y-mean(y)
+    
+    tol.poly=0.01 # tolerance for checking polyedral lemma
 ##check KKT
+ 
    g0=t(x)%*%(y-x%*%bhat)
    g=g0-lambda*sign(bhat)
     gg=g0/lambda
     oo=abs(bhat)>tol.beta
-    if(max(abs(g[oo]))>tol.kkt) stop("Solution bhat does not satisfy the KKT conditions")
+    if(max(abs(g[oo]))>tol.kkt) cat(c("Warning: Solution bhat may not satisfy the KKT conditions"),fill=T)
     if(sum(!oo)>0){
-     if(min(gg[!oo])< -1-tol.kkt | max(gg[!oo])>1 +tol.kkt) stop("Solution bhat does not satisfy the KKT conditions")
+     if(min(gg[!oo])< -1-tol.kkt | max(gg[!oo])>1 +tol.kkt) cat(c("Warning: Solution bhat may not satisfy the KKT conditions"),fill=T)
  }
 ##       
 junk=tf.jonab(y,x,bhat,lambda,tol=tol.beta)
-n=length(y)
-    p=ncol(x)
+a=junk$A
+b=junk$b
+
   
-      if(is.null(sigma) & p>=n){cat("Warning: p ge n; the value sigma=1 used for error standard deviation; you may want to estimate sigma using the estimateSigma function",fill=T); sigma=1}
+      if(is.null(sigma) & p>=n){cat("Warning: p ge n; the value sigma=1 used for error standard deviation; you may want    to estimate sigma using the estimateSigma function",fill=T); sigma=1}
   if(is.null(sigma) & n>p){
       sigma=sqrt(sum(lsfit(x,y)$res^2)/(n-p))
        cat("Standard deviation of noise estimated from mean squared residual",fill=T)
   }
  
-a=junk$A
-b=junk$b
+
     if(max(a%*%y-b)>tol.poly*sqrt(var(y))){
-stop("Polyhedral constraints not satisfied; you need to recompute bhat more
-accurately. With glmnet, be sure to use exact=TRUE in coef() and also try decreasing lambda.min
-in call to glmnet. If p>N, the value of lambda specified may also be too small--- smaller than the val#ue yielding zero training error")}
+  stop("Polyhedral constraints not satisfied; you need to recompute bhat more
+   accurately. With glmnet, be sure to use exact=TRUE in coef() and also try decreasing lambda.min
+   in call to glmnet. If p>N, the value of lambda specified may also be too small---
+      smaller than the value yielding zero training error")}
     
 e=which(bhat!=0)
 xe=x[,e,drop=F]
@@ -44,8 +52,11 @@ pv=vmall=vpall=rep(NA,pp)
 ci=miscov=matrix(NA,pp,2)
 etaall=matrix(NA,nrow=pp,ncol=n)
 SMALL=1e-7
-    ttall=rep(NA,pp)  
+ttall=rep(NA,pp)
+    
+ 
 for(k in 1:pp){
+   #construct contrast vectors
     if(trace) cat(k,fill=T)
     if (coeftype == "partial") 
             eta = ginv(t(xe))[, k]
@@ -55,25 +66,26 @@ for(k in 1:pp){
     bhat0=sum(eta*y)
     if(one.sided) eta=eta*sign(bhat0)
     flip=(one.sided & sign(bhat0)==-1)
-etaall[k,]=eta
-   
-#vs=tf.jonvs(y,a,b,eta)
-vs=compute.vmvp(y,eta,a,b,nrow(a))    
-vpp=vs$vp;vmm=vs$vm
-vmall[k]=vmm
-vpall[k]=vpp
+    etaall[k,]=eta
+ #compute truncation limits
+    vs=compute.vmvp(y,eta,a,b,nrow(a))    
+    vpp=vs$vp;vmm=vs$vm
+    vmall[k]=vmm
+    vpall[k]=vpp
    tt=sum(eta*y)
     ttall[k]=tt
    sigma.eta=sigma*sqrt(sum(eta^2))
+    #compute p-values
    u=0  #null
   pv[k]=  1-myptruncnorm(tt, vmm, vpp, u, sigma.eta)
    
-if(!one.sided)  pv[k]=2*min(pv[k],1-pv[k])
-  if(compute.si) { junk=selection.int(y,eta,sigma,vs,alpha,flip=flip)
-                   ci[k,]=junk$ci;miscov[k,]=junk$miscov
-                
-               
-}}
+    if(!one.sided)  pv[k]=2*min(pv[k],1-pv[k])
+    #compute slection intervals
+    if(compute.si) { junk=selection.int(y,eta,sigma,vs,alpha,flip=flip,mingap=mingap)
+                   ci[k,]=junk$ci;miscov[k,]=junk$miscov              
+                 }
+}
+    
 out=list(pv=pv,ci=ci,tailarea=miscov,eta=etaall,vm=vmall,vp=vpall,pred=e,alpha=alpha,sigma=sigma,one.sided=one.sided,lambda=lambda,coeftype=coeftype)
 class(out)="fixedLassoInf"
     out$call=this.call
