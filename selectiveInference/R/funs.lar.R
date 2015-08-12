@@ -530,8 +530,8 @@ print.larInf <- function(obj) {
     tab = cbind(1:length(obj$pv),obj$vars,
       round(obj$sign*obj$vmat%*%obj$y,3),round(obj$pv,3),round(obj$ci,3),
       round(obj$tailarea,3),round(obj$pv.spacing,3),round(obj$pv.cov,3)) 
-    colnames(tab) = c("Step", "Var", "Stdz-Coef", "P-value", "LoConfPt",
-              "UpConfPt", "LoArea", "UpArea", "Spacing", "CovTest")
+    colnames(tab) = c("Step", "Var", "Stdz-Coef", "P-value", "LowConfPt",
+              "UpConfPt", "LowArea", "UpArea", "Spacing", "CovTest")
     rownames(tab) = rep("",nrow(tab))
     print(tab)
 
@@ -542,8 +542,8 @@ print.larInf <- function(obj) {
     cat(sprintf("\nTesting results at step = %i, with alpha = %0.3f\n",obj$k,obj$alpha))
     tab = cbind(obj$vars,round(obj$sign*obj$vmat%*%obj$y,3),
       round(obj$pv,3),round(obj$ci,3),round(obj$tailarea,3))
-    colnames(tab) = c("Var", "StdzCoef", "P-value", "LoConf Pt", "UpConfPt",
-              "LoArea", "UpArea")
+    colnames(tab) = c("Var", "StdzCoef", "P-value", "LowConf Pt", "UpConfPt",
+              "LowArea", "UpArea")
     rownames(tab) = rep("",nrow(tab))
     print(tab)
   }
