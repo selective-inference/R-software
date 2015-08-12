@@ -7,4 +7,6 @@
 
 -leave name k alone in fsInf- now that I understand what it does
 
+-fixedLasoInf currently broken, as ryan changed check.args functions
+
 -fix plot.lar and plot.fs. add predictor #s on RHS in plot.fs
