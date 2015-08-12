@@ -27,12 +27,12 @@ See "type" argument below. Default NULL
 for model constructed after "k" steps; with "aic", the number of steps k is estimated the AIC
 criterion, and then p-values and confidence intervals are computed
 for model constructed after this number of steps. Note that BIC or other criteria can be specified 
-htought the argument "mult" below.
+via the argument "mult" below.
 }
 \item{gridfac}{Factor that multiplies the standard deviation, in determining the width of the grid we use for confidence interval construction. Default 25.}
 \item{gridpts}{Number of grid points in the grid used  for confidence interval construction. Default 1000.}
 \item{mult}{Multiplier for AIC-style penallty; default of 2 gives AIC: mult=log(nrow(x)) gives BIC}
-\item{ntimes}{Number of steps for which AIC-style criterion has to increase before minimizing point is declared}
+\item{ntimes}{Number of steps for which the AIC-style criterion has to increase before minimizing point is declared. Default 2.}
 }
 \details{
 This function computes selective p-values and confidence intervals (selection intervals) for least angle regression.   The selection interval estimation involves numerical search and can be fragile:
@@ -44,20 +44,20 @@ for reported  interval--- these should be close to alpha/2.}
 
 \item{type}{Type of analysis specified in call}
   \item{k}{Value of k specified in call}
-\item{khat}{Estimated number of steps, if type="aic" was used}
+\item{khat}{Estimated number of steps, if type="aic" was specified}
 \item{pv}{Estimated pvalues}
  \item{ci}{Selection intervals}
-\item{tailarea}{Realized tail area for each  selection interval}
+\item{tailarea}{Realized tail area (lower and upper) for each  selection interval}
  \item{vlo}{Lower bounds for functionals}
  \item{vup}{Upper bounds for functionals}
 \item{vmat}{Matrix of linear functionals used for inference}
 \item{y}{Vector of outcomes}
 \item{pv.spacing}{p-values from the spacing test (where we use M^+ as V^{lo})}
  \item{pv.asymp}{p-values from the asymptotic form of the spacing test (where we use \lambda_{k-1} (previous knot) in place of M^+)}
-\item{pv.cov}{p-values from covariance test. The reference distribution is Exp(1) if sigma is unknown; otherwise it is F (2,n-p)}
+\item{pv.cov}{p-values from covariance test. The reference distribution is Exp(1) if sigma is unknown; otherwise it is F_(2,n-p)}
 \item{vars}{Predictors entered at each step of forward stepwise}
 \item{sign}{Signs of coefficients for predictors entered at each step of forward stepwise}
-\item{sigma}{Value of error standard devarion (sigma) used}
+\item{sigma}{Value of error standard deviation (sigma) used}
 \item{alpha}{Desired coverage (alpha/2 in each tail)}
 \item{call}{The call to larInf}
 }

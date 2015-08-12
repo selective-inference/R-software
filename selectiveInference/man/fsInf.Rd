@@ -51,7 +51,7 @@ for reported  interval--- these should be close to alpha/2.
 \item{khat}{Estimated number of steps, if type="aic" was used}
 \item{pv}{Estimated pvalues}
  \item{ci}{Selection intervals}
-\item{tailarea}{Realized tail area for each  selection interval}
+\item{tailarea}{Realized tail area (lower and upper) for each  selection interval}
  \item{vlo}{Lower bounds for functionals}
  \item{vup}{Upper bounds for functionals}
 \item{vmat}{Matrix of linear functionals used for inference}
@@ -61,7 +61,7 @@ for reported  interval--- these should be close to alpha/2.
 \item{which.steps }{Which FS steps were analyzed}
 \item{step.ind}{Step indicator for each row of constraint matrix A (returned below)}
 \item{ForwardStopHat}{Estimated stopping point from forwardStop rule, approximately controlling FDR at alpha}
-\item{sigma}{Value of error standard devarion (sigma) used}
+\item{sigma}{Value of error standard deviation (sigma) used}
 \item{alpha}{Desired coverage (alpha/2 in each tail)}
 \item{call}{The call to fsInf}
 }

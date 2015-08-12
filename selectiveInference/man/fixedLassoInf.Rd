@@ -2,14 +2,14 @@
 \alias{fixedLassoInf}
 
 \title{
-Inference for fixed lambda lasso
+Inference for lasso with fixed lambda 
 }
 \description{
 Compute p-values and selection intervals for lasso fit with fixed value of regularization parameter
 lambda
 }
 \usage{
-fixedLassoInf(x, y, bhat, lambda, coeftype = c("partial", "full"), sigma=NULL, alpha = 0.1, trace = FALSE, compute.si = TRUE, tol.beta = 1e-5,
+fixedLassoInf(x, y, bhat, lambda, coeftype = c("partial", "full"), sigma=NULL, alpha = 0.1, verbose = FALSE, compute.si = TRUE, tol.beta = 1e-5,
 tol.kkt=0.05, one.sided = TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
@@ -42,7 +42,7 @@ function.
   \item{alpha}{
 Significance level for  selection intervals (target is miscoverage alpha/2 in each tail)
 }
-  \item{trace}{
+  \item{verbose}{
 Print out more details along the way.}
   \item{compute.si}{
 Compute selection intervals? Default TRUE. Can slow down the computation, if only p-values are desired. 
@@ -67,7 +67,7 @@ for reported  interval--- these should be close to alpha/2.
 \value{  
 \item{pv}{p-values for each predictor}
 \item{ci}{Selection intervals}
-\item{tailarea}{Realized tail areas (left and right) for each  selection interval}
+\item{tailarea}{Realized tail areas (lower and upper) for each  selection interval}
 \item{eta}{Linear functionals defining each parameter}
 \item{vm}{Lower bounds for functionals}
 \item{vp}{Upper bounds for functionals}

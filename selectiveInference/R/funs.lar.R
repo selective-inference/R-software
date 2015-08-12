@@ -527,6 +527,7 @@ print.larInf <- function(obj) {
 
   if (obj$type == "active") {
     cat(sprintf("\nSequential testing results with alpha = %0.3f\n",obj$alpha))
+    cat("",fill=T)
     tab = cbind(1:length(obj$pv),obj$vars,
       round(obj$sign*obj$vmat%*%obj$y,3),round(obj$pv,3),round(obj$ci,3),
       round(obj$tailarea,3),round(obj$pv.spacing,3),round(obj$pv.cov,3)) 
@@ -540,9 +541,10 @@ print.larInf <- function(obj) {
 
   else if (obj$type == "all") {
     cat(sprintf("\nTesting results at step = %i, with alpha = %0.3f\n",obj$k,obj$alpha))
+    cat("",fill=T)
     tab = cbind(obj$vars,round(obj$sign*obj$vmat%*%obj$y,3),
       round(obj$pv,3),round(obj$ci,3),round(obj$tailarea,3))
-    colnames(tab) = c("Var", "StdzCoef", "P-value", "LowConf Pt", "UpConfPt",
+    colnames(tab) = c("Var", "StdzCoef", "P-value", "LowConfPt", "UpConfPt",
               "LowArea", "UpArea")
     rownames(tab) = rep("",nrow(tab))
     print(tab)
@@ -550,10 +552,11 @@ print.larInf <- function(obj) {
 
   else if (obj$type == "aic") {
     cat(sprintf("\nTesting results at step = %i, with alpha = %0.3f\n",obj$k,obj$alpha))
+     cat("",fill=T)
     tab = cbind(obj$vars,round(obj$sign*obj$vmat%*%obj$y,3),
       round(obj$pv,3),round(obj$ci,3),round(obj$tailarea,3))
-    colnames(tab) = c("Var", "Stdz Coef", "P-value", "Lo Conf Pt", "Up Conf Pt",
-              "Lo Area", "Up Area")
+    colnames(tab) = c("Var", "Stdz Coef", "P-value", "LowConfPt", "UpConfPt",
+              "LowArea", "UpArea")
     rownames(tab) = rep("",nrow(tab))
     print(tab)
     

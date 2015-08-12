@@ -1,5 +1,5 @@
 
-fixedLassoInf=function(x,y,bhat,lambda, sigma=NULL,coeftype=c("partial","full"),alpha=.10,trace=FALSE,compute.si=TRUE,tol.beta=1e-5,tol.kkt=0.1,one.sided=TRUE,mingap=0.05){
+fixedLassoInf=function(x,y,bhat,lambda, sigma=NULL,coeftype=c("partial","full"),alpha=.10,verbose=FALSE,compute.si=TRUE,tol.beta=1e-5,tol.kkt=0.1,one.sided=TRUE,mingap=0.05){
     # inference for fixed lam lasso
     # careful!  lambda is for usual lasso problem; glmnet uses lambda/n
     #assumes glmnet (or lasso solver)  is run with intercept=T and standardize=F
@@ -58,7 +58,7 @@ ttall=rep(NA,pp)
  
 for(k in 1:pp){
    #construct contrast vectors
-    if(trace) cat(k,fill=T)
+    if(verbose) cat(k,fill=T)
     if (coeftype == "partial") 
             eta = ginv(t(xe))[, k]
         if (coeftype == "full") 

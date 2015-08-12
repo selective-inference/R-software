@@ -27,7 +27,7 @@ myptruncnorm(z, a, b, mean = 0, sd = 1)
 \method{print}{larInf}(x, digits = max(3, getOption("digits") - 3), ...)
 \method{print}{manyMeans}(x,...)
 }
-\author{Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
-}
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Max G'Sell, Stephen Reid}
+
 \keyword{internal}
 

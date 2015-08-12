@@ -6,3 +6,5 @@
 -avoid rbind in formation of gamma matrix 
 
 -leave name k alone in fsInf- now that I understand what it does
+
+-fix plot.lar and plot.fs. add predictor #s on RHS in plot.fs

@@ -40,7 +40,8 @@ The following functions are included in the package:
 
 }
 
-\author{Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Max G'Sell, Stephen Reid}
+
 
 
 Maintainer: Rob Tibshirani <tibs@stanford.edu>
@@ -70,11 +71,11 @@ Exact Post-selection Inference for Forward Stepwise and Least Angle Regression. 
 #y=x%*%beta+sigma*rnorm(n)
 #y=y-mean(y)
 #first run forward stepwise
-# fsfit=forwardStep(x,y)
+# fsfit=fs(x,y)
 #
 # forward stepwise inference for each successive entry of a predictor; sigma estimated
 #  from mean squared residual
-# aa=forwardStepInf(fsfit,x,y)
+# aa=fsInf(fsfit)
 ##
 #  lasso with fixed lambda
 #
@@ -90,7 +91,7 @@ Exact Post-selection Inference for Forward Stepwise and Least Angle Regression. 
 # first run  glmnet
 #gfit=glmnet(x,y,standardize=F)
 #lam = .1
-#extract coef for a given lam; Note the 1/n factor!
+#extract coef for a given lam; Note the 1/n factor in s!
 #bhat = coef(gfit, s=lam/n, exact=TRUE)[-1]
 
 # compute fixed lambda p-values and selection intervals
@@ -111,7 +112,7 @@ Exact Post-selection Inference for Forward Stepwise and Least Angle Regression. 
 #
 #lar inference for each successive entry of a predictor; sigma estimated
 #  from mean squared residual from least squares fit
-# aa=larInf(larfit,x,y)
+# aa=larInf(larfit)
 
 ##
 ##many normal means
