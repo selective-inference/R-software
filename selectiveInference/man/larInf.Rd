@@ -1,81 +1,107 @@
 \name{larInf}
 \alias{larInf}
 \title{
-Selective inference for least angle regression (LAR)
+Selective inference for least angle regression 
 }
 \description{
-Compute p-values and selection intervals for least angle regression
+Computes p-values and confidence intervals for least 
+angle regression
 }
 \usage{
 larInf(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic"), 
-                   gridfac=25, gridpts=1000, mult=2, ntimes=2)
+       gridrange=c(-100,100), gridpts=1000, mult=2, ntimes=2, verbose=FALSE) 
 }
-%- maybe also 'usage' for other objects documented here.
 \arguments{
+ \item{obj}{
+Object returned by \code{lar} function (not the \code{lars} function!)
+}
+\item{sigma}{
+Estimate of error standard deviation. If NULL (default), this is estimated 
+using the mean squared residual of the full least squares fit when n >= 2p, and 
+using the standard deviation of y when n < 2p. In the latter case, the user 
+should use \code{\link{estimateSigma}} function for a more accurate estimate
+}
+\item{alpha}{
+Significance level for confidence intervals (target is miscoverage alpha/2 in each tail)
+}
+\item{k}{
+See "type" argument below. Default is NULL, in which case k is taken to be the
+the number of steps computed in the least angle regression path
+}
+\item{type}{
+Type of analysis desired: with "active" (default), p-values and confidence intervals are 
+computed for each predictor as it is entered into the active step, all the way through
+k steps; with "all", p-values and confidence intervals are computed for all variables in 
+the active model after k steps; with "aic", the number of steps k is first estimated using 
+a modified AIC criterion, and then the same type of analysis as in "all" is carried out for 
+this particular value of k.  
 
-  \item{obj}{
-Object returned by \code{lar} function (not the \code{lars} function)!
+Note that the AIC scheme is defined to choose a number of steps k after which the AIC criterion 
+increases \code{ntimes} in a row, where \code{ntimes} can be specified by the user (see below). 
+Under this definition, the AIC selection event is characterizable as a polyhedral set, and hence
+the extra conditioning can be taken into account exactly. Also note that an analogous BIC scheme
+can be specified through the \code{mult} argument (see below)
 }
-  \item{sigma}{Estimate of error standard deviation}
-  \item{alpha}{
-Significance level for  selection intervals (target is miscoverage alpha/2 in each tail). Eg alpha=.10 or .05.
+\item{gridrange}{
+Grid range for constructing confidence intervals, on the standardized scale
 }
-  \item{k}{
-See "type" argument below. Default NULL
+\item{gridpts}{
+Number of grid points for constructing confidence intervals, within the specified
+grid range}
+\item{mult}{Multiplier for the AIC-style penalty. Hence a value of 2 (default) 
+gives AIC, whereas a value of log(n) would give BIC}
+\item{ntimes}{Number of steps for which AIC-style criterion has to increase before 
+minimizing point is declared}
+\item{verbose}{Print out progress along the way? Default is FALSE}
 }
-\item{type}{Type of analysis desired: with "active" (default), p-values and confidence intervals are computed for each predictor as it is entered; with "All",  p-values and confidence intervals are computed
-for model constructed after "k" steps; with "aic", the number of steps k is estimated the AIC
-criterion, and then p-values and confidence intervals are computed
-for model constructed after this number of steps. Note that BIC or other criteria can be specified 
-via the argument "mult" below.
-}
-\item{gridfac}{Factor that multiplies the standard deviation, in determining the width of the grid we use for confidence interval construction. Default 25.}
-\item{gridpts}{Number of grid points in the grid used  for confidence interval construction. Default 1000.}
-\item{mult}{Multiplier for AIC-style penallty; default of 2 gives AIC: mult=log(nrow(x)) gives BIC}
-\item{ntimes}{Number of steps for which the AIC-style criterion has to increase before minimizing point is declared. Default 2.}
-}
+
 \details{
-This function computes selective p-values and confidence intervals (selection intervals) for least angle regression.   The selection interval estimation involves numerical search and can be fragile:
-if the observed statistics are too close to either end of the truncation interavls (Vm, Vp) (see ref), the interval of desired coverage
-cannot be computed and is set to (-Inf, +Inf). The output \code{tailarea} gives the achieved Gaussian tail area
-for reported  interval--- these should be close to alpha/2.}
+This function computes selective p-values and confidence intervals (selection intervals)
+for least angle regression. The default is to report the results for 
+each predictor after its entry into the model. See the "type" argument for other options.
+The confidence interval construction involves numerical search and can be fragile:
+if the observed statistics are too close to either end of the truncation intervals 
+(vlo and vup, see references), then the interval of desired coverage
+cannot be computed and is set to [-Inf, +Inf]. The output \code{tailarea} gives 
+the achieved Gaussian tail area for reported interval---these should be close to alpha/2,
+and can be used for error-checking purposes.
+}
 
 \value{
 
-\item{type}{Type of analysis specified in call}
-  \item{k}{Value of k specified in call}
-\item{khat}{Estimated number of steps, if type="aic" was specified}
-\item{pv}{Estimated pvalues}
- \item{ci}{Selection intervals}
-\item{tailarea}{Realized tail area (lower and upper) for each  selection interval}
- \item{vlo}{Lower bounds for functionals}
- \item{vup}{Upper bounds for functionals}
-\item{vmat}{Matrix of linear functionals used for inference}
+\item{type}{Type of analysis (active, all, or aic)}
+\item{k}{Value of k specified in call}
+\item{khat}{When type is "active", this is an estimated stopping point
+declared by \code{\link{forwardStop}}; when type is "aic", this is the
+value chosen by the modified AIC scheme}
+\item{pv}{P-values for active variables}
+\item{ci}{Confidence intervals}
+\item{tailarea}{Realized tail areas (lower and upper) for each confidence interval}
+\item{vlo}{Lower truncation limits for statistics}
+\item{vup}{Upper truncation limits for statistics}
+\item{vmat}{Linear contrasts that define the observed statistics}
 \item{y}{Vector of outcomes}
-\item{pv.spacing}{p-values from the spacing test (where we use M^+ as V^lo)}
-\item{pv.asymp}{p-values from the asymptotic form of the spacing test (where we use lambda_(k-1) (previous knot) in place of M^+)}
-\item{pv.cov}{p-values from covariance test. The reference distribution is Exp(1) if sigma is unknown; otherwise it is F_(2,n-p)}
-\item{vars}{Predictors entered at each step of forward stepwise}
-\item{sign}{Signs of coefficients for predictors entered at each step of forward stepwise}
-\item{sigma}{Value of error standard deviation (sigma) used}
+\item{pv.spacing}{P-values from the spacing test (here M+ is used)}
+\item{pv.asymp}{P-values from the asymptotic form of the spacing test (here M+ is replaced by the last knot)}
+\item{pv.covtest}{P-values from covariance test}
+\item{vars}{Variables in active set}
+\item{sign}{Signs of active coefficients}
 \item{alpha}{Desired coverage (alpha/2 in each tail)}
+\item{sigma}{Value of error standard deviation (sigma) used}
 \item{call}{The call to larInf}
 }
 
 \references{
 Jonathan Taylor, Richard Lockhart, Ryan Tibshirani, Rob Tibshirani (2014).
-Exact Post-selection Inference for Forward Stepwise and Least Angle Regression. arXiv:1401.3889
-
+Exact post-selection inference for sequential regression procedures. arXiv:1401.3889.
 }
-\author{Ryan Tibshirani, Rob Tibshirani,  Jonathan Taylor, Max G'Sell, Stephen Reid}
 
-
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
+\author{Rob Tibshirani, Ryan Tibshirani, Jonathan Taylor, Stephen Reid}
 
 \seealso{
  \code{\link{lar}}
 }
+
 \examples{
 
 #NOT RUN
@@ -95,8 +121,3 @@ Exact Post-selection Inference for Forward Stepwise and Least Angle Regression. 
 #  from mean squared residual from least squares fit
 # aa=larInf(larfit)
 }
-
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

@@ -1,6 +1,6 @@
 Package: selectiveInference
 Type: Package
-Title: Selective inference for regression problems
+Title: Tools for selective inference
 Version: 1.0
 Date: 2015-09-01
 Author: Rob Tibshirani, Ryan Tibshirani, Jonathan Taylor, Stephen Reid

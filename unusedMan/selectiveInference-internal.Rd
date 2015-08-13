@@ -11,7 +11,6 @@
 \alias{print.larInf}
   \alias{print.manyMeans}
 
-
 \description{Internal selectiveInference functions}
 \usage{
 selection.int(y, eta, sigma, vs, alpha, del = 1e-04, flip = F)
@@ -27,7 +26,6 @@ myptruncnorm(z, a, b, mean = 0, sd = 1)
 \method{print}{larInf}(x, digits = max(3, getOption("digits") - 3), ...)
 \method{print}{manyMeans}(x,...)
 }
-\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Max G'Sell, Stephen Reid}
-
+\author{Rob Tibshirani, Ryan Tibshirani, Jonathan Taylor, Stephen Reid}
 \keyword{internal}
 

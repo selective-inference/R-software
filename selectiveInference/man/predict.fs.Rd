@@ -1,45 +1,41 @@
 \name{predict.fs}
 \alias{predict.fs}
+\alias{coef.fs}
+\alias{plot.fs}
+
 \title{
-Prediction from forward stepwise fit
+Prediction, coefficient, and plot functions for forward stepwise
+regression
 }
 \description{
-Make predictions or extract coefficients from a fitted forward stepwise model
+Make predictions or extract coefficients from a forward stepwise object;
+or plot coefficient profiles along the path
 }
 \usage{
 \method{predict}{fs}(object, newx, s, ...)
+\method{coef}{fs}(object, newx, s, ...)
+\method{plot}{fs}(x, breaks=TRUE, omit.zeros=TRUE, var.labels=TRUE, ...)
 }
 
 \arguments{
-  \item{object}{
+\item{object}{
 Object returned by a call to \code{fs} function
 }
-  \item{newx}{
-          The matrix of x values at which the
-          fit is required. 
+\item{newx}{
+Matrix of x values at which the predictions are desired. If NULL,
+the x values from forward stepwise fitting are used
 }
-  \item{s}{
-        a step number, or vector of step values, indexing the path.
+\item{s}{
+Step number(s) at which predictions or coefficients are desired
 }
-\item{\dots}{Any additional arguments for fs}
+\item{\dots}{Additional arguments}
 }
   
 \value{
-Either a vector/matrix of fitted values, or a vector/matrix of
-     coefficients.
-}
-\references{
-
-     Hastie, Tibshirani and Friedman (2002) Elements of Statistical
-     Learning, Springer, NY.
-
-      Jonathan Taylor, Richard Lockhart,  Ryan Tibshirani and Rob Tibshirani (2015) 
-    Exact Post-selection Inference for Forward Stepwise and Least Angle Regression.
-arXiv:1401.3889
+Either a vector/matrix of predictions, or a vector/matrix of coefficients.
 }
 
-\author{Ryan Tibshirani, Rob Tibshirani,  Jonathan Taylor, Max G'Sell, Stephen Reid}
-
+\author{Rob Tibshirani, Ryan Tibshirani, Jonathan Taylor, Stephen Reid}
 
 \examples{
 #NOT RUN

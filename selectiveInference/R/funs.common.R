@@ -129,14 +129,14 @@ checkcols <- function(A) {
   return(FALSE)
 }
 
-estimateSigma=function(x,y){
-    if(nrow(x)<10) stop("Number of observations must be at least 10 to run estimateSigma")
-    cvfit=cv.glmnet(x,y,standardize=F)
-    lamhat=cvfit$lambda.min
-    fit=glmnet(x,y,standardize=F)
-    yhat=predict(fit,x,s=lamhat)
-    nz=sum(predict(fit,s=lamhat, type="coef")!=0)
-    sigma=sqrt(sum((y-yhat)^2)/(length(y)-nz-1))
-    return(list(sigmahat=sigma, df=nz))
+estimateSigma <- function(x, y, intercept=TRUE, standardize=TRUE) {
+  if(nrow(x)<10) stop("Number of observations must be at least 10 to run estimateSigma")
+  cvfit=cv.glmnet(x,y,intercept=intercept,standardize=standardize)
+  lamhat=cvfit$lambda.min
+  fit=glmnet(x,y,standardize=F)
+  yhat=predict(fit,x,s=lamhat)
+  nz=sum(predict(fit,s=lamhat, type="coef")!=0)
+  sigma=sqrt(sum((y-yhat)^2)/(length(y)-nz-1))
+  return(list(sigmahat=sigma, df=nz))
 }
 

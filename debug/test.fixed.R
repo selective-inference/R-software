@@ -10,7 +10,6 @@ p=10
 sigma=1
 
 x = matrix(rnorm(n*p),n,p)
-#generate y
 beta=c(-6,3,2,-1,rep(0,p-4))
 y=x%*%beta+sigma*rnorm(n)
 
@@ -18,7 +17,7 @@ y=x%*%beta+sigma*rnorm(n)
 ### intercept and standardize, EXCEPT intercept=F and standardize=T.
 ### In this case, glmnet simply refuses to fit very many lambdas
 ### along the path, and so lambda=10 is way to small for it
-a = glmnet(x,y,intercept=F,standardize=T,lambda.min.ratio=1e-6)
+a = glmnet(x,y,intercept=F,standardize=F,lambda.min.ratio=1e-6,thresh=1e-10)
 lambda = 10
 bhat = (coef(a, s=lambda/n, exact=TRUE))[-1]
 out= lassoInf(x,y,bhat,lambda,sigma=sigma)

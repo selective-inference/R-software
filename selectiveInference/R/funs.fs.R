@@ -2,8 +2,8 @@
 # a response vector y and predictor matrix x.  We assume
 # that x has columns in general position.
 
-fs <- function(x, y, maxsteps=2000, verbose=FALSE, intercept=TRUE,
-               normalize=TRUE) {
+fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
+               verbose=FALSE) {
 
   this.call = match.call()
   checkargs.xy(x=x,y=y)

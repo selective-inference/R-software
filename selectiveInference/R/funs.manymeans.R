@@ -21,7 +21,7 @@
 ####    - sigma = Estimate of standard deviation of one of the components
 #### output:
 ####    * A list (of class "mm") with the following components :
-####        - muhat = Vector of length length(y) containing the estimated signal size. If a sample element is not selected, then its signal size estimate is 0
+####        - mu.hat = Vector of length length(y) containing the estimated signal size. If a sample element is not selected, then its signal size estimate is 0
 ####        - selected.set = Indices into the vector y of the sample elements that were selected by our procedure (either BH(q) or top-K)
 ####        - CIs = Matrix with two columns and number of rows equal to number of elements in selected.set. Provides the post-selection CI bounds for the estimated signal sizes of selected elements. CIs given is rows in the same order as encountered in selected.set
 ####        - p.vals = Vector of p-values for the test of nullity of the signals of the selected sample elemetns. P-values given in the same order as selected.set
@@ -53,7 +53,7 @@ manyMeans <- function(y, alpha=0.1, bh.q=NULL, k=NULL, sigma=1, verbose=FALSE) {
     
     if (last.reject == -Inf){ # none rejected
       if (verbose) cat("No sample elements selected.\n")
-      out = list(muhat=rep(0,n), selected.set=NULL, pv=NULL, ci=NULL, method="BH(q)",
+      out = list(mu.hat=rep(0,n), selected.set=NULL, pv=NULL, ci=NULL, method="BH(q)",
         bh.q=bh.q, k=NULL, threshold=NULL, sigma=sigma, call=this.call)
       class(out) = "manyMeans"
       return(out)
@@ -71,7 +71,7 @@ manyMeans <- function(y, alpha=0.1, bh.q=NULL, k=NULL, sigma=1, verbose=FALSE) {
       cis = cbind(y - z.alpha*sigma, y + z.alpha*sigma)
       p.vals = 2*pnorm (abs(y), 0, sigma, lower.tail=FALSE)
       
-      out = list(muhat=y, selected.set=1:n, pv=p.vals, ci=ci, method="top-K",
+      out = list(mu.hat=y, selected.set=1:n, pv=p.vals, ci=ci, method="top-K",
         bh.q=NULL, k=k, threshold=NULL, sigma=sigma, call=this.call)
       class(out) = "manyMeans"
       return(out)
@@ -112,7 +112,7 @@ manyMeans <- function(y, alpha=0.1, bh.q=NULL, k=NULL, sigma=1, verbose=FALSE) {
   mu.hat.final = rep(0, n)
   mu.hat.final[selected.set] = mu.hat
   
-  out = list(muhat=mu.hat.final, selected.set=selected.set, pv=p.vals, ci=cbind(left.ci,right.ci),
+  out = list(mu.hat=mu.hat.final, selected.set=selected.set, pv=p.vals, ci=cbind(left.ci,right.ci),
     method=ifelse(is.null(bh.q), "top-K", "BH(q)"), sigma=sigma, bh.q=bh.q, k=k, threshold=threshold,
     call=this.call)
   class(out) = "manyMeans"
@@ -126,10 +126,11 @@ print.manyMeans <- function(x, ...){
   cat("\nCall:\n")
   dput(x$call)
 
-  cat(sprintf("\nStandard deviation of noise sigma = %0.3f\n",
+  cat(sprintf("\nStandard deviation of noise sigma = %0.3f\n\n",
               x$sigma))
   
-  tab = cbind(x$selected.set,x$muhat[x$selected.set],pv,ci[,1],ci[,2])
+  tab = cbind(x$selected.set,x$mu.hat[x$selected.set],x$pv,x$ci)
+  tab = round(tab,3)
   colnames(tab) = c("SelInd","MuHat","P-value","LowConfPt","UpConfPt")
   rownames(tab) = rep("",nrow(tab))
   print(tab)

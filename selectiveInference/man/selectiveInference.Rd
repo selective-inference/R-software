@@ -2,58 +2,55 @@
 \alias{selectiveInference}
 \docType{package}
 \title{
-Functions for Selective Inference
+Tools for selective inference
 }
 \description{
-A collection of functions that performs inference after selection for forward stepwise regression,
-the lasso, least angle regression and the many normal means problem.
+Functions to perform inference after selection for forward
+stepwise regression, least angle regression, the lasso and the 
+many normal means problem
 }
 \details{
 \tabular{ll}{
-
 Package: \tab selectiveInference\cr
 Type: \tab Package\cr
 Version: \tab 1.0\cr
-Date: \tab 2015-01-05\cr
+Date: \tab 2015-09-01\cr
 License: \tab GPL-2\cr
 }
-This collection of functions  performs inference after selection for forward stepwise regression,
-the lasso, least angle regression and the many normal means problem.
-The functions compute p-values and selection intervals that properly account for the inherence selection
-carried out by the procedure. These have exact finite sample  type I error and coverage
-under Gaussian errors.
-Some of this code  is derived from python code developed by
-the Selective Inference development team
-(Jonathan Taylor and others at Stanford University):
-http://github.com/selective-inference/selective-inference
 
-The following functions are included in the package:
+This package provides tools for inference after selection, in forward stepwise 
+regression, least angle regression, the lasso, and the many normal means problem. 
+The functions compute p-values and selection intervals that properly account for 
+the inherent selection carried out by the procedure. These have exact finite sample 
+type I error and coverage under Gaussian errors.
 
+This R code was developed in coordination with an analogous Python package developed 
+by Jonathan Taylor and others, see http://github.com/selective-inference/selective-inference.
+
+The main functions included in the package are:
 \code{\link{fs}},
 \code{\link{fsInf}},
-\code{\link{fixedLassoInf}},
 \code{\link{lar}},
-\code{\link{predict.lar}}
 \code{\link{larInf}},
-\code{\link{forwardStop}},
+\code{\link{lassoInf}},
 \code{\link{manyMeans}}
-
 }
 
-\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Max G'Sell, Stephen Reid
+\author{Rob Tibshirani, Ryan Tibshirani, Jonathan Taylor, Stephen Reid
+
 Maintainer: Rob Tibshirani <tibs@stanford.edu>
 }
- 
 
 \references{
-Jason D. Lee, Dennis L. Sun, Yuekai Sun, Jonathan E. Taylor (2014). Exact post-selection inference, with application to the lasso. arXiv:1311.6238
-
-Stephen Reid, Jonathan Taylor, Robert Tibshirani (2014).
-Post-selection point and interval estimation of signal sizes in Gaussian samples.
-arXiv:1405.3340
-
 Jonathan Taylor, Richard Lockhart, Ryan Tibshirani, Rob Tibshirani (2014).
-Exact Post-selection Inference for Forward Stepwise and Least Angle Regression. arXiv:1401.3889
+Exact post-selection inference for sequential regression procedures. arXiv:1401.3889.
+
+Jason Lee, Dennis Sun, Yuekai Sun, Jonathan Taylor (2014). 
+Exact post-selection inference, with application to the lasso. arXiv:1311.6238.
+
+Stephen Reid, Jonathan Taylor, Rob Tibshirani (2014).
+Post-selection point and interval estimation of signal sizes in Gaussian samples.
+arXiv:1405.3340.
 }
 
 \examples{

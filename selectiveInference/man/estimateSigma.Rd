@@ -2,13 +2,14 @@
 \alias{estimateSigma}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Forward stepwise regression
+Estimate the noise standard deviation in regression 
 }
 \description{
-This function estimates the standard deviaiton of the noise, for use in the selectiveInference package
+Estimates the standard deviation of the noise, for use in the selectiveInference 
+package
 }
 \usage{
-estimateSigma(x, y)
+estimateSigma(x, y, intercept=TRUE, standardize=TRUE)
 }
 \arguments{
   \item{x}{
@@ -17,25 +18,25 @@ Matrix of predictors (n by p)
   \item{y}{
 Vector of outcomes (length n)
 }
+\item{intercept}{Should glmnet be run with an intercept? Default is TRUE}
+\item{standardize}{Should glmnet be run with standardized predictors? Default is TRUE}
 }
 \details{
 This function estimates the standard deviation of the noise, in a linear regresion setting.
 A lasso regression is fit, using cross-validation to estimate the tuning parameter lambda.
-With sample size n,  yhat equal to the predicted values and df being the number of non-zero coefficients from
-the lasso fit, the estimate of sigma is  sqrt( sum( (y-yhat)^2)/(n-df-1))
+With sample size n, yhat equal to the predicted values and df being the number of nonzero 
+coefficients from the lasso fit, the estimate of sigma is \code{sqrt(sum((y-yhat)^2) / (n-df-1))}.	  
 }
 \value{
 \item{sigmahat}{The estimate of sigma}
-\item{df}{The estimate degrees of freedom of lasso fit ued for estimating sigma}
+\item{df}{The degrees of freedom of lasso fit used}
 }
 \references{
-Stephen Reid, Jerome Friedman and  Rob Tibshirani (2014). A Study of Error Variance Estimation in Lasso Regression. arXiv:1311.5274.
+Stephen Reid, Jerome Friedman and Rob Tibshirani (2014). 
+A study of error variance estimation in lasso regression. arXiv:1311.5274.
 }
 
-\author{
-Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
-}
-
+\author{Rob Tibshirani, Ryan Tibshirani, Jonathan Taylor, Stephen Reid}
 
 \examples{
 #NOT RUN
@@ -58,8 +59,3 @@ Joshua Loftus, Stephen Reid, Jonathan Taylor, Ryan Tibshirani, Rob Tibshirani
 }
 
 
-
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

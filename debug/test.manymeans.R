@@ -9,5 +9,5 @@ mu = c(rep(signal, floor (n/5)), rep(0, n-floor(n/5))) # 20% of elements get the
 mu=sample(mu)
 y = mu + rnorm (n, 0, 1)
 
-mmObj = manyMeans(y, bh.q=0.1)
+mmObj = manyMeans(y, k=10, verbose=T)
 

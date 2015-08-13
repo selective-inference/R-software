@@ -12,8 +12,8 @@
 # the definition. This is still sufficient to imply the uniqueness
 # of the lasso solution, on the centered x
 
-lar <- function(x, y, maxsteps=2000, minlam=0, verbose=FALSE,
-                intercept=TRUE, normalize=TRUE) {
+lar <- function(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
+                verbose=FALSE) {
 
   this.call = match.call()
   checkargs.xy(x=x,y=y)
@@ -299,7 +299,7 @@ updateQR <- function(Q1,Q2,R,col) {
 
 # Coefficient function for lar
 
-coef.lar <- function(object, s, mode=c("step","lambda"),...) {
+coef.lar <- function(object, s, mode=c("step","lambda"), ...) {
   mode = match.arg(mode)
 
   if (object$completepath) {
