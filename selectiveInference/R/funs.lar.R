@@ -342,11 +342,13 @@ predict.lasso <- predict.lar
 # Lar inference function
 
 larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic"), 
-                   gridfac=25, gridpts=1000, mult=2, ntimes=2) {
+                   gridrange=c(-100,100), gridpts=1000, mult=2, ntimes=2) {
   
   this.call = match.call()
   type = match.arg(type)
-  checkargs.misc(sigma=sigma,alpha=alpha,k=k)
+  checkargs.misc(sigma=sigma,alpha=alpha,k=k,
+                 gridrange=gridrange,gridpts=gridpts,
+                 mult=mult,ntimes=ntimes)
   if (class(obj) != "lar") stop("obj must be an object of class lar")
   if (is.null(k) && type=="active") k = length(obj$action)
   if (is.null(k) && type=="all") stop("k must be specified when type = all")
@@ -385,8 +387,8 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
       vup[j] = a$vup
       vmat[j,] = vj
     
-      a = poly.int(y,Gj,uj,vj,sigma,alpha,gridfac=gridfac,gridpts=gridpts,
-        flip=(sign[j]==-1))
+      a = poly.int(y,Gj,uj,vj,sigma,alpha,gridrange=gridrange,
+        gridpts=gridpts,flip=(sign[j]==-1))
       ci[j,] = a$int
       tailarea[j,] = a$tailarea
       
@@ -438,8 +440,8 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
       vup[j] = a$vup
       vmat[j,] = vj
 
-      a = poly.int(y,Gj,uj,vj,sigma,alpha,gridfac=gridfac,gridpts=gridpts,
-        flip=(sign[j]==-1))
+      a = poly.int(y,Gj,uj,vj,sigma,alpha,gridrange=gridrange,
+        gridpts=gridpts,flip=(sign[j]==-1))
       ci[j,] = a$int
       tailarea[j,] = a$tailarea
     }
@@ -523,7 +525,7 @@ print.lar <- function(x, ...) {
   invisible()
 }
 
-print.larInf <- function(x, ...) {
+print.larInf <- function(x, tailarea=TRUE, ...) {
   cat("\nCall:\n")
   dput(x$call)
 
@@ -534,10 +536,14 @@ print.larInf <- function(x, ...) {
     cat(sprintf("\nSequential testing results with alpha = %0.3f\n",x$alpha))
     cat("",fill=T)
     tab = cbind(1:length(x$pv),x$vars,
-      round(x$sign*x$vmat%*%x$y,3),round(x$pv,3),round(x$ci,3),
-      round(x$tailarea,3),round(x$pv.spacing,3),round(x$pv.cov,3)) 
-    colnames(tab) = c("Step", "Var", "Stdz-Coef", "P-value", "LowConfPt",
-              "UpConfPt", "LowArea", "UpArea", "Spacing", "CovTest")
+      round(x$sign*x$vmat%*%x$y,3),round(x$sign*x$vmat%*%x$y/x$sigma,3),
+      round(x$pv,3),round(x$ci,3),round(x$pv.spacing,3),round(x$pv.cov,3)) 
+    colnames(tab) = c("Step", "Var", "StdzCoef", "Z-score", "P-value",
+              "LowConfPt", "UpConfPt", "Spacing", "CovTest")
+    if (tailarea) {
+      tab = cbind(tab,round(x$tailarea,3))
+      colnames(tab)[(ncol(tab)-1):ncol(tab)] = c("LowTailArea","UpTailArea")
+    }
     rownames(tab) = rep("",nrow(tab))
     print(tab)
 
@@ -547,10 +553,14 @@ print.larInf <- function(x, ...) {
   else if (x$type == "all") {
     cat(sprintf("\nTesting results at step = %i, with alpha = %0.3f\n",x$k,x$alpha))
     cat("",fill=T)
-    tab = cbind(x$vars,round(x$sign*x$vmat%*%x$y,3),
-      round(x$pv,3),round(x$ci,3),round(x$tailarea,3))
-    colnames(tab) = c("Var", "StdzCoef", "P-value", "LowConfPt", "UpConfPt",
-              "LowArea", "UpArea")
+    tab = cbind(x$vars,
+      round(x$sign*x$vmat%*%x$y,3),round(x$sign*x$vmat%*%x$y/x$sigma,3),
+      round(x$pv,3),round(x$ci,3))
+    colnames(tab) = c("Var", "StdzCoef", "Z-score", "P-value", "LowConfPt", "UpConfPt")
+    if (tailarea) {
+      tab = cbind(tab,round(x$tailarea,3))
+      colnames(tab)[(ncol(tab)-1):ncol(tab)] = c("LowTailArea","UpTailArea")
+    }
     rownames(tab) = rep("",nrow(tab))
     print(tab)
   }
@@ -558,10 +568,14 @@ print.larInf <- function(x, ...) {
   else if (x$type == "aic") {
     cat(sprintf("\nTesting results at step = %i, with alpha = %0.3f\n",x$khat,x$alpha))
      cat("",fill=T)
-    tab = cbind(x$vars,round(x$sign*x$vmat%*%x$y,3),
-      round(x$pv,3),round(x$ci,3),round(x$tailarea,3))
-    colnames(tab) = c("Var", "Stdz Coef", "P-value", "LowConfPt", "UpConfPt",
-              "LowArea", "UpArea")
+    tab = cbind(x$vars,
+      round(x$sign*x$vmat%*%x$y,3),round(x$sign*x$vmat%*%x$y/x$sigma,3),
+      round(x$pv,3),round(x$ci,3))
+    colnames(tab) = c("Var", "StdzCoef", "Z-score", "P-value", "LowConfPt", "UpConfPt")
+    if (tailarea) {
+      tab = cbind(tab,round(x$tailarea,3))
+      colnames(tab)[(ncol(tab)-1):ncol(tab)] = c("LowTailArea","UpTailArea")
+    }
     rownames(tab) = rep("",nrow(tab))
     print(tab)
     

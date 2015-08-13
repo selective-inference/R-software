@@ -2,8 +2,8 @@
 library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
 set.seed(0)
-n = 100
-p = 1000
+n = 50
+p = 500
 s = 3
 size = 10
 

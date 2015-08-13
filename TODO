@@ -1,15 +1,7 @@
 
 
--arrange for fs to print out betahat and  z score
-    do the same for lar!
-This is already done by the inference functions. Can we leave it as is??
-
--avoid rbind in formation of gamma matrix 
-
--leave name k alone in fsInf- now that I understand what it does
-done
-
 -fixedLasoInf currently broken, as ryan changed check.args functions
 
--fix plot.lar and plot.fs. add predictor #s on RHS in plot.fs
-done
+-manyMeans
+
+-NAMESPACE

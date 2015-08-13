@@ -9,7 +9,7 @@ export(lar,fs,
        print.fixedLassoInf,
        forwardStop,
        aicStop,
-      manyMeans,print.manyMeans,estimateSigma,
+       manyMeans,print.manyMeans,estimateSigma,
        poly.pval,poly.int,tnorm.surv)
 
 S3method("coef", "lar")
