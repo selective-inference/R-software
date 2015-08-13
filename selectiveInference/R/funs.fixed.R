@@ -87,8 +87,9 @@ for(k in 1:pp){
     if(!one.sided)  pv[k]=2*min(pv[k],1-pv[k])
     #compute selection intervals
     #  junk2=selection.int(y,eta,sigma,vs,alpha,flip=flip,mingap=mingap)
-    #   ci[k,]=junk2$ci;miscov[k,]=junk2$miscov  
-   junk2= poly.int(y,-a,-b,eta,sigma,alpha,gridfac=gridfac,gridpts=gridpts,
+    #   ci[k,]=junk2$ci;miscov[k,]=junk2$miscov
+    eta2=eta/sqrt(sum(eta^2))
+   junk2= poly.int(y,-a,-b,eta2,sigma,alpha,gridfac=gridfac,gridpts=gridpts,
         flip=flip)
 
        ci[k,] = junk2$int

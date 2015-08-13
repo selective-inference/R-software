@@ -1,7 +1,7 @@
 
 
  library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
-
+#library(selectiveInference)
 options(error=dump.frames)
 #attach("/Users/tibs/dropbox/PAPERS/lasso/lasso3/.RData")
 
@@ -26,7 +26,7 @@ bhat = coef(a, s=lambda/n)[-1]
 
 # compute fixed lambda p-values
 
-a4=fixedLassoInf(x,y,bhat,lambda,compute.si=T)
+a4=fixedLassoInf(x,y,bhat,lambda)
 
 critf=function(b,lam,x,y){
      yhat=x%*%b
