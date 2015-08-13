@@ -56,7 +56,7 @@ the residual).
 \author{Rob Tibshirani, Ryan Tibshirani, Jonathan Taylor, Stephen Reid}
 
 \seealso{
- \code{\code{\link{fsInf}}, \link{coef.fs}}, \code{\link{predict.fs}}, \code{\link{plot.fs}}
+ \code{\code{\link{fsInf}}, \code{\link{predict.fs}}, \link{coef.fs}}, \code{\link{plot.fs}}
 }
 
 \examples{

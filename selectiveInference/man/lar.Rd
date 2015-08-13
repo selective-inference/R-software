@@ -9,7 +9,7 @@ selectiveInference package
 }
 \usage{
 lar(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
-   verbose=FALSE) 
+    verbose=FALSE) 
 }
 
 \arguments{
@@ -69,7 +69,7 @@ Jerome Friedman (2002, 2009). Elements of Statistical Learning.
 \author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Max G'Sell, Stephen Reid}
 
 \seealso{
- \code{\link{larInf}}, \code{\link{coef.lar}}, \code{\link{predict.lar}}, \code{\link{plot.lar}}
+ \code{\link{larInf}}, \code{\link{predict.lar}}, \code{\link{coef.lar}}, \code{\link{plot.lar}}
 }
 
 \examples{

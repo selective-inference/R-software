@@ -25,7 +25,6 @@ S3method("print", "lassoInf")
 S3method("print", "manyMeans")
 
 useDynLib("selectiveInference")
-import(MASS)
 import(glmnet)
 
 
