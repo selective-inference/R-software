@@ -1,4 +1,5 @@
- library(selectiveInference,lib.loc="mylib")
+library(selectiveInference)
+#library(selectiveInference,lib.loc="mylib")
 
 set.seed(12345)
 
