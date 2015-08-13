@@ -5,11 +5,10 @@ export(lar,fs,
        print.lar,print.fs,
        print.larInf,print.fsInf,
        plot.lar,plot.fs,
-       fixedLassoInf,
-       print.fixedLassoInf,
-       forwardStop,
-       aicStop,
-       manyMeans,print.manyMeans,estimateSigma,
+       lassoInf,print.lassoInf,
+       forwardStop,aicStop,
+       estimateSigma,
+       manyMeans,print.manyMeans,
        poly.pval,poly.int,tnorm.surv)
 
 S3method("coef", "lar")
@@ -17,12 +16,12 @@ S3method("predict", "lar")
 S3method("print", "lar")
 S3method("plot", "lar")
 S3method("print", "larInf")
-
 S3method("coef", "fs")
 S3method("predict", "fs")
 S3method("print", "fs")
 S3method("plot", "fs")
 S3method("print", "fsInf")
+S3method("print", "lassoInf")
 
 useDynLib("selectiveInference")
 import(MASS)

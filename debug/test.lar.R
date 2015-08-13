@@ -28,7 +28,7 @@ max(abs(predict(obj,s=4.5,mode="step")-
         lars::predict.lars(obj2,s=4.5,newx=x,mode="step")$fit))
 
 # Sequential inference
-out = larInf(obj,sigma=sigma,k=20)
+out = larInf(obj,sigma=sigma,k=20,verbose=TRUE)
 out
 sum(out$ci[,1]>out$ci[,2])
 plot(out$pv,ylim=c(0,1))

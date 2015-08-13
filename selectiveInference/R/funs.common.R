@@ -84,32 +84,38 @@ coef.interpolate <- function(betas, s, knots, dec=TRUE) {
 
 ##############################
 
-is.wholenumber <- function(x, tol = .Machine$double.eps^0.5)  abs(x - round(x)) < tol
-
 checkargs.xy <- function(x, y) {
-  if (missing(x)) stop("x is missing.")
-  if (is.null(x) || !is.matrix(x)) stop("x must be a matrix.")
-  if (missing(y)) stop("y is missing.")
-  if (is.null(y) || !is.numeric(y)) stop("y must be numeric.")
-  if (ncol(x) == 0) stop("There must be at least one predictor [must have ncol(x) > 0].")
-  if (checkcols(x)) stop("x cannot have duplicate columns.")
-  if (length(y) == 0) stop("There must be at least one data point [must have length(y) > 0].")
-  if (length(y)!=nrow(x)) stop("Dimensions don't match [length(y) != nrow(x)].")
+  if (missing(x)) stop("x is missing")
+  if (is.null(x) || !is.matrix(x)) stop("x must be a matrix")
+  if (missing(y)) stop("y is missing")
+  if (is.null(y) || !is.numeric(y)) stop("y must be numeric")
+  if (ncol(x) == 0) stop("There must be at least one predictor [must have ncol(x) > 0]")
+  if (checkcols(x)) stop("x cannot have duplicate columns")
+  if (length(y) == 0) stop("There must be at least one data point [must have length(y) > 0]")
+  if (length(y)!=nrow(x)) stop("Dimensions don't match [length(y) != nrow(x)]")
 }
 
-checkargs.misc <- function(sigma=NULL, alpha=NULL, lambda=NULL, k=NULL,
-                           gridrange=NULL, gridpts=NULL, mult=NULL, ntimes=NULL) {
+checkargs.misc <- function(sigma=NULL, alpha=NULL, k=NULL,
+                           gridrange=NULL, gridpts=NULL, mult=NULL, ntimes=NULL,
+                           beta=NULL, lambda=NULL, tol.beta=NULL ,tol.kkt=NULL) {
+  
   if (!is.null(sigma) && sigma <= 0) stop("sigma must be > 0")
   if (!is.null(lambda) && lambda < 0) stop("lambda must be >= 0")
   if (!is.null(alpha) && (alpha <= 0 || alpha >= 1)) stop("alpha must be between 0 and 1")
+  if (!is.null(k) && length(k) != 1) stop("k must be a single number")
   if (!is.null(k) && (k < 1 || k != floor(k))) stop("k must be an integer >= 1")
   if (!is.null(gridrange) && (length(gridrange) != 2 || gridrange[1] > gridrange[2]))
     stop("gridrange must be an interval of the form c(a,b) with a <= b")
-  if (!is.null(gridpts) && (gridpts <= 100 || gridpts != round(gridpts)))
-    stop("gridpts must be an integer >= 100")
+  if (!is.null(gridpts) && (gridpts < 50 || gridpts != round(gridpts)))
+    stop("gridpts must be an integer >= 50")
   if (!is.null(mult) && mult < 0) stop("mult must be >= 0")
   if (!is.null(ntimes) && (ntimes <= 0 || ntimes != round(ntimes)))
     stop("ntimes must be an integer > 0")
+  if (!is.null(beta) && sum(beta!=0)==0) stop("Value of lambda too large, beta is zero")
+  if (!is.null(lambda) && length(lambda) != 1) stop("lambda must be a single number")
+  if (!is.null(lambda) && lambda < 0) stop("lambda must be >=0")
+  if (!is.null(tol.beta) && tol.beta <= 0) stop("tol.beta must be > 0")
+  if (!is.null(tol.kkt) && tol.kkt <= 0) stop("tol.kkt must be > 0")
 }
 
 # Make sure that no two columms of A are the same
@@ -120,46 +126,6 @@ checkcols <- function(A) {
   a = sort(t(A)%*%b)
   if (any(diff(a)==0)) return(TRUE)
   return(FALSE)
-}
-
-checkargs2= function(y,x=NULL,bhat=NULL,sigma=NULL,lambda=0,alpha=.1,tol.beta=1e-5,tol.kkt=0.01,nsteps=NULL
-,larfit=NULL, fsfit=NULL, k=NULL,bh.q=NULL){
-  
-    # checks arguments for all user-callable functions.
-  
- if(!is.null(x)){
-    if(!is.matrix(x)) stop("x must be matrix")
-    if(ncol(x)<2) stop("x must have at least 2 columns")
-    if(length(y)!=nrow(x)) stop("Number of rows of x must equal length of y")
-}
- 
-    if(!is.null(bhat)){
-         if(length(bhat)!=ncol(x))  stop("bhat must have length equal to the number of cols of x")
-     }
-    if(!is.null(sigma)){
-         if(sigma<=0) stop("sigma must be gt 0")
-     }
-    if(lambda<0) stop("lambda must be non-negative")
-    if(alpha<=0 | alpha >=1) stop("alpha must be between 0 and 1")
-      if(tol.beta<=0) stop("tol.beta must be gt 0")
-    if(tol.kkt<=0) stop("tol.kkt must be gt 0")
-    if(!is.null(nsteps)){
-        if(nsteps<1 | nsteps> min(nrow(x),ncol(x))) stop("nsteps must be between 1 and min(nrow(x),ncol(x))")
-        if(!is.wholenumber(nsteps)) stop("nsteps must be an integer")
-    }
-  
-       if(!is.null(larfit)){
-             if(class(larfit)!="lar") stop("larfit must be a lar object returned by lar (not lars)")
-         }
-    if(!is.null(fsfit)){
-             if(class(fsfit)!="forwardStep") stop("fsfit must be an object returned by forwardStep")
-         }
-if(!is.null(bh.q)){
-  if(bh.q<=0 | bh.q >=1) stop("bh.q must be between 0 and 1")
-   }
-   if(!is.null(k)){
-        if(k<1 | k >length(y))  stop("k must be between 1 and length(y)")
-    } 
 }
 
 estimateSigma=function(x,y){

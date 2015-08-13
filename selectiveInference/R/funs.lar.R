@@ -342,7 +342,7 @@ predict.lasso <- predict.lar
 # Lar inference function
 
 larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic"), 
-                   gridrange=c(-100,100), gridpts=1000, mult=2, ntimes=2) {
+                   gridrange=c(-100,100), gridpts=1000, mult=2, ntimes=2, verbose=FALSE) {
   
   this.call = match.call()
   type = match.arg(type)
@@ -362,10 +362,14 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
   nk = obj$nk
 
   if (is.null(sigma)) {
-    if (n < 2*p) sigma = sd(y)
-    else sigma = sqrt(sum(lsfit(x,y,intercept=F)$res^2)/(n-p))
+    if (n >= 2*p) sigma = sqrt(sum(lsfit(x,y,intercept=F)$res^2)/(n-p))
+    else {
+      sigma = sd(y)
+      warning(paste(sprintf("p > n/2, and sd(y) = %0.3f used as an estimate of sigma;",sigma),
+                    "you may want to use the estimateSigma function"))
+    }
   }
-
+  
   pv.spacing = pv.asymp = pv.covtest = khat = NULL
   
   if (type == "active") {
@@ -377,6 +381,8 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
     vars = obj$action[1:k]
 
     for (j in 1:k) {
+      if (verbose) cat(sprintf("Inference for variable %i ...\n",vars[j]))
+      
       Gj = G[1:nk[j],]
       uj = rep(0,nk[j])
       vj = G[nk[j],]
@@ -426,9 +432,10 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
     M = solve(crossprod(xa),t(xa))
     
     for (j in 1:kk) {
+      if (verbose) cat(sprintf("Inference for variable %i ...\n",vars[j]))
+      
       vj = M[j,]
       sign[j] = sign(sum(vj*y))
-      
       vj = vj / sqrt(sum(vj^2))
       vj = sign[j] * vj
       Gj = rbind(G,vj)

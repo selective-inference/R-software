@@ -3,9 +3,9 @@ Type: Package
 Title: Selective inference for regression problems
 Version: 1.0
 Date: 2015-09-01
-Author: Rob Tibshirani, Ryan Tibshirani. Contributors: Max Grazier, Joshua Loftus, Stephen Reid, Jonathan Taylor
+Author: Rob Tibshirani, Ryan Tibshirani, Jonathan Taylor, Stephen Reid
 Maintainer: Rob Tibshirani <tibs@stanford.edu>
 Depends: glmnet
-Description: A collection of functions that performs inference after selection for forward stepwise regression, least angle regression, the lasso, and the many normal means problem. Some of this code is based on python code developed by the Selective Inference Development Team (Jonathan Taylor and others at Stanford University, http://github.com/selective-inference/selective-inference).
+Description: This package provides tools for inference after selection, in forward stepwise regression, least angle regression, the lasso, and the many normal means problem. This R code was developed in coordination with an analogous Python package developed by Jonathan Taylor and others, see http://github.com/selective-inference/selective-inference.
 License: GPL-2
 
