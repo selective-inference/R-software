@@ -1,7 +1,14 @@
 library(selectiveInference)
 #library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
+<<<<<<< HEAD
 #options(error=dump.frames)
+=======
+
+ library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+#library(selectiveInference)
+options(error=dump.frames)
+>>>>>>> b9bfc4fb52c176d0abc6b23ebe952ccfdd2677fb
 #attach("/Users/tibs/dropbox/PAPERS/lasso/lasso3/.RData")
 
 set.seed(133)
@@ -14,6 +21,7 @@ x = matrix(rnorm(n*p),n,p)
 beta=c(-6,3,2,-1,rep(0,p-4))
 y=x%*%beta+sigma*rnorm(n)
 
+<<<<<<< HEAD
 ### RJT COMMENTS: this seems to work with every combination of
 ### intercept and standardize, EXCEPT intercept=F and standardize=T.
 ### In this case, glmnet simply refuses to fit very many lambdas
@@ -25,6 +33,19 @@ out= lassoInf(x,y,bhat,lambda,sigma=sigma)
 out
 
 ##
+=======
+y=y-mean(y)
+
+a=glmnet(x,y,standardize=F)
+lambda = 1
+bhat = coef(a, s=lambda/n)[-1]
+
+
+# compute fixed lambda p-values
+
+a4=fixedLassoInf(x,y,bhat,lambda)
+
+>>>>>>> b9bfc4fb52c176d0abc6b23ebe952ccfdd2677fb
 critf=function(b,lam,x,y){
      yhat=x%*%b
      .5*sum( (y-yhat)^2) + lam*sum(abs(b))
