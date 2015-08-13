@@ -97,11 +97,19 @@ checkargs.xy <- function(x, y) {
   if (length(y)!=nrow(x)) stop("Dimensions don't match [length(y) != nrow(x)].")
 }
 
-checkargs.misc <- function(sigma=NULL, alpha=NULL, lambda=NULL, k=NULL) {
-  if (!is.null(sigma) && sigma<=0) stop("sigma must be > 0")
-  if (!is.null(lambda) && lambda<0) stop("lambda must be >= 0")
-  if (!is.null(alpha) && (alpha <=0 || alpha >= 1)) stop("alpha must be between 0 and 1")
-  if (!is.null(k) && (k < 1 || k!=floor(k))) stop("k must be an integer >= 1")
+checkargs.misc <- function(sigma=NULL, alpha=NULL, lambda=NULL, k=NULL,
+                           gridrange=NULL, gridpts=NULL, mult=NULL, ntimes=NULL) {
+  if (!is.null(sigma) && sigma <= 0) stop("sigma must be > 0")
+  if (!is.null(lambda) && lambda < 0) stop("lambda must be >= 0")
+  if (!is.null(alpha) && (alpha <= 0 || alpha >= 1)) stop("alpha must be between 0 and 1")
+  if (!is.null(k) && (k < 1 || k != floor(k))) stop("k must be an integer >= 1")
+  if (!is.null(gridrange) && (length(gridrange) != 2 || gridrange[1] > gridrange[2]))
+    stop("gridrange must be an interval of the form c(a,b) with a <= b")
+  if (!is.null(gridpts) && (gridpts <= 100 || gridpts != round(gridpts)))
+    stop("gridpts must be an integer >= 100")
+  if (!is.null(mult) && mult < 0) stop("mult must be >= 0")
+  if (!is.null(ntimes) && (ntimes <= 0 || ntimes != round(ntimes)))
+    stop("ntimes must be an integer > 0")
 }
 
 # Make sure that no two columms of A are the same

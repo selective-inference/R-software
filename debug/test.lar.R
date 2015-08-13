@@ -3,10 +3,10 @@ library(selectiveInference)
 library(lars)
 
 set.seed(0)
-n = 100
-p = 1000
+n = 50
+p = 100
 s = 3
-size = 10
+size = 3
 
 sigma = 1
 x = matrix(rnorm(n*p),n,p)
@@ -40,8 +40,8 @@ out2
 
 # Fixed step inference
 k = out2$khat
-out3 = larInf(obj,sigma=sigma,k=5,type="all")
-out3
+out3 = larInf(obj,sigma=sigma,k=k,type="all")
+print(out3,tail=TRUE)
 
 # Least squares inference
 out.ls = lm(y~x[,obj$action[1:k]])
