@@ -5,9 +5,6 @@
 ###   iii) selection adjusted interval estimates
 ###   iv) selection adjusted p-value of hypothesis testing whether underlying signal is 0
 
-
-
-
 #########################
 ##### MAIN FUNCTION #####
 #########################
@@ -29,26 +26,21 @@
 ####        - CIs = Matrix with two columns and number of rows equal to number of elements in selected.set. Provides the post-selection CI bounds for the estimated signal sizes of selected elements. CIs given is rows in the same order as encountered in selected.set
 ####        - p.vals = Vector of p-values for the test of nullity of the signals of the selected sample elemetns. P-values given in the same order as selected.set
 
-manyMeans = function(y, alpha=0.05, bh.q=NULL, k=NULL, sigma=1){
-    this.call=match.call()
-  #### error checks
-    checkargs(y,alpha=alpha,bh.q=bh.q,k=k,sigma=sigma)
-    if(!is.wholenumber(k) | k<1 | k>length(y)) stop("k must be an integer between 1 and length of y")
-  if (is.null(bh.q) & is.null(k)){
-    print ("Please set either the BH control parameter (bh.q) or the top-k parameter (k). They cannot both be NULL.")
-    return ()
-  }
-  
+manyMeans <- function(y, alpha=0.1, bh.q=NULL, k=NULL, sigma=1, verbose=FALSE) {
+  this.call = match.call()
+  if (missing(y) || is.null(y)) stop("y must be specified")
+  if (!is.numeric(y)) stop("y must be numeric")
+  if (alpha <= 0 || alpha >= 1) stop("alpha must be between 0 and 1")
+  if (is.null(bh.q) && is.null(k)) stop("You must either bh.q or k; they cannot both be NULL")
+  if (!is.null(bh.q) && (bh.q <= 0 || bh.q >= 1)) stop("bh.q must be between 0 and 1")
+  if (!is.null(k) && (k < 1 || k > length(y) || k != round(k))) stop("k must be an integer between 1 and length(y)")
+  if (sigma <= 0) stop("sigma must be > 0")
   
   n = length(y)
-  if (!is.null(bh.q)){ # use BH selection procedure
-    if (bh.q > 1 | bh.q < 0){
-      print ("Please specify a bh.q value between 0 and 1.")
-      return ()
-    }
-    if (!is.null(k)){
-      warning ("Both bh.q and k have been specified. k ignored.")
-    }
+  if (!is.null(bh.q)) { # use BH selection procedure
+    
+    if (verbose && !is.null(k)) cat("(Both bh.q and k have been specified; k is being ignored)\n")
+    k = NULL
     
     ### find the selected set and threshold
     p.vals = 2*pnorm (abs(y)/sigma, 0, 1, lower.tail=FALSE)
@@ -60,25 +52,29 @@ manyMeans = function(y, alpha=0.05, bh.q=NULL, k=NULL, sigma=1){
     options (warn=0) # reinstitute warnings
     
     if (last.reject == -Inf){ # none rejected
-      print ("No sample elements selected.")
-      
-      out = list(muhat=rep(0, n), selected.set=NULL, CIs=NULL, p.vals=NULL, method="BH(q)", q=bh.q, k=NULL, threshold=NULL)
-      class (out) = "manyMeans"
-      return (out)
+      if (verbose) cat("No sample elements selected.\n")
+      out = list(muhat=rep(0,n), selected.set=NULL, pv=NULL, ci=NULL, method="BH(q)",
+        bh.q=bh.q, k=NULL, threshold=NULL, sigma=sigma, call=this.call)
+      class(out) = "manyMeans"
+      return(out)
     }
     
     selected.set = order.p.vals[1:n <= last.reject]
     threshold = sigma*qnorm (last.reject/2/n, lower.tail=FALSE)
-  }else{ # use top-k selection procedure
+  }
+
+  else{ # use top-k selection procedure
+    
     ### find the selected set and threshold
-    if (k == n){ # make no changes - return MLE
+    if (k == n) { # make no changes - return MLE
       z.alpha = qnorm (alpha/2, lower.tail=FALSE)
       cis = cbind(y - z.alpha*sigma, y + z.alpha*sigma)
       p.vals = 2*pnorm (abs(y), 0, sigma, lower.tail=FALSE)
       
-      out = list(muhat=y, selected.set=1:n, CIs=cis, p.vals=round(p.vals, 4), method="top-K", q=NULL, k=k, threshold=NULL)
+      out = list(muhat=y, selected.set=1:n, pv=p.vals, ci=ci, method="top-K",
+        bh.q=NULL, k=k, threshold=NULL, sigma=sigma, call=this.call)
       class(out) = "manyMeans"
-      return (out)
+      return(out)
     }
     
     order.abs.y = order (-abs(y))
@@ -90,7 +86,7 @@ manyMeans = function(y, alpha=0.05, bh.q=NULL, k=NULL, sigma=1){
   
   ### estimate their underlying signal sizes
   mu.hat = sapply (selected.set, function(s){
-    uniroot (f=function(mu){tn.mean(mu, -threshold, threshold, sigma=sigma) - y[s]}, lower=-10000*sigma, upper=10000*sigma)$root
+    uniroot(f=function(mu){tn.mean(mu, -threshold, threshold, sigma=sigma) - y[s]}, lower=-10000*sigma, upper=10000*sigma)$root
   })
   
   ### and CIs
@@ -102,8 +98,8 @@ manyMeans = function(y, alpha=0.05, bh.q=NULL, k=NULL, sigma=1){
   })
   
   ### and p-values
-  p.val = sapply (selected.set, function(s){tn.cdf (y[s], 0, -threshold, threshold, sigma=sigma)})
-  p.val = 2*pmin(p.val, 1-p.val)
+  p.vals = sapply (selected.set, function(s){tn.cdf (y[s], 0, -threshold, threshold, sigma=sigma)})
+  p.vals = 2*pmin(p.vals, 1-p.vals)
   
   ### arrange
   order.selected.set = order (selected.set)
@@ -111,17 +107,33 @@ manyMeans = function(y, alpha=0.05, bh.q=NULL, k=NULL, sigma=1){
   mu.hat = mu.hat[order.selected.set]
   left.ci = left.ci[order.selected.set]
   right.ci = right.ci[order.selected.set]
-  p.val = p.val[order.selected.set]
+  p.vals = p.vals[order.selected.set]
   
   mu.hat.final = rep(0, n)
   mu.hat.final[selected.set] = mu.hat
   
-  out = list(muhat=mu.hat.final, selected.set=selected.set,selint=cbind(left.ci, right.ci), p.vals=round(p.val, 4), method=ifelse(is.null(bh.q), "top-K", "BH(q)"), q=bh.q, k=k, threshold=threshold, call=this.call)
-  class (out) = "manyMeans"
-  return (out)
+  out = list(muhat=mu.hat.final, selected.set=selected.set, pv=p.vals, ci=cbind(left.ci,right.ci),
+    method=ifelse(is.null(bh.q), "top-K", "BH(q)"), sigma=sigma, bh.q=bh.q, k=k, threshold=threshold,
+    call=this.call)
+  class(out) = "manyMeans"
+  return(out)
 }
 
+#### prints a pretty data frame summarising the information of an object of the mm class
+#### columns for index, signal size estimate, left and right CI bounds and p values
+#### only for those sample elements selected by the selection procedure associated with the mmObj
+print.manyMeans <- function(x, ...){
+  cat("\nCall:\n")
+  dput(x$call)
 
+  cat(sprintf("\nStandard deviation of noise sigma = %0.3f\n",
+              x$sigma))
+  
+  tab = cbind(x$selected.set,x$muhat[x$selected.set],pv,ci[,1],ci[,2])
+  colnames(tab) = c("SelInd","MuHat","P-value","LowConfPt","UpConfPt")
+  rownames(tab) = rep("",nrow(tab))
+  print(tab)
+}
 
 ###############################
 ##### AUXILIARY FUNCTIONS #####
@@ -162,7 +174,6 @@ tn.cdf = function(y, mu, a, b, sigma=1){
   }
 }
 
-
 ##### function for computing the mean of an N(mu, 1) RV
 ##### truncated to be on the interval (-Inf, a) \union (b, Inf)
 tn.mean = function(mu, a, b, sigma=1){
@@ -181,30 +192,4 @@ tn.mean = function(mu, a, b, sigma=1){
   }else{
     mu - exp(n_right + log(1 - exp(n_left-n_right)) - d_log)
   }
-}
-
-
-
-
-#### returns a pretty data frame summarising the information of an object of the mm class
-#### columns for index, signal size estimate, left and right CI bounds and p values
-#### only for those sample elements selected by the selection procedure associated with the mmObj
-summary.manyMeans = function (object, ...){
-  selected.set = object$selected.set
-  mu.hat = object$muhat[selected.set]
-  selint = object$selint # note that we need not apply the selected set
-  p.vals=object$p.vals # note that we need not apply the selected set
-  
-  pretty.out = data.frame(index=selected.set, muhat=mu.hat,lowerConfPt=selint[,1], upperConfPt=selint[,2], p.value=p.vals)
-  
-  return (pretty.out)
-}
-
-#### function for printing an manyMeans object
-#### calls the summary function, which makes a pretty data frame
-#### then prints the data frame
-print.manyMeans = function(x, ...){
-  ## pretty print
-  pretty.out = summary(x)
-  print (pretty.out)
 }

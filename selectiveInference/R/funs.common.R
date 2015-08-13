@@ -97,7 +97,8 @@ checkargs.xy <- function(x, y) {
 
 checkargs.misc <- function(sigma=NULL, alpha=NULL, k=NULL,
                            gridrange=NULL, gridpts=NULL, mult=NULL, ntimes=NULL,
-                           beta=NULL, lambda=NULL, tol.beta=NULL ,tol.kkt=NULL) {
+                           beta=NULL, lambda=NULL, tol.beta=NULL ,tol.kkt=NULL,
+                           bh.q=NULL) {
   
   if (!is.null(sigma) && sigma <= 0) stop("sigma must be > 0")
   if (!is.null(lambda) && lambda < 0) stop("lambda must be >= 0")

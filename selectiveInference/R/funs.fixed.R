@@ -6,7 +6,6 @@ lassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
                      type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
                      gridrange=c(-100,100), gridpts=1000, verbose=FALSE) {
   
-<<<<<<< HEAD
   this.call = match.call()
   type = match.arg(type)
   checkargs.xy(x,y)
@@ -25,89 +24,6 @@ lassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
     obj = standardize(x,y,TRUE,FALSE)
     x = obj$x
     y = obj$y
-=======
-      if(is.null(sigma) & p>=n){cat("Warning: p ge n; the value sigma=1 used for error standard deviation; you may want    to estimate sigma using the estimateSigma function",fill=T); sigma=1}
-  if(is.null(sigma) & n>p){
-      sigma=sqrt(sum(lsfit(x,y)$res^2)/(n-p))
-       cat("Standard deviation of noise estimated from mean squared residual",fill=T)
-  }
- 
-
-    if(max(a%*%y-b)>tol.poly*sqrt(var(y))){
-     stop("Polyhedral constraints not satisfied;
-      you need to recompute bhat more
-     accurately. With glmnet, be sure to use exact=TRUE in coef() and also try decreasing lambda.min
-       in call to glmnet. If p>N, the value of lambda specified may also be too small---
-      smaller than the value yielding zero training error")}
-    
-e=which(bhat!=0)
-xe=x[,e,drop=F]
-
-pp=length(e)
-pv=vmall=vpall=rep(NA,pp)
-ci=tailarea=matrix(NA,pp,2)
-etaall=matrix(NA,nrow=pp,ncol=n)
-SMALL=1e-7
-ttall=rep(NA,pp)
-    
- 
-for(k in 1:pp){
-   #construct contrast vectors
-    if(verbose) cat(k,fill=T)
-    if (coeftype == "partial") 
-            eta = ginv(t(xe))[, k]
-        if (coeftype == "full") 
-            eta = ginv(t(x))[,e[k]]
- 
-    bhat0=sum(eta*y)
-    if(one.sided) eta=eta*sign(bhat0)
-    flip=(one.sided & sign(bhat0)==-1)
-    etaall[k,]=eta
- #compute truncation limits
-  #  vs=compute.vmvp(y,eta,a,b,nrow(a))    
-  #  vpp=vs$vp;vmm=vs$vm
-  #  vmall[k]=vmm
-  #  vpall[k]=vpp
-   tt=sum(eta*y)
-    ttall[k]=tt
- #  sigma.eta=sigma*sqrt(sum(eta^2))
-    #compute p-values
- #  u=0  #null
-#  pv[k]=  1-myptruncnorm(tt, vmm, vpp, u, sigma.eta)
-    junk= poly.pval(y,-a,-b,eta,sigma) 
-    pv[k] = junk$pv
-    vmall[k]=junk$vlo
-    vpall[k]=junk$vup
-    if(!one.sided)  pv[k]=2*min(pv[k],1-pv[k])
-    #compute selection intervals
-    #  junk2=selection.int(y,eta,sigma,vs,alpha,flip=flip,mingap=mingap)
-    #   ci[k,]=junk2$ci;miscov[k,]=junk2$miscov
-    eta2=eta/sqrt(sum(eta^2))
-   junk2= poly.int(y,-a,-b,eta2,sigma,alpha,gridfac=gridfac,gridpts=gridpts,
-        flip=flip)
-
-       ci[k,] = junk2$int
-      tailarea[k,] = junk2$tailarea
-                  
-                
-}
-    
-out=list(pv=pv,ci=ci,tailarea=tailarea,eta=etaall,vlo=vmall,vup=vpall,pred=e,alpha=alpha,sigma=sigma,one.sided=one.sided,lambda=lambda,coeftype=coeftype)
-class(out)="fixedLassoInf"
-    out$call=this.call
-return(out)
-}
-
-print.fixedLassoInf=function(x,digits = max(3, getOption("digits") - 3),...){
-      cat("\nCall: ", deparse(x$call), "\n\n")
-      cat(c("lambda=",x$lam,", alpha=",x$alpha),fill=T)
-      cat("",fill=T)
-tab=cbind(x$pred,x$pv,x$ci,x$tailarea)
-      dimnames(tab)=list(NULL,c("predictor","p-value","lowerConfPt","upperConfPt","lowerArea","upperArea"))
-      print(tab)
-       cat("",fill=T)
-    cat(c("Value used for error standard deviation (sigma)=",round(x$sigma,6)),fill=T)
->>>>>>> b9bfc4fb52c176d0abc6b23ebe952ccfdd2677fb
   }
   
   # Check the KKT conditions
@@ -129,9 +45,11 @@ tab=cbind(x$pred,x$pv,x$ci,x$tailarea)
   tol.poly = 0.01 
   if (min(G %*% y - u) < -tol.poly * sd(y))
     stop(paste("Polyhedral constraints not satisfied; you must recompute beta",
-               "more accurately. With glmnet, be sure to use exact=TRUE in coef().",
-               "Also, it may be the case that the value of lambda is too small",
-               "(beyond the grid of values visited by glmnet)"))
+               "more accurately. With glmnet, make sure to use exact=TRUE in coef(),",
+               "and check whether the specified value of lambda is too small",
+               "(beyond the grid of values visited by glmnet).",
+               "You might also try rerunning glmnet with a lower setting of the",
+               "'thresh' parameter, for a more accurate convergence."))
 
   # Estimate sigma
   if (is.null(sigma)) {
