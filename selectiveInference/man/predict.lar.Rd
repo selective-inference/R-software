@@ -2,22 +2,18 @@
 \alias{predict.lar}
 \alias{coef.lar}
 
-
 \title{
-Prediction, coefficient, and plot functions for least angle regression
+Prediction and coefficient functions for least angle regression
 }
 \description{
-Make predictions or extract coefficients from a least angle regression object;
-or plot coefficient profiles along the path
+Make predictions or extract coefficients from a least angle regression object
 }
 \usage{
 \method{predict}{lar}(object, newx, s, mode=c("step","lambda"), ...)
 \method{coef}{lar}(object, s, mode=c("step","lambda"), ...)
-
 }
 
 \arguments{
-
 \item{object}{
 Object returned by a call to \code{lar} function
 (not the \code{lars} function!)
