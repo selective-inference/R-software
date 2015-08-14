@@ -2,14 +2,12 @@
 \alias{predict.fs}
 \alias{coef.fs}
 
-
 \title{
-Prediction, coefficient, and plot functions for forward stepwise
+Prediction and coefficient functions for forward stepwise
 regression
 }
 \description{
-Make predictions or extract coefficients from a forward stepwise object;
-or plot coefficient profiles along the path
+Make predictions or extract coefficients from a forward stepwise object
 }
 \usage{
 \method{predict}{fs}(object, newx, s, ...)
