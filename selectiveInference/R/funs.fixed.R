@@ -37,7 +37,7 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
                   "(to within specified tolerances)"))
   
   # Get lasso polyhedral region, of form Gy >= u
-  out = lasso.poly(x,y,beta,lambda,tol.beta)
+  out = fixedLasso.poly(x,y,beta,lambda,tol.beta)
   G = out$G
   u = out$u
 
@@ -106,7 +106,7 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
 
 ##############################
 
-lasso.poly <- function(x, y, beta, lambda, tol.beta=1e-5) {
+fixedLasso.poly <- function(x, y, beta, lambda, tol.beta=1e-5) {
   a = abs(beta) > tol.beta
   xa = x[,a,drop=F]
   xac = x[,!a,drop=F]
