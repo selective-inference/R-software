@@ -32,11 +32,11 @@ The main functions included in the package are:
 \code{\link{fsInf}},
 \code{\link{lar}},
 \code{\link{larInf}},
-\code{\link{lassoInf}},
+\code{\link{fixedLassoInf}},
 \code{\link{manyMeans}}
 }
 
-\author{Rob Tibshirani, Ryan Tibshirani, Jonathan Taylor, Stephen Reid
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid
 
 Maintainer: Rob Tibshirani <tibs@stanford.edu>
 }
@@ -61,8 +61,8 @@ arXiv:1405.3340.
 #p=10
 #sigma=.7
 #x=matrix(rnorm(n*p),n,p)
-#x=scale(x,T,F)
-#beta=c(3,2,0,0,rep(0,p-4))
+#x=scale(x,T,T)/sqrt(n-1)
+#beta=c(4,2,0,0,rep(0,p-4))
 #y=x%*%beta+sigma*rnorm(n)
 #y=y-mean(y)
 #first run forward stepwise
@@ -80,9 +80,10 @@ arXiv:1405.3340.
 #sigma=.7
 #x=matrix(rnorm(n*p),n,p)
 #x=scale(x,T,T)/sqrt(n-1)
-#beta=c(3,2,0,0,rep(0,p-4))
+#beta=c(4,2,0,0,rep(0,p-4))
 #y=x%*%beta+sigma*rnorm(n)
 #y=y-mean(y)
+#
 # first run  glmnet
 #gfit=glmnet(x,y,standardize=F)
 #lam = .1

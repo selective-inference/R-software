@@ -41,7 +41,7 @@ manyMeans <- function(y, alpha=0.1, bh.q=NULL, k=NULL, sigma=1, verbose=FALSE) {
     
     if (verbose && !is.null(k)) cat("(Both bh.q and k have been specified; k is being ignored)\n")
     k = NULL
-    
+    ci=NULL
     ### find the selected set and threshold
     p.vals = 2*pnorm (abs(y)/sigma, 0, 1, lower.tail=FALSE)
     order.p.vals = order(p.vals)

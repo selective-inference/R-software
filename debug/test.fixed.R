@@ -1,5 +1,5 @@
-library(selectiveInference)
-#library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+#library(selectiveInference)
+library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
 #options(error=dump.frames)
 #attach("/Users/tibs/dropbox/PAPERS/lasso/lasso3/.RData")
@@ -37,7 +37,7 @@ p=10
 sigma=2.3
 
 x=matrix(rnorm(n*p),n,p)
-x=scale(x,T,F)
+x=scale(x,T,T)/sqrt(n-1)
 
 beta=c(rep(2,5),rep(0,p-5))
      lambda = 2

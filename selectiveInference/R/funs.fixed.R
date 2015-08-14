@@ -2,7 +2,7 @@
 # for the solution of
 # min 1/2 || y - \beta_0 - X \beta ||_2^2 + \lambda || \beta ||_1
 
-lassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
+fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
                      type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
                      gridrange=c(-100,100), gridpts=1000, verbose=FALSE) {
   
@@ -100,7 +100,7 @@ lassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
     tailarea=tailarea,vlo=vlo,vup=vup,vmat=vmat,y=y,
     vars=vars,sign=sign,sigma=sigma,alpha=alpha,
     call=this.call)
-  class(out) = "lassoInf"
+  class(out) = "fixedLassoInf"
   return(out)
 }
 
@@ -140,7 +140,7 @@ pinv <- function(A, tol=.Machine$double.eps) {
 
 ##############################
 
-print.lassoInf <- function(x, tailarea=TRUE, ...) {
+print.fixedLassoInf <- function(x, tailarea=TRUE, ...) {
   cat("\nCall:\n")
   dput(x$call)
 
@@ -160,7 +160,7 @@ print.lassoInf <- function(x, tailarea=TRUE, ...) {
   rownames(tab) = rep("",nrow(tab))
   print(tab)
  
-  cat(sprintf("\nNote: displayed are coefficients in the %s regression model\n",
+  cat(sprintf("\nNote: coefficients shown are %s regression coefficients\n",
               ifelse(x$type=="partial","partial","full")))
   invisible()
 }

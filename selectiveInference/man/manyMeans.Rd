@@ -30,8 +30,8 @@ or choose the number to consider via the BH rule.
 \value{  
 \item{mu.hat}{ Vector of length n containing the estimated signal sizes.
 If a sample element is not selected, then its signal size estimate is 0}
-\item{selected.set}{Indices into the vector y of the sample elements that 
-were selected by the procedure (either BH(q) or top-K)}
+\item{selected.set}{Indices of the  vector y of the sample elements that 
+were selected by the procedure (either BH(q) or top-K). Labelled "Selind" in output table.}
 \item{pv}{P-values for selected signals}
 \item{ci}{Confidence intervals}
 \item{method}{Method used to choose number of means}
@@ -48,7 +48,7 @@ Post-selection point and interval estimation of signal sizes in Gaussian samples
 arXiv:1405.3340.
 }
 
-\author{Rob Tibshirani, Ryan Tibshirani, Jonathan Taylor, Stephen Reid}
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid}
 
 \examples{
 

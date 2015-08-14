@@ -1,7 +1,7 @@
 \name{predict.fs}
 \alias{predict.fs}
 \alias{coef.fs}
-\alias{plot.fs}
+
 
 \title{
 Prediction, coefficient, and plot functions for forward stepwise
@@ -13,8 +13,7 @@ or plot coefficient profiles along the path
 }
 \usage{
 \method{predict}{fs}(object, newx, s, ...)
-\method{coef}{fs}(object, newx, s, ...)
-\method{plot}{fs}(x, breaks=TRUE, omit.zeros=TRUE, var.labels=TRUE, ...)
+\method{coef}{fs}(object, s, ...)
 }
 
 \arguments{
@@ -35,7 +34,7 @@ Step number(s) at which predictions or coefficients are desired
 Either a vector/matrix of predictions, or a vector/matrix of coefficients.
 }
 
-\author{Rob Tibshirani, Ryan Tibshirani, Jonathan Taylor, Stephen Reid}
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid}
 
 \examples{
 #NOT RUN

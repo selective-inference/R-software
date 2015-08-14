@@ -95,19 +95,21 @@ Joshua Loftus and Jonathan Taylor (2014). A significance test for forward stepwi
 model selection. arXiv:1405.3920.
 }
 
-\author{Rob Tibshirani, Ryan Tibshirani, Jonathan Taylor, Stephen Reid}
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid}
 
 \seealso{\code{\link{fs}}}
 
 \examples{
 #NOT RUN
-#set.seed(43)
+#set.seed(433)
+
 #n=50
 #p=10
 #sigma=.7
 #x=matrix(rnorm(n*p),n,p)
-#x=scale(x,T,F)
-#beta=c(3,2,0,0,rep(0,p-4))
+
+#x=scale(x,T,T)/sqrt(n-1)
+#beta=c(4,2,0,0,rep(0,p-4))
 #y=x%*%beta+sigma*rnorm(n)
 #y=y-mean(y)
 #first run forward stepwise
@@ -119,10 +121,9 @@ model selection. arXiv:1405.3920.
 
 # forward stepwise inference for fixed model of size 4, testing deletion of each predictor; 
 # known value of sigma used
-# aa2=fsInf(fsfit,x,y,sigma=sigma,type="all",k=4)
+# aa2=fsInf(fsfit,sigma=sigma,type="all",k=4)
 
 # forward stepwise inference for  model chosen by AIC, testing deletion of each predictor; 
 # known value of sigma used
 # aa3=fsInf(fsfit,sigma=sigma,type="aic")
-
 }

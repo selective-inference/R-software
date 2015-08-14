@@ -53,10 +53,10 @@ the residual).
 \item{call}{The call to fs}
 }
 
-\author{Rob Tibshirani, Ryan Tibshirani, Jonathan Taylor, Stephen Reid}
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid}
 
 \seealso{
- \code{\code{\link{fsInf}}, \code{\link{predict.fs}}, \link{coef.fs}}, \code{\link{plot.fs}}
+ \code{\link{fsInf}}, \code{\link{predict.fs}},\code{\link{coef.fs}}, \code{\link{plot.fs}}
 }
 
 \examples{

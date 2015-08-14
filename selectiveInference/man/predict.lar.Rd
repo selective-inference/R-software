@@ -1,7 +1,7 @@
 \name{predict.lar}
 \alias{predict.lar}
 \alias{coef.lar}
-\alias{plot.lar}
+
 
 \title{
 Prediction, coefficient, and plot functions for least angle regression
@@ -12,9 +12,8 @@ or plot coefficient profiles along the path
 }
 \usage{
 \method{predict}{lar}(object, newx, s, mode=c("step","lambda"), ...)
-\method{coef}{lar}(object, newx, s, mode=c("step","lambda"), ...)
-\method{plot}{lar}(x, xvar=c("norm","step","lambda"), breaks=TRUE, 
-                   omit.zeros=TRUE, var.labels=TRUE, ...)
+\method{coef}{lar}(object, s, mode=c("step","lambda"), ...)
+
 }
 
 \arguments{
@@ -32,6 +31,7 @@ Step number(s) or lambda value(s) at which predictions or coefficients
 are desired
 }
 \item{mode}{Either "step" or "lambda", determining the role of s (above)}
+
 \item{\dots}{Additional arguments}
 }
 
@@ -39,7 +39,7 @@ are desired
 Either a vector/matrix of predictions, or a vector/matrix of coefficients.
 }
 
-\author{Rob Tibshirani, Ryan Tibshirani, Jonathan Taylor, Stephen Reid}
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid}
 
 \examples{
 #NOT RUN

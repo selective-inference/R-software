@@ -419,7 +419,7 @@ plot.fs <- function(x, breaks=TRUE, omit.zeros=TRUE, var.labels=TRUE, ...) {
   }
   p = nrow(beta)
   
-  x = 1:k
+  xx = 1:k
   xlab = "Step"
   
   if (omit.zeros) {
@@ -430,10 +430,10 @@ plot.fs <- function(x, breaks=TRUE, omit.zeros=TRUE, var.labels=TRUE, ...) {
     beta[!inds] = NA
   }
 
-  plot(c(),c(),xlim=range(x,na.rm=T),ylim=range(beta,na.rm=T),
+  plot(c(),c(),xlim=range(xx,na.rm=T),ylim=range(beta,na.rm=T),
        xlab=xlab,ylab="Coefficients",main="Forward stepwise path",...)
   abline(h=0,lwd=2)
-  matplot(x,t(beta),type="l",lty=1,add=TRUE)
+  matplot(xx,t(beta),type="l",lty=1,add=TRUE)
   if (breaks) abline(v=x,lty=2)
   if (var.labels) axis(4,at=beta[,k],labels=1:p,cex=0.8,adj=0) 
   invisible()

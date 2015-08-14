@@ -36,7 +36,7 @@ Stephen Reid, Jerome Friedman and Rob Tibshirani (2014).
 A study of error variance estimation in lasso regression. arXiv:1311.5274.
 }
 
-\author{Rob Tibshirani, Ryan Tibshirani, Jonathan Taylor, Stephen Reid}
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid}
 
 \examples{
 #NOT RUN
@@ -51,10 +51,8 @@ A study of error variance estimation in lasso regression. arXiv:1311.5274.
 #y=y-mean(y)
 
 #out=estimateSigma(x,y)
-#a=forwardStep(x,y)
-#out2=forwardStepInf(a,x,y,sigma=out$sigmahat,compute.si=T,trace=T)
-
-
+#a=fs(x,y)
+#out2=fsInf(a,sigma=out$sigmahat)
 
 }
 
