@@ -115,8 +115,10 @@ model selection. arXiv:1405.3920.
 #first run forward stepwise
 # fsfit=fs(x,y)
 #
-# forward stepwise inference for each successive entry of a predictor; sigma estimated
-#  from mean squared residual
+# forward stepwise inference for each successive entry of a predictor; 
+#
+#  sigma estimated from mean squared residual
+#  
 # aa=fsInf(fsfit)
 
 # forward stepwise inference for fixed model of size 4, testing deletion of each predictor; 
@@ -126,4 +128,19 @@ model selection. arXiv:1405.3920.
 # forward stepwise inference for  model chosen by AIC, testing deletion of each predictor; 
 # known value of sigma used
 # aa3=fsInf(fsfit,sigma=sigma,type="aic")
+#
+# states data example: predict life expectancy
+#x=state.x77[,-4]
+#y=state.x77[,4]
+#x=scale(x,T,T)
+#n=nrow(x)
+#  estimate sigma from cross-validated lasso fit
+#cvf=cv.glmnet(x,y)
+#sigmahat=estimateSigma(x,y,stand=F)$sigmahat
+#
+# run forward stepwise
+#fsfit=fs(x,y,normalize=F)
+#
+# compute p-values and confidence intervals
+# fsInf(fsfit,sigma=sigmahat)
 }

@@ -78,7 +78,7 @@ if the observed statistics are too close to either end of the truncation interva
 (vlo and vup, see references), then the interval of desired coverage
 cannot be computed and is set to [-Inf, +Inf]. The output \code{tailarea} gives 
 the achieved Gaussian tail area for reported interval---these should be close to alpha/2,
-and can be used for error-checking purposes.
+and can be used for error-checking purposes. 
 }
 \value{  
 \item{type}{Type of coefficients tested (partial or fall)}
@@ -117,11 +117,34 @@ Exact post-selection inference, with application to the lasso. arXiv:1311.6238.
 #y=y-mean(y)
 # first run  glmnet
 #gfit=glmnet(x,y,standardize=F)
-#lam = .1
-#extract coef for a given lam; Note the 1/n factor!
-#beta = coef(gfit, s=lam/n, exact=TRUE)[-1]
+#lambda = .1
+#extract coef for a given lambda; Note the 1/n factor!
+#beta = coef(gfit, s=lambda/n, exact=TRUE)[-1]
 
 # compute fixed lambda p-values and selection intervals
-#aa=fixedLassoInf(x,y,beta,lam,sigma=sigma)
+#aa=fixedLassoInf(x,y,beta,lambda,sigma=sigma)
+#
+# as above, but use lar function instead to get initial lasso fit (should get same result)
+# fit=lar(x,y,normalize=F)
+# beta=coef(fit,s=lambda,mode="lambda")
+# fixedLassoInf(x,y,beta,lambda,sigma=sigma)
 
+
+##
+# states data example: predict life expectancy
+#x=state.x77[,-4]
+#y=state.x77[,4]
+#x=scale(x,T,T)
+#n=nrow(x)
+#  estimate sigma from cross-validated lasso fit
+#  cvf=cv.glmnet(x,y)
+# sigmahat=estimateSigma(x,y,stand=F)$sigmahat
+#
+# fit lasso
+# lambda=n*cvf$lambda.min
+# gfit=glmnet(x,y,standardize=F)
+# bhat=coef(gfit, s=lambda/n, exact=TRUE)[-1]
+#
+# compute p-values and confidence intervals
+# fixedLassoInf(x,y,bhat,lambda,sigma=sigmahat)
 }

@@ -120,4 +120,20 @@ Exact post-selection inference for sequential regression procedures. arXiv:1401.
 #lar inference for each successive entry of a predictor; sigma estimated
 #  from mean squared residual from least squares fit
 # aa=larInf(larfit)
+#
+# states data example: predict life expectancy
+#x=state.x77[,-4]
+#y=state.x77[,4]
+#x=scale(x,T,T)
+#n=nrow(x)
+#  estimate sigma from cross-validated lasso fit
+#cvf=cv.glmnet(x,y)
+#sigmahat=estimateSigma(x,y,stand=F)$sigmahat
+#
+# run LAR
+#larfit=lar(x,y,normalize=F)
+#
+# compute p-values and confidence intervals
+# larInf(larfit,sigma=sigmahat)
 }
+

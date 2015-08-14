@@ -74,8 +74,23 @@ the residual).
 #fsfit=fs(x,y)
 #
 #out=fsInf(x,y)
+#
+# states data example: predict life expectancy
+#x=state.x77[,-4]
+#y=state.x77[,4]
+#x=scale(x,T,T)
+#n=nrow(x)
+#
+#  estimate sigma from cross-validated lasso fit
+#cvf=cv.glmnet(x,y)
+#sigmahat=estimateSigma(x,y,stand=F)$sigmahat
+#
+# fit forwardStepwise
+# fsfit=fs(x,y,normalize=F)
+#
+# compute p-values and confidence intervals
+#  fsInf(fsfit,sigma=sigmahat)
 }
-
 
 
 % Add one or more standard keywords, see file 'KEYWORDS' in the

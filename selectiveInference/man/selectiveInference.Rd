@@ -71,7 +71,8 @@ arXiv:1405.3340.
 #first run forward stepwise
 # fsfit=fs(x,y)
 #
-# forward stepwise inference for each successive entry of a predictor; sigma estimated from mean squared residual
+# forward stepwise inference for each successive entry of a predictor; 
+#   sigma estimated from mean squared residual
 #   
 # aa=fsInf(fsfit)
 ##
@@ -96,7 +97,7 @@ arXiv:1405.3340.
 # compute fixed lambda p-values and selection intervals
 #aa=fixedLassoInf(x,y,bhat,lam,sigma=sigma)
 #
-##least angle regression
+##least angle regressionfrom mean squared residual
 #set.seed(43)
 #n=50
 #p=10

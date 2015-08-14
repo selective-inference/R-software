@@ -25,7 +25,10 @@ Vector of outcomes (length n)
 This function estimates the standard deviation of the noise, in a linear regresion setting.
 A lasso regression is fit, using cross-validation to estimate the tuning parameter lambda.
 With sample size n, yhat equal to the predicted values and df being the number of nonzero 
-coefficients from the lasso fit, the estimate of sigma is \code{sqrt(sum((y-yhat)^2) / (n-df-1))}.	  
+coefficients from the lasso fit, the estimate of sigma is \code{sqrt(sum((y-yhat)^2) / (n-df-1))}.
+Important: if you are using glmnet to compute the lasso estimate, be sure to use the same values
+for the intercept and standardized argument in glmnet and estimateSigma. Same applies to  fs or lar,
+where the argument for standardization is called "normalize"
 }
 \value{
 \item{sigmahat}{The estimate of sigma}
