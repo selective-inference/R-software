@@ -546,7 +546,7 @@ print.larInf <- function(x, tailarea=TRUE, ...) {
       round(x$sign*x$vmat%*%x$y,3),round(x$sign*x$vmat%*%x$y/x$sigma,3),
       round(x$pv,3),round(x$ci,3),round(x$pv.spacing,3),round(x$pv.cov,3)) 
     colnames(tab) = c("Step", "Var", "StdzCoef", "Z-score", "P-value",
-              "LowConfPt", "UpConfPt", "Spacing", "CovTest")
+              "LowConfPt", "UpConfPt", "Spacing-pval", "CovTest-pval")
     if (tailarea) {
       tab = cbind(tab,round(x$tailarea,3))
       colnames(tab)[(ncol(tab)-1):ncol(tab)] = c("LowTailArea","UpTailArea")

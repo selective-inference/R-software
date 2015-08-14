@@ -34,7 +34,8 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
   vars = which(abs(beta) > tol.beta)
   if (any(sign(g[vars]) != sign(beta[vars])))
     warning(paste("Solution beta does not satisfy the KKT conditions",
-                  "(to within specified tolerances)"))
+                  "(to within specified tolerances). You might try rerunning glmnet with a lower setting of the",
+               "'thresh' parameter, for a more accurate convergence."))
   
   # Get lasso polyhedral region, of form Gy >= u
   out = lasso.poly(x,y,beta,lambda,tol.beta)

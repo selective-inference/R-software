@@ -1,5 +1,5 @@
-library(selectiveInference)
-#library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+#library(selectiveInference)
+library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 library(lars)
 
 set.seed(0)
@@ -8,7 +8,7 @@ p = 100
 s = 3
 size = 3
 
-sigma = 1
+sigma = .2
 x = matrix(rnorm(n*p),n,p)
 b = c(sample(c(-1,1),s,replace=T)*rep(size,s),rep(0,p-s))
 mu = x%*%b

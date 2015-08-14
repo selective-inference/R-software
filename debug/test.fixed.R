@@ -2,7 +2,7 @@
 library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
 #options(error=dump.frames)
-#attach("/Users/tibs/dropbox/PAPERS/lasso/lasso3/.RData")
+attach("/Users/tibs/dropbox/PAPERS/lasso/lasso3/.RData")
 
 set.seed(133)
 n=45
@@ -10,6 +10,7 @@ p=10
 sigma=1
 
 x = matrix(rnorm(n*p),n,p)
+x=scale(x,T,F)/sqrt(n-1)
 beta=c(-6,3,2,-1,rep(0,p-4))
 y=x%*%beta+sigma*rnorm(n)
 
@@ -18,9 +19,9 @@ y=x%*%beta+sigma*rnorm(n)
 ### In this case, glmnet simply refuses to fit very many lambdas
 ### along the path, and so lambda=10 is way to small for it
 a = glmnet(x,y,intercept=F,standardize=F,lambda.min.ratio=1e-6,thresh=1e-10)
-lambda = 10
+lambda = 1
 bhat = (coef(a, s=lambda/n, exact=TRUE))[-1]
-out= lassoInf(x,y,bhat,lambda,sigma=sigma)
+out= fixedLassoInf(x,y,bhat,lambda,sigma=sigma)
 out
 
 
@@ -80,7 +81,7 @@ critf=function(b,lam,x,y){
  }
 set.seed(4)
 n=100
-p=1000
+p=500
 sigma=1
 x=matrix(rnorm(n*p),ncol=p)
 x=scale(x,T,F)
@@ -102,7 +103,7 @@ plot(bhat,bhat2)
 
 critf(bhat,lambda,x,y)
 critf(bhat2,lambda,x,y)
- junk= lassoInf(x,y,bhat2,lambda,sigma=sigma,mingap=0.01)
+ junk= fixedLassoInf(x,y,bhat,lambda,sigma=sigma)
 
 
  # check of KKT

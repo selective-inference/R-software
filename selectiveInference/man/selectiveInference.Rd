@@ -56,6 +56,8 @@ arXiv:1405.3340.
 \examples{
 #NOT RUN
 # forward stepwise:
+#
+#generate some data
 #set.seed(43)
 #n=50
 #p=10
@@ -65,11 +67,12 @@ arXiv:1405.3340.
 #beta=c(4,2,0,0,rep(0,p-4))
 #y=x%*%beta+sigma*rnorm(n)
 #y=y-mean(y)
+#
 #first run forward stepwise
 # fsfit=fs(x,y)
 #
-# forward stepwise inference for each successive entry of a predictor; sigma estimated
-#  from mean squared residual
+# forward stepwise inference for each successive entry of a predictor; sigma estimated from mean squared residual
+#   
 # aa=fsInf(fsfit)
 ##
 #  lasso with fixed lambda
@@ -92,7 +95,7 @@ arXiv:1405.3340.
 
 # compute fixed lambda p-values and selection intervals
 #aa=fixedLassoInf(x,y,bhat,lam,sigma=sigma)
-
+#
 ##least angle regression
 #set.seed(43)
 #n=50
@@ -121,7 +124,8 @@ arXiv:1405.3340.
 #mmObj = manyMeans(y, bh.q=0.1)
 
 
-##estimation of sigma
+##estimation of sigma for use in fsInf or larInf or fixedLassoInf
+#
 #set.seed(43)
 #n=50
 #p=10
