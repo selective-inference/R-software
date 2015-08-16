@@ -85,7 +85,7 @@ tnorm.surv <- function(z, mean, sd, a, b) {
 # Returns Prob(Z>z | Z in [a,b]), where mean can be a vector, based on
 # A UNIFORM APPROXIMATION TO THE RIGHT NORMAL TAIL INTEGRAL, W Bryc
 # Applied Mathematics and Computation
-# Volume 127, Issues 2–3, 15 April 2002, Pages 365–374
+# Volume 127, Issues 23, 15 April 2002, Pages 365--374
 # https://math.uc.edu/~brycw/preprint/z-tail/z-tail.pdf
 
 bryc.tnorm.surv <- function(z, mean=0, sd=1, a, b) {
