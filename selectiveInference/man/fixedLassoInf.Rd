@@ -79,6 +79,10 @@ if the observed statistics are too close to either end of the truncation interva
 cannot be computed and is set to [-Inf, +Inf]. The output \code{tailarea} gives 
 the achieved Gaussian tail area for reported interval---these should be close to alpha/2,
 and can be used for error-checking purposes. 
+
+NOTE: typically it is best to standardize the features x before running lasso. This function  standardizes  so that colMeans(x)=0, colMeans(x^2)=1 (at least when intercept=TRUE).  For ease of interpretation, we recommend  standarding the data in this way before running fixedLassoInf.
+ You can do this via   x <- scale(x,T,T)/(sqrt(nrow(x))-1).  If you use some other standardization
+like x <- scale(x,T,T), this gives colSums(x^2)= n-1  and you will have to adjust the coef estimates and interval endpoints by dividing by  the factor sqrt(n-1).
 }
 \value{  
 \item{type}{Type of coefficients tested (partial or fall)}
