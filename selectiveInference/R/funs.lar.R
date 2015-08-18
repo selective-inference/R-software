@@ -342,7 +342,7 @@ predict.lasso <- predict.lar
 # Lar inference function
 
 larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic"), 
-                   gridrange=c(-100,100), gridpts=1000, mult=2, ntimes=2, verbose=FALSE) {
+                   gridrange=c(-100,100), gridpts=1000, mult=2, ntimes=2, verbose=FALSE, maxz=8) {
   
   this.call = match.call()
   type = match.arg(type)
@@ -387,20 +387,23 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
       uj = rep(0,nk[j])
       vj = G[nk[j],]
       vj = vj / sqrt(sum(vj^2))
-      a = poly.pval(y,Gj,uj,vj,sigma)
+      sigmatemp=sigma
+      tt=sum(vj*y)
+      if(abs(tt)>maxz) sigmatemp= (abs(tt)/maxz)*sigma
+      a = poly.pval(y,Gj,uj,vj,sigmatemp)
       pv[j] = a$pv
       vlo[j] = a$vlo
       vup[j] = a$vup
       vmat[j,] = vj
     
-      a = poly.int(y,Gj,uj,vj,sigma,alpha,gridrange=gridrange,
+      a = poly.int(y,Gj,uj,vj,sigmatemp,alpha,gridrange=gridrange,
         gridpts=gridpts,flip=(sign[j]==-1))
       ci[j,] = a$int
       tailarea[j,] = a$tailarea
       
-      pv.spacing[j] = spacing.pval(obj,sigma,j)
-      pv.asymp[j] = asymp.pval(obj,sigma,j)
-      pv.covtest[j] = covtest.pval(obj,sigma,j)
+      pv.spacing[j] = spacing.pval(obj,sigmatemp,j)
+      pv.asymp[j] = asymp.pval(obj,sigmatemp,j)
+      pv.covtest[j] = covtest.pval(obj,sigmatemp,j)
     }
 
     khat = forwardStop(pv,alpha)
