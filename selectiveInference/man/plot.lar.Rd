@@ -14,24 +14,19 @@ Plot coefficient profiles along the LAR path
 }
 
 \arguments{
-
 \item{x}{
 Object returned by a call to \code{lar} function
 (not the \code{lars} function!)
 }
-\item{xvar}{Either "norm" or "step" or "lambda", determining what is plotted on the horizontal axis}
-\item{breaks}{If TRUE, then vertical lines are drawn at each break point
-          in the piecewise linear coefficient paths}
-\item{omit.zeros}{When the number of variables is much greater than the
-          number of observations, many coefficients will never be
-          nonzero; this logical (default TRUE) avoids plotting these
-          zero coefficients}
-\item{var.labels}{Should profiles be labelled with variable numbers? Default TRUE}
-\item{\dots}{Additional arguments}
-}
-
-\value{
-Either a vector/matrix of predictions, or a vector/matrix of coefficients.
+\item{xvar}{Either "norm" or "step" or "lambda", determining what is plotted 
+on the x-axis}
+\item{breaks}{Should vertical lines be drawn at each break point in the piecewise
+linear coefficient paths? Default is TRUE}
+\item{omit.zeros}{Should segments of the coefficients paths that are equal to 
+zero be omitted (to avoid clutter in the figure)? Default is TRUE}
+\item{var.labels}{Should paths be labelled with corresponding variable numbers? 
+Default is TRUE}
+\item{...}{Additional arguments for plotting}
 }
 
 \author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid}
