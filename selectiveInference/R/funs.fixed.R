@@ -4,7 +4,7 @@
 
 fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
                      type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
-                     gridrange=c(-100,100), gridpts=1000, verbose=FALSE) {
+                     gridrange=c(-100,100), gridpts=1000, verbose=FALSE, maxz=Inf) {
   
   this.call = match.call()
   type = match.arg(type)
@@ -25,7 +25,8 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
     x = obj$x
     y = obj$y
   }
-  
+
+ # browser()
   # Check the KKT conditions
   g = t(x)%*%(y-x%*%beta) / lambda
   if (any(abs(g) > 1+tol.kkt))
@@ -76,6 +77,8 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
     M = pinv(crossprod(x)) %*% t(x)
     M = M[vars,,drop=FALSE]
   }
+
+   # maxz is max z score when calling pvalue or ci functions
   
   for (j in 1:k) {
     if (verbose) cat(sprintf("Inference for variable %i ...\n",vars[j]))
@@ -84,14 +87,16 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
     sign[j] = sign(sum(vj*y))
     vj = vj / sqrt(sum(vj^2))
     vj = sign[j] * vj
-
-    a = poly.pval(y,G,u,vj,sigma)
+    sigmatemp=sigma
+    tt=sum(vj*y)
+    if(abs(tt)>maxz) sigmatemp= (abs(tt)/maxz)*sigma
+    a = poly.pval(y,G,u,vj,sigmatemp)
     pv[j] = a$pv
     vlo[j] = a$vlo
     vup[j] = a$vup
     vmat[j,] = vj
 
-    a = poly.int(y,G,u,vj,sigma,alpha,gridrange=gridrange,
+    a = poly.int(y,G,u,vj,sigmatemp,alpha,gridrange=gridrange,
       gridpts=gridpts,flip=(sign[j]==-1))
     ci[j,] = a$int
     tailarea[j,] = a$tailarea

@@ -6,11 +6,11 @@ attach("/Users/tibs/dropbox/PAPERS/lasso/lasso3/.RData")
 
 set.seed(133)
 n=100
-p=200
-sigma=1
+p=10
+sigma=3
 
 x = matrix(rnorm(n*p),n,p)
-x=scale(x,T,F)/sqrt(n-1)
+#x=scale(x,T,T)/sqrt(n-1)
 beta=c(-6,3,2,-1,rep(0,p-4))
 y=x%*%beta+sigma*rnorm(n)
 
@@ -19,11 +19,19 @@ y=x%*%beta+sigma*rnorm(n)
 ### In this case, glmnet simply refuses to fit very many lambdas
 ### along the path, and so lambda=10 is way to small for it
 a = glmnet(x,y,intercept=F,standardize=F,lambda.min.ratio=1e-6,thresh=1e-10)
-lambda = 1
+nlam2=trunc(length(a$lam)/2)
+lambda = n*(a$lam[nlam2])
 bhat = (coef(a, s=lambda/n, exact=TRUE))[-1]
 out= fixedLassoInf(x,y,bhat,lambda,sigma=sigma)
+
 out
 
+##
+a=fs(x,y)
+aa=fsInf(a)
+
+a=lar(x,y)
+aa=larInf(a)
 
 critf=function(b,lam,x,y){
      yhat=x%*%b
@@ -41,8 +49,8 @@ x=matrix(rnorm(n*p),n,p)
 x=scale(x,T,T)/sqrt(n-1)
 
 beta=c(rep(2,5),rep(0,p-5))
-     lambda = 2
-nsim=100
+     lambda = 1
+nsim=1
 seeds=sample(1:9999,size=nsim)
 
 ci=matrix(NA,nsim,2)
@@ -60,11 +68,9 @@ y=y-mean(y)
 gfit=glmnet(x,y,standardize=F,lambda.min.ratio=1e-9)
 
      bhat = predict(gfit, s=lambda/n,type="coef",exact=T)[-1]
-bhat2=lasso2lam(x,y,lambda,int=F,stand=F)
- junk= lassoInf(x,y,bhat,lambda,sigma=sigma)
+#bhat2=lasso2lam(x,y,lambda,int=F,stand=F)
+ junk= fixedLassoInf(x,y,bhat,lambda,sigma=sigma)
 ci[ii,]=junk$ci[3,]
-    xx=x[,junk$pred]
-    btrue[ii]=(solve(t(xx)%*%xx)%*%t(xx)%*%mu)[3]
 }
 
 sum(ci[,1]< btrue & ci[,]> btrue)/nsim
@@ -182,3 +188,139 @@ gfit=glmnet(x,y,standardize=F)
 bhat=coef(gfit, s=lambda/n, exact=TRUE)[-1]
 
 fixedLassoInf(x,y,bhat,lambda,sigma=sigmahat)
+
+
+# lucas example
+library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+
+set.seed(44)
+
+p <- 300
+n <- 200
+s0 <- 2
+b <- 1
+b0 <- 0
+sigma <- .5
+alpha = 0.05
+#set.seed('1')
+
+#X <- rbinom(p*n,1,prob=0.15);
+#dim(X) <- c(n,p);
+#X <- X %*% diag(1+9*runif(p))
+X = matrix(rnorm(n*p),n,p)
+#X = scale(X,center=T,scale=T)  # original
+X = scale(X,center=T,scale=T)/sqrt(n-1)   #CHANGED
+
+m = 1000
+eps = matrix(rnorm(m*n),n,m)
+#lam = 2*mean(apply(t(X)%*%eps,2,max))   #original
+#theta0 <- c(rep(b,s0),rep(0,p-s0))*sqrt(n-1)  #original
+theta0 <- c(rep(b,s0),rep(0,p-s0))*sqrt(n-1)  #CHANGED
+  mu=b0+X%*%theta0
+nsim=100
+int=matrix(NA,nsim,2)
+btrue=rep(NA,nsim)
+for(ii in 1:nsim){
+    cat(ii)
+w <- sigma*rnorm(n);
+       
+y <- (mu+w);
+
+tic = proc.time()
+gfit = glmnet(X,y,standardize=F)
+    nz=colSums(gfit$beta!=0)
+    lam=gfit$lambda[nz>=2]/1.1 # CHANGED
+    lam=lam[1]*n               #CHANGED
+coef = coef(gfit, s=lam/n, exact=T)[-1]
+oo=which(coef!=0)
+btrue[ii]=lsfit(X[,oo],mu)$coef[2]
+sint = fixedLassoInf(X,y,coef,lam,sigma=sigma,alpha=alpha)
+int[ii,]=sint$ci[1,]
+}
+
+
+areaf=function(tt,mean,sigma.eta,a,b,nd=20){
+ #compute Prob_mean (W<tt| W in [a,b]
+  val=NA
+  if(tt>=a & tt <=b){
+#      val0=pnorm(mpfr((tt-mean)/sigma.eta,nd),log.p=TRUE)
+ #     val1=pnorm(mpfr((a-mean)/sigma.eta,nd),log.p=TRUE)
+ #     val2=pnorm(mpfr((b-mean)/sigma.eta,nd),log.p=TRUE)
+
+#  val=(1-mpfr(exp(val2-val0),nd))/(mpfr(exp(val1-val0),nd)-mpfr(exp(val2-val0),nd))
+      val0=pnorm(mpfr((tt-mean)/sigma.eta,nd),log.p=F)
+      val1=pnorm(mpfr((a-mean)/sigma.eta,nd),log.p=F)
+      val2=pnorm(mpfr((b-mean)/sigma.eta,nd),log.p=F)
+ if(val1!=val2)  val=(val0-val2)/(val1-val2)
+}
+return(val)
+}
+
+tnorm.surv <- function(z, mean, sd, a, b) {
+  z = max(min(z,b),a)
+
+  # Check silly boundary cases
+  p = numeric(length(mean))
+  p[mean==-Inf] = 0
+  p[mean==Inf] = 1
+
+  o = is.finite(mean)
+  p[o] = bryc.tnorm.surv(z,mean[o],sd,a,b)
+  #p[o] = gsell.tnorm.surv(z,mean[o],sd,a,b)
+  return(p)
+}
+
+# Returns Prob(Z>z | Z in [a,b]), where mean can be a vector, based on
+# A UNIFORM APPROXIMATION TO THE RIGHT NORMAL TAIL INTEGRAL, W Bryc
+# Applied Mathematics and Computation
+# Volume 127, Issues 23, 15 April 2002, Pages 365--374
+# https://math.uc.edu/~brycw/preprint/z-tail/z-tail.pdf
+
+bryc.tnorm.surv <- function(z, mean=0, sd=1, a, b) {
+  z = (z-mean)/sd
+  a = (a-mean)/sd
+  b = (b-mean)/sd
+  n = length(mean)
+
+  term1 = exp(z*z)
+  o = a > -Inf
+  term1[o] = ff(a[o])*exp(-(a[o]^2-z[o]^2)/2)
+  term2 = rep(0,n)
+  oo = b < Inf
+  term2[oo] = ff(b[oo])*exp(-(b[oo]^2-z[oo]^2)/2)
+  p = (ff(z)-term2)/(term1-term2)
+
+  # Sometimes the approximation can give wacky p-values,
+  # outside of [0,1] ..
+  #p[p<0 | p>1] = NA
+  p = pmin(1,pmax(0,p))
+  return(p)
+}
+ff <- function(z) {
+  return((z^2+5.575192695*z+12.7743632)/
+         (z^3*sqrt(2*pi)+14.38718147*z*z+31.53531977*z+2*12.77436324))
+}
+
+areaf2=function(x,a,b,mean=0,sigma=1,nd=500){
+   x = max(x, a)
+    x = min(x, b)
+    if (a > 0 & b > 0){
+        Fx= pnorm(mpfr(pnorm(-x,mean=mean,sd=sigma),nd)); Fa=pnorm(mpfr(pnorm(-a,mean=mean,sd=sigma),nd)); Fb= pnorm(mpfr(pnorm(-b,mean=mean,sd=sigma),nd))
+        return (1- ( Fa - Fx ) / ( Fa - Fb ) )
+    }
+    else{
+        Fx= pnorm(mpfr(pnorm(x,mean=mean,sd=sigma),nd));Fa=pnorm(mpfr(pnorm(a,mean=mean,sd=sigma),nd));Fb= pnorm(mpfr(pnorm(b,mean=mean,sd=sigma),nd))
+        return ( 1-( Fx - Fa ) / ( Fb - Fa ) )
+      }
+    }
+
+library(Rmpfr)
+a=10
+b=14
+x=12
+mean=0
+sigma=1.4
+tnorm.surv(x,mean,sigma,a,b)
+areaf(x,mean,sigma,a,b)
+areaf2(x,a,b,mean=mean,sigma=sigma)
+ 

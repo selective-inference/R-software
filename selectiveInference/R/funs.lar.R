@@ -342,7 +342,7 @@ predict.lasso <- predict.lar
 # Lar inference function
 
 larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic"), 
-                   gridrange=c(-100,100), gridpts=1000, mult=2, ntimes=2, verbose=FALSE) {
+                   gridrange=c(-100,100), gridpts=1000, mult=2, ntimes=2, verbose=FALSE, maxz=8) {
   
   this.call = match.call()
   type = match.arg(type)
@@ -388,20 +388,25 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
       vj = G[nk[j],]
       mj = sqrt(sum(vj^2))
       vj = vj / mj        # Standardize (divide by norm of vj)
+      vj = vj / sqrt(sum(vj^2))
+      ## sigmatemp=sigma
+      ## tt=sum(vj*y)
+      ## if(abs(tt)>maxz) sigmatemp= (abs(tt)/maxz)*sigma
+      ## a = poly.pval(y,Gj,uj,vj,sigmatemp)
       a = poly.pval(y,Gj,uj,vj,sigma)
       pv[j] = a$pv
       vlo[j] = a$vlo * mj # Unstandardize (mult by norm of vj)
       vup[j] = a$vup * mj # Unstandardize (mult by norm of vj)
       vmat[j,] = vj * mj  # Unstandardize (mult by norm of vj)
     
-      a = poly.int(y,Gj,uj,vj,sigma,alpha,gridrange=gridrange,
+      a = poly.int(y,Gj,uj,vj,sigmatemp,alpha,gridrange=gridrange,
         gridpts=gridpts,flip=(sign[j]==-1))
       ci[j,] = a$int * mj # Unstandardize (mult by norm of vj)
       tailarea[j,] = a$tailarea
       
-      pv.spacing[j] = spacing.pval(obj,sigma,j)
-      pv.asymp[j] = asymp.pval(obj,sigma,j)
-      pv.covtest[j] = covtest.pval(obj,sigma,j)
+      pv.spacing[j] = spacing.pval(obj,sigmatemp,j)
+      pv.asymp[j] = asymp.pval(obj,sigmatemp,j)
+      pv.covtest[j] = covtest.pval(obj,sigmatemp,j)
     }
 
     khat = forwardStop(pv,alpha)
