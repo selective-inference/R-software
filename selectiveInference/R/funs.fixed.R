@@ -1,0 +1,175 @@
+# Lasso inference function (for fixed lambda). Note: here we are providing inference
+# for the solution of
+# min 1/2 || y - \beta_0 - X \beta ||_2^2 + \lambda || \beta ||_1
+
+fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
+                     type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
+                     gridrange=c(-100,100), gridpts=1000, maxz=8, verbose=FALSE) {
+  
+  this.call = match.call()
+  type = match.arg(type)
+  checkargs.xy(x,y)
+  if (missing(beta) || is.null(beta)) stop("Must supply the solution beta")
+  if (missing(lambda) || is.null(lambda)) stop("Must supply the tuning parameter value lambda") 
+  checkargs.misc(beta=beta,lambda=lambda,sigma=sigma,alpha=alpha,
+                 gridrange=gridrange,gridpts=gridpts,
+                 tol.beta=tol.beta,tol.kkt=tol.kkt)
+  n = nrow(x)
+  p = ncol(x)
+  beta = as.numeric(beta)
+  if (length(beta) != p) stop("beta must have length equal to ncol(x)")
+
+  # If glmnet was run with an intercept term, center x and y
+  if (intercept==TRUE) {
+    obj = standardize(x,y,TRUE,FALSE)
+    x = obj$x
+    y = obj$y
+  }
+
+  # Check the KKT conditions
+  g = t(x)%*%(y-x%*%beta) / lambda
+  if (any(abs(g) > 1+tol.kkt))
+    warning(paste("Solution beta does not satisfy the KKT conditions",
+                  "(to within specified tolerances)"))
+  vars = which(abs(beta) > tol.beta)
+  if (any(sign(g[vars]) != sign(beta[vars])))
+    warning(paste("Solution beta does not satisfy the KKT conditions",
+                  "(to within specified tolerances). You might try rerunning",
+                  "glmnet with a lower setting of the",
+                  "'thresh' parameter, for a more accurate convergence."))
+  
+  # Get lasso polyhedral region, of form Gy >= u
+  out = fixedLasso.poly(x,y,beta,lambda,tol.beta)
+  G = out$G
+  u = out$u
+
+  # Check polyhedral region
+  tol.poly = 0.01 
+  if (min(G %*% y - u) < -tol.poly * sd(y))
+    stop(paste("Polyhedral constraints not satisfied; you must recompute beta",
+               "more accurately. With glmnet, make sure to use exact=TRUE in coef(),",
+               "and check whether the specified value of lambda is too small",
+               "(beyond the grid of values visited by glmnet).",
+               "You might also try rerunning glmnet with a lower setting of the",
+               "'thresh' parameter, for a more accurate convergence."))
+
+  # Estimate sigma
+  if (is.null(sigma)) {
+    if (n >= 2*p) {
+      oo = intercept
+      sigma = sqrt(sum(lsfit(x,y,intercept=oo)$res^2)/(n-p-oo))
+    }
+    else {
+      sigma = sd(y)
+      warning(paste(sprintf("p > n/2, and sd(y) = %0.3f used as an estimate of sigma;",sigma),
+                    "you may want to use the estimateSigma function"))
+    }
+  }
+ 
+  k = length(vars)
+  pv = vlo = vup = numeric(k) 
+  vmat = matrix(0,k,n)
+  ci = tailarea = matrix(0,k,2)
+  sign = numeric(k)
+
+  if (type=="partial" || p > n) {
+    if (p > n) warning(paste("type='full' does not make sense when p > n;",
+                             "switching to type='partial'"))
+    xa = x[,vars,drop=F]
+    M = pinv(crossprod(xa)) %*% t(xa)
+  }
+  else {
+    M = pinv(crossprod(x)) %*% t(x)
+    M = M[vars,,drop=F]
+  }
+  
+  for (j in 1:k) {
+    if (verbose) cat(sprintf("Inference for variable %i ...\n",vars[j]))
+    
+    vj = M[j,]
+    mj = sqrt(sum(vj^2))
+    vj = vj / mj        # Standardize (divide by norm of vj)
+    sign[j] = sign(sum(vj*y))
+    vj = sign[j] * vj
+    a = poly.pval(y,G,u,vj,sigma)
+    pv[j] = a$pv * mj   # Unstandardize (mult by norm of vj)
+    vlo[j] = a$vlo * mj # Unstandardize (mult by norm of vj)
+    vup[j] = a$vup * mj # Unstandardize (mult by norm of vj)
+    vmat[j,] = vj * mj  # Unstandardize (mult by norm of vj)
+
+    a = poly.int(y,G,u,vj,sigma,alpha,gridrange=gridrange,
+      gridpts=gridpts,flip=(sign[j]==-1),maxz=maxz)
+    ci[j,] = a$int
+    tailarea[j,] = a$tailarea
+  }
+  
+  out = list(type=type,lambda=lambda,pv=pv,ci=ci,
+    tailarea=tailarea,vlo=vlo,vup=vup,vmat=vmat,y=y,
+    vars=vars,sign=sign,sigma=sigma,alpha=alpha,
+    call=this.call)
+  class(out) = "fixedLassoInf"
+  return(out)
+}
+
+##############################
+
+fixedLasso.poly <- function(x, y, beta, lambda, tol.beta=1e-5) {
+  a = abs(beta) > tol.beta
+  xa = x[,a,drop=F]
+  xac = x[,!a,drop=F]
+  xai = pinv(crossprod(xa))
+  xap = xai %*% t(xa)
+  za = sign(beta[a])
+  if (length(za)>1) dz = diag(za)
+  if (length(za)==1) dz = matrix(za,1,1)
+
+  P = diag(1,nrow(xa)) - xa %*% xap
+  G = -rbind(1/lambda * t(xac) %*% P,
+    -1/lambda * t(xac) %*% P,
+    -dz %*% xap)
+  u = -c(1 - t(xac) %*% t(xap) %*% za,
+    1 + t(xac) %*% t(xap) %*% za,
+    -lambda * dz %*% xai %*% za)
+
+  return(list(G=G,u=u))
+}
+
+# Moore-Penrose pseudo inverse for symmetric matrices
+
+pinv <- function(A, tol=.Machine$double.eps) {
+  e = eigen(A)
+  v = Re(e$vec)
+  d = Re(e$val)
+  d[d > tol] = 1/d[d > tol]
+  d[d < tol] = 0
+  return(v %*% diag(d) %*% t(v))
+}
+
+##############################
+
+print.fixedLassoInf <- function(x, tailarea=TRUE, ...) {
+  cat("\nCall:\n")
+  dput(x$call)
+
+  cat(sprintf("\nStandard deviation of noise (specified or estimated) sigma = %0.3f\n",
+              x$sigma))
+  
+  cat(sprintf("\nTesting results at lambda = %0.3f, with alpha = %0.3f\n",x$lambda,x$alpha))
+  cat("",fill=T)
+  tab = cbind(x$vars,
+    round(x$sign*x$vmat%*%x$y,3),
+    round(x$sign*x$vmat%*%x$y/(x$sigma*sqrt(rowSums(x$vmat^2))),3),
+    round(x$pv,3),round(x$ci,3))
+  colnames(tab) = c("Var", "Coef", "Z-score", "P-value", "LowConfPt", "UpConfPt")
+  if (tailarea) {
+    tab = cbind(tab,round(x$tailarea,3))
+    colnames(tab)[(ncol(tab)-1):ncol(tab)] = c("LowTailArea","UpTailArea")
+  }
+  rownames(tab) = rep("",nrow(tab))
+  print(tab)
+ 
+  cat(sprintf("\nNote: coefficients shown are %s regression coefficients\n",
+              ifelse(x$type=="partial","partial","full")))
+  invisible()
+}
+
