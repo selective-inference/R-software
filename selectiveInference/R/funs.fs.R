@@ -300,7 +300,7 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
     sign = numeric(kk)
     vars = obj$action[1:kk]
     xa = x[,vars]
-    M = solve(crossprod(xa),t(xa))
+    M = pinv(crossprod(xa)) %*% t(xa)
     
     for (j in 1:kk) {
       if (verbose) cat(sprintf("Inference for variable %i ...\n",vars[j]))

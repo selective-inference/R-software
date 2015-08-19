@@ -4,7 +4,7 @@
 
 fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
                      type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
-                     gridrange=c(-100,100), gridpts=1000, verbose=FALSE, maxz=Inf) {
+                     gridrange=c(-100,100), gridpts=1000, verbose=FALSE, maxz=8) {
   
   this.call = match.call()
   type = match.arg(type)
@@ -68,35 +68,37 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
   vmat = matrix(0,k,n)
   ci = tailarea = matrix(0,k,2)
   sign = numeric(k)
-  
-  if (type=="partial") {
+
+  if (type=="partial" || p > n) {
+    if (p > n) warning(paste("type='full' does not make sense when p > n;",
+                             "switching to type='partial'"))
     xa = x[,vars,drop=F]
     M = pinv(crossprod(xa)) %*% t(xa)
   }
   else {
     M = pinv(crossprod(x)) %*% t(x)
-    M = M[vars,,drop=FALSE]
+    M = M[vars,,drop=F]
   }
-
-   # maxz is max z score when calling pvalue or ci functions
   
   for (j in 1:k) {
     if (verbose) cat(sprintf("Inference for variable %i ...\n",vars[j]))
     
     vj = M[j,]
     sign[j] = sign(sum(vj*y))
-    vj = vj / sqrt(sum(vj^2))
+    mj = sqrt(sum(vj^2))
+    vj = vj / mj        # Standardize (divide by norm of vj)
     vj = sign[j] * vj
-    sigmatemp=sigma
-    tt=sum(vj*y)
-    if(abs(tt)>maxz) sigmatemp= (abs(tt)/maxz)*sigma
-    a = poly.pval(y,G,u,vj,sigmatemp)
-    pv[j] = a$pv
-    vlo[j] = a$vlo
-    vup[j] = a$vup
-    vmat[j,] = vj
+    ## sigmatemp=sigma
+    ## tt=sum(vj*y)
+    ## if(abs(tt)>maxz) sigmatemp= (abs(tt)/maxz)*sigma
+    ## a = poly.pval(y,G,u,vj,sigmatemp)
+    a = poly.pval(y,G,u,vj,sigma)
+    pv[j] = a$pv * mj   # Unstandardize (mult by norm of vj)
+    vlo[j] = a$vlo * mj # Unstandardize (mult by norm of vj)
+    vup[j] = a$vup * mj # Unstandardize (mult by norm of vj)
+    vmat[j,] = vj * mj  # Unstandardize (mult by norm of vj)
 
-    a = poly.int(y,G,u,vj,sigmatemp,alpha,gridrange=gridrange,
+    a = poly.int(y,G,u,vj,sigma,alpha,gridrange=gridrange,
       gridpts=gridpts,flip=(sign[j]==-1))
     ci[j,] = a$int
     tailarea[j,] = a$tailarea

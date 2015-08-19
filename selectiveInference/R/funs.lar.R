@@ -399,14 +399,14 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
       vup[j] = a$vup * mj # Unstandardize (mult by norm of vj)
       vmat[j,] = vj * mj  # Unstandardize (mult by norm of vj)
     
-      a = poly.int(y,Gj,uj,vj,sigmatemp,alpha,gridrange=gridrange,
+      a = poly.int(y,Gj,uj,vj,sigma,alpha,gridrange=gridrange,
         gridpts=gridpts,flip=(sign[j]==-1))
       ci[j,] = a$int * mj # Unstandardize (mult by norm of vj)
       tailarea[j,] = a$tailarea
       
-      pv.spacing[j] = spacing.pval(obj,sigmatemp,j)
-      pv.asymp[j] = asymp.pval(obj,sigmatemp,j)
-      pv.covtest[j] = covtest.pval(obj,sigmatemp,j)
+      pv.spacing[j] = spacing.pval(obj,sigma,j)
+      pv.asymp[j] = asymp.pval(obj,sigma,j)
+      pv.covtest[j] = covtest.pval(obj,sigma,j)
     }
 
     khat = forwardStop(pv,alpha)
@@ -433,7 +433,7 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
     sign = numeric(kk)
     vars = obj$action[1:kk]
     xa = x[,vars]
-    M = solve(crossprod(xa),t(xa))
+    M = pinv(crossprod(xa)) %*% t(xa)
     
     for (j in 1:kk) {
       if (verbose) cat(sprintf("Inference for variable %i ...\n",vars[j]))
