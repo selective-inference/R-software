@@ -17,14 +17,11 @@ poly.pval <- function(y, G, u, v, sigma) {
 # Main confidence interval function
 
 poly.int <- function(y, G, u, v, sigma, alpha, gridrange=c(-100,100),
-                     gridpts=1000, flip=FALSE, maxz=8) {
+                     gridpts=10000, flip=FALSE) {
   
   z = sum(v*y)
   vv = sum(v^2)
   sd = sigma*sqrt(vv)
-
-  ## ROB'S TRICK
-  if (abs(z) > maxz) sd = abs(z)/maxz * sd
   
   rho = G %*% v / vv
   vec = (u - G %*% y + rho*z) / rho
@@ -79,10 +76,33 @@ tnorm.surv <- function(z, mean, sd, a, b) {
   p[mean==-Inf] = 0
   p[mean==Inf] = 1
   
+  # Try the multi precision floating point calculation first
   o = is.finite(mean)
-  p[o] = bryc.tnorm.surv(z,mean[o],sd,a,b)
-  #p[o] = gsell.tnorm.surv(z,mean[o],sd,a,b)
+  mm = mean[o]
+  pp = mpfr.tnorm.surv(z,mm,sd,a,b) 
+
+  # If there are any NAs, then settle for an approximation
+  oo = is.na(pp)
+  if (any(oo)) {
+    pp[oo] = bryc.tnorm.surv(z,mm[oo],sd,a,b)
+    #pp[oo] = gsell.tnorm.surv(z,mm[oo],sd,a,b)
+  }
+  
+  p[o] = pp
   return(p)
+}
+
+# Returns Prob(Z>z | Z in [a,b]), where mean cane be a vector, using
+# multi precision floating point calculations thanks to the Rmpfr package
+
+mpfr.tnorm.surv <- function(z, mean=0, sd=1, a, b, bits=250) {
+  ## z = mpfr((z-mean)/sd, bits)
+  ## a = mpfr((a-mean)/sd, bits)
+  ## b = mpfr((b-mean)/sd, bits)
+  z = (z-mean)/sd
+  a = (a-mean)/sd
+  b = (b-mean)/sd
+  return((pnorm(b)-pnorm(z))/(pnorm(b)-pnorm(a)))
 }
 
 # Returns Prob(Z>z | Z in [a,b]), where mean can be a vector, based on

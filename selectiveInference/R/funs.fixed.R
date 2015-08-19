@@ -4,7 +4,7 @@
 
 fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
                      type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
-                     gridrange=c(-100,100), gridpts=1000, maxz=8, verbose=FALSE) {
+                     gridrange=c(-100,100), gridpts=10000, verbose=FALSE) {
   
   this.call = match.call()
   type = match.arg(type)
@@ -28,7 +28,7 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
 
   # Check the KKT conditions
   g = t(x)%*%(y-x%*%beta) / lambda
-  if (any(abs(g) > 1+tol.kkt))
+  if (any(abs(g) > 1+tol.kkt*sd(y)))
     warning(paste("Solution beta does not satisfy the KKT conditions",
                   "(to within specified tolerances)"))
   vars = which(abs(beta) > tol.beta)
@@ -98,8 +98,8 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
     vmat[j,] = vj * mj  # Unstandardize (mult by norm of vj)
 
     a = poly.int(y,G,u,vj,sigma,alpha,gridrange=gridrange,
-      gridpts=gridpts,flip=(sign[j]==-1),maxz=maxz)
-    ci[j,] = a$int
+      gridpts=gridpts,flip=(sign[j]==-1))
+    ci[j,] = a$int * mj # Unstandardize (mult by norm of vj)
     tailarea[j,] = a$tailarea
   }
   

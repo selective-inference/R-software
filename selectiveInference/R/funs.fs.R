@@ -218,8 +218,7 @@ predict.fs <- function(object, newx, s, ...) {
 # FS inference function
 
 fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic"), 
-                  gridrange=c(-100,100), gridpts=1000, mult=2, ntimes=2, maxz=8,
-                  verbose=FALSE) {
+                  gridrange=c(-100,100), gridpts=10000, mult=2, ntimes=2, verbose=FALSE) {
   
   this.call = match.call()
   type = match.arg(type)
@@ -276,7 +275,7 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
       vmat[j,] = vj * mj / sxj  # Unstandardize (mult by norm of vj / sxj)
   
       a = poly.int(y,Gj,uj,vj,sigma,alpha,gridrange=gridrange,
-        gridpts=gridpts,flip=(sign[j]==-1),maxz=maxz)
+        gridpts=gridpts,flip=(sign[j]==-1))
       ci[j,] = a$int * mj / sxj # Unstandardize (mult by norm of vj / sxj)
       tailarea[j,] = a$tailarea
     }
@@ -326,7 +325,7 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
       vmat[j,] = vj * mj / sxj  # Unstandardize (mult by norm of vj / sxj)
 
       a = poly.int(y,Gj,uj,vj,sigma,alpha,gridrange=gridrange,
-        gridpts=gridpts,flip=(sign[j]==-1),maxz=maxz)
+        gridpts=gridpts,flip=(sign[j]==-1))
       ci[j,] = a$int * mj / sxj # Unstandardize (mult by norm of vj / sxj)
       tailarea[j,] = a$tailarea
     }
