@@ -4,7 +4,7 @@
 
 fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
                      type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
-                     gridrange=c(-100,100), gridpts=1000, verbose=FALSE, maxz=Inf) {
+                     gridrange=c(-100,100), gridpts=1000, verbose=FALSE, maxz=8) {
   
   this.call = match.call()
   type = match.arg(type)

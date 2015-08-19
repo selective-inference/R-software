@@ -219,7 +219,7 @@ predict.fs <- function(object, newx, s, ...) {
 
 fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic"), 
                   gridrange=c(-100,100), gridpts=1000, mult=2, ntimes=2,
-                  verbose=FALSE) {
+                  verbose=FALSE, maxz=8) {
   
   this.call = match.call()
   type = match.arg(type)
@@ -268,8 +268,11 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
       vlo[j] = a$vlo
       vup[j] = a$vup
       vmat[j,] = vj
-    
-      a = poly.int(y,Gj,uj,vj,sigma,alpha,gridrange=gridrange,
+      tt=sum(vj*y)
+      sigmatemp=sigma
+       if(abs(tt)>maxz)  sigmatemp= (abs(tt)/maxz)*sigma
+      cat(c(abs(tt), maxz, sigma,sigmatemp),fill=T)
+      a = poly.int(y,Gj,uj,vj,sigmatemp,alpha,gridrange=gridrange,
         gridpts=gridpts,flip=(sign[j]==-1))
       ci[j,] = a$int
       tailarea[j,] = a$tailarea
@@ -312,14 +315,16 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
       vj = sign[j] * vj
       Gj = rbind(G,vj)
       uj = c(u,0)
-
-      a = poly.pval(y,Gj,uj,vj,sigma)
+      sigmatemp=sigma
+      tt=sum(vj*y)
+      if(abs(tt)>maxz) sigmatemp= (abs(tt)/maxz)*sigma
+      a = poly.pval(y,Gj,uj,vj,sigmatemp)
       pv[j] = a$pv
       vlo[j] = a$vlo
       vup[j] = a$vup
       vmat[j,] = vj
 
-      a = poly.int(y,Gj,uj,vj,sigma,alpha,gridrange=gridrange,
+      a = poly.int(y,Gj,uj,vj,sigmatemp,alpha,gridrange=gridrange,
         gridpts=gridpts,flip=(sign[j]==-1))
       ci[j,] = a$int
       tailarea[j,] = a$tailarea
