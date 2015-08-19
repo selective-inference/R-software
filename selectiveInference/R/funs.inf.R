@@ -17,11 +17,14 @@ poly.pval <- function(y, G, u, v, sigma) {
 # Main confidence interval function
 
 poly.int <- function(y, G, u, v, sigma, alpha, gridrange=c(-100,100),
-                     gridpts=1000, flip=FALSE) {
-
+                     gridpts=1000, flip=FALSE, maxz=8) {
+  
   z = sum(v*y)
   vv = sum(v^2)
   sd = sigma*sqrt(vv)
+
+  ## ROB'S TRICK
+  if (abs(z) > maxz) sd = abs(z)/maxz * sd
   
   rho = G %*% v / vv
   vec = (u - G %*% y + rho*z) / rho
@@ -169,10 +172,9 @@ aicStop <- function(x, y, action, df, sigma, mult=2, ntimes=2) {
 
   if (i < k) {
     khat = i - ntimes
-    kstop
     aic = aic[1:i]
   }
   else khat = k
   
-  return(list(khat=khat,G=G,u=u,aic=aic,kstop=i))
+  return(list(khat=khat,G=G,u=u,aic=aic,stopped=(i<k)))
 }

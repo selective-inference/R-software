@@ -4,7 +4,7 @@
 
 fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
                      type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
-                     gridrange=c(-100,100), gridpts=1000, verbose=FALSE, maxz=8) {
+                     gridrange=c(-100,100), gridpts=1000, maxz=8, verbose=FALSE) {
   
   this.call = match.call()
   type = match.arg(type)
@@ -18,7 +18,7 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
   p = ncol(x)
   beta = as.numeric(beta)
   if (length(beta) != p) stop("beta must have length equal to ncol(x)")
-  
+
   # If glmnet was run with an intercept term, center x and y
   if (intercept==TRUE) {
     obj = standardize(x,y,TRUE,FALSE)
@@ -26,7 +26,6 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
     y = obj$y
   }
 
- # browser()
   # Check the KKT conditions
   g = t(x)%*%(y-x%*%beta) / lambda
   if (any(abs(g) > 1+tol.kkt))
@@ -35,8 +34,9 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
   vars = which(abs(beta) > tol.beta)
   if (any(sign(g[vars]) != sign(beta[vars])))
     warning(paste("Solution beta does not satisfy the KKT conditions",
-                  "(to within specified tolerances). You might try rerunning glmnet with a lower setting of the",
-               "'thresh' parameter, for a more accurate convergence."))
+                  "(to within specified tolerances). You might try rerunning",
+                  "glmnet with a lower setting of the",
+                  "'thresh' parameter, for a more accurate convergence."))
   
   # Get lasso polyhedral region, of form Gy >= u
   out = fixedLasso.poly(x,y,beta,lambda,tol.beta)
@@ -55,7 +55,10 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
 
   # Estimate sigma
   if (is.null(sigma)) {
-    if (n >= 2*p) sigma = sqrt(sum(lsfit(x,y,intercept=F)$res^2)/(n-p))
+    if (n >= 2*p) {
+      oo = intercept
+      sigma = sqrt(sum(lsfit(x,y,intercept=oo)$res^2)/(n-p-oo))
+    }
     else {
       sigma = sd(y)
       warning(paste(sprintf("p > n/2, and sd(y) = %0.3f used as an estimate of sigma;",sigma),
@@ -84,14 +87,10 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
     if (verbose) cat(sprintf("Inference for variable %i ...\n",vars[j]))
     
     vj = M[j,]
-    sign[j] = sign(sum(vj*y))
     mj = sqrt(sum(vj^2))
     vj = vj / mj        # Standardize (divide by norm of vj)
+    sign[j] = sign(sum(vj*y))
     vj = sign[j] * vj
-    ## sigmatemp=sigma
-    ## tt=sum(vj*y)
-    ## if(abs(tt)>maxz) sigmatemp= (abs(tt)/maxz)*sigma
-    ## a = poly.pval(y,G,u,vj,sigmatemp)
     a = poly.pval(y,G,u,vj,sigma)
     pv[j] = a$pv * mj   # Unstandardize (mult by norm of vj)
     vlo[j] = a$vlo * mj # Unstandardize (mult by norm of vj)
@@ -99,7 +98,7 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
     vmat[j,] = vj * mj  # Unstandardize (mult by norm of vj)
 
     a = poly.int(y,G,u,vj,sigma,alpha,gridrange=gridrange,
-      gridpts=gridpts,flip=(sign[j]==-1))
+      gridpts=gridpts,flip=(sign[j]==-1),maxz=maxz)
     ci[j,] = a$int
     tailarea[j,] = a$tailarea
   }
@@ -158,9 +157,10 @@ print.fixedLassoInf <- function(x, tailarea=TRUE, ...) {
   cat(sprintf("\nTesting results at lambda = %0.3f, with alpha = %0.3f\n",x$lambda,x$alpha))
   cat("",fill=T)
   tab = cbind(x$vars,
-    round(x$sign*x$vmat%*%x$y,3),round(x$sign*x$vmat%*%x$y/x$sigma,3),
+    round(x$sign*x$vmat%*%x$y,3),
+    round(x$sign*x$vmat%*%x$y/(x$sigma*sqrt(rowSums(x$vmat^2))),3),
     round(x$pv,3),round(x$ci,3))
-  colnames(tab) = c("Var", "StdzCoef", "Z-score", "P-value", "LowConfPt", "UpConfPt")
+  colnames(tab) = c("Var", "Coef", "Z-score", "P-value", "LowConfPt", "UpConfPt")
   if (tailarea) {
     tab = cbind(tab,round(x$tailarea,3))
     colnames(tab)[(ncol(tab)-1):ncol(tab)] = c("LowTailArea","UpTailArea")
