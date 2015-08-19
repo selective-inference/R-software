@@ -258,20 +258,21 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
 
     for (j in 1:k) {
       if (verbose) cat(sprintf("Inference for variable %i ...\n",vars[j]))
-      
+
       Gj = G[1:nk[j],]
       uj = rep(0,nk[j])
       vj = G[nk[j],]
-      vj = vj / sqrt(sum(vj^2))
+      mj = sqrt(sum(vj^2))
+      vj = vj / mj        # Standardize (divide by norm of vj)
       a = poly.pval(y,Gj,uj,vj,sigma)
       pv[j] = a$pv
-      vlo[j] = a$vlo
-      vup[j] = a$vup
-      vmat[j,] = vj
-    
+      vlo[j] = a$vlo * mj # Unstandardize (mult by norm of vj)
+      vup[j] = a$vup * mj # Unstandardize (mult by norm of vj)
+      vmat[j,] = vj * mj  # Unstandardize (mult by norm of vj)
+  
       a = poly.int(y,Gj,uj,vj,sigma,alpha,gridrange=gridrange,
         gridpts=gridpts,flip=(sign[j]==-1))
-      ci[j,] = a$int
+      ci[j,] = a$int * mj # Unstandardize (mult by norm of vj)
       tailarea[j,] = a$tailarea
     }
 
@@ -282,13 +283,14 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
     if (type == "aic") {
       out = aicStop(x,y,obj$action[1:k],obj$df[1:k],sigma,mult,ntimes)
       khat = out$khat
-      GG = out$G
-      uu = out$u
+      m = out$stopped * ntimes
+      G = rbind(out$G,G[1:nk[khat+m],])  # Take ntimes more steps past khat
+      u = c(out$u,rep(0,nk[khat+m]))     # (if we need to)
       kk = khat
     }
     else {
-      GG = matrix(0,0,n)
-      uu = c()
+      G = G[1:nk[k],]
+      u = rep(0,nk[k])
       kk = k
     }
     
@@ -297,31 +299,29 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
     ci = tailarea = matrix(0,kk,2)
     sign = numeric(kk)
     vars = obj$action[1:kk]
-
-    G = rbind(GG,G[1:nk[kk],])
-    u = c(uu,rep(0,nk[kk]))
     xa = x[,vars]
     M = solve(crossprod(xa),t(xa))
     
     for (j in 1:kk) {
       if (verbose) cat(sprintf("Inference for variable %i ...\n",vars[j]))
-            
+
       vj = M[j,]
       sign[j] = sign(sum(vj*y))
-      vj = vj / sqrt(sum(vj^2))
+      mj = sqrt(sum(vj^2))
+      vj = vj / mj        # Standardize (divide by norm of vj)
       vj = sign[j] * vj
       Gj = rbind(G,vj)
       uj = c(u,0)
 
       a = poly.pval(y,Gj,uj,vj,sigma)
       pv[j] = a$pv
-      vlo[j] = a$vlo
-      vup[j] = a$vup
-      vmat[j,] = vj
+      vlo[j] = a$vlo * mj # Unstandardize (mult by norm of vj)
+      vup[j] = a$vup * mj # Unstandardize (mult by norm of vj)
+      vmat[j,] = vj * mj  # Unstandardize (mult by norm of vj)
 
       a = poly.int(y,Gj,uj,vj,sigma,alpha,gridrange=gridrange,
         gridpts=gridpts,flip=(sign[j]==-1))
-      ci[j,] = a$int
+      ci[j,] = a$int * mj # Unstandardize (mult by norm of vj)
       tailarea[j,] = a$tailarea
     }
   }

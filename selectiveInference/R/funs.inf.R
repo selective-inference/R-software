@@ -55,8 +55,8 @@ grid.search <- function(grid, vals, left, right) {
   ir = which(vals <= right)
   if (length(il)==0) return(c(grid[n],Inf))   # All vals < left
   if (length(ir)==0) return(c(-Inf,grid[1]))  # All vals > right
-  ## RJT QUESTION: should we just return c(-Inf,Inf) for the
-  ## above two cases?? The above logic seems correct ...
+  # RJT: the above logic is correct ... but for simplicity, instead,
+  # we could just return c(-Inf,Inf) 
 
   i1 = min(il); i2 = max(ir)
   if (i1==1) lo = -Inf
@@ -169,8 +169,10 @@ aicStop <- function(x, y, action, df, sigma, mult=2, ntimes=2) {
 
   if (i < k) {
     khat = i - ntimes
+    kstop
     aic = aic[1:i]
   }
   else khat = k
-  return(list(khat=khat,G=G,u=u,aic=aic))
+  
+  return(list(khat=khat,G=G,u=u,aic=aic,kstop=i))
 }
