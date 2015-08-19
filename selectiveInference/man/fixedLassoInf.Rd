@@ -52,7 +52,7 @@ Was glmnet run with an intercept=TRUE? Default is TRUE
 \item{type}{Contrast type for p-values and confidence intervals: default is
 "partial"---meaning that the contrasts tested are the partial population 
 regression coefficients, within the active set of predictors; the alternative is
-"full"-- meaning that the full population regression coefficients are tested.
+"full"---meaning that the full population regression coefficients are tested.
 The latter does not make sense when p > n.}
 \item{tol.beta}{
 Tolerance for determining if a coefficient is zero

@@ -1,16 +1,15 @@
-#library(selectiveInference)
-library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+library(selectiveInference)
+#library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
 set.seed(0)
 n = 100
-
-p=25
+p = 25
 s = 3
 size = 10
 
 sigma = 1
 x = matrix(rnorm(n*p),n,p)
-x=scale(x,T,F)/sqrt(n-1)
+#x = scale(x,T,F)/sqrt(n-1)
 
 b = c(sample(c(-1,1),s,replace=T)*rep(size,s),rep(0,p-s))
 mu = x%*%b
