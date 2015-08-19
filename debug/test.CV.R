@@ -32,7 +32,7 @@ instance <- function(n, p, sparsity, snr, index, steps, nfolds) {
     return(list(variable = fit$variable, pvals = pvals))
 }
 
-output <- replicate(niter, instance(n, p, sparsity, snr, index, steps))
+output <- replicate(niters, instance(n, p, sparsity, snr, index, steps))
 
 pvals <- do.call(c, output[2,])
 vars <- do.call(c, output[1,])
