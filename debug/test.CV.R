@@ -1,6 +1,7 @@
 
 library(MASS)
 library(intervals)
+source("../josh/quadratic.R")
 source("../josh/cv.R")
 source("../josh/groupfs.R")
 

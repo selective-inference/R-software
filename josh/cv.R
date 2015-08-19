@@ -1,5 +1,3 @@
-source("groupfs.R")
-
 # ------------------------------------------------
 # Cross-validation, preliminary
 

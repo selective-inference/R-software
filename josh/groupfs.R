@@ -1,5 +1,3 @@
-source("quadratic.R")
-
 # Forward stepwise implementation with groups and truncated \chi p-values
 # -----------------------------------------------------------
 
