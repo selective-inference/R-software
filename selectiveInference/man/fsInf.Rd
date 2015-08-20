@@ -9,7 +9,7 @@ stepwise regression
 }
 \usage{
 fsInf(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic"), 
-      gridrange=c(-100,100), gridpts=1000, mult=2, ntimes=2, verbose=FALSE) 
+      gridrange=c(-100,100), gridpts=10000, mult=2, ntimes=2, verbose=FALSE) 
 }
 \arguments{
   \item{obj}{

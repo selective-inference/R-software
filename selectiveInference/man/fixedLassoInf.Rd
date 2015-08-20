@@ -11,7 +11,7 @@ fixed value of the tuning parameter lambda
 \usage{
 fixedLassoInf(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
          type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
-         gridrange=c(-100,100), gridpts=1000, verbose=FALSE) 
+         gridrange=c(-100,100), gridpts=10000, verbose=FALSE) 
 }
 \arguments{
   \item{x}{
@@ -80,9 +80,10 @@ cannot be computed and is set to [-Inf, +Inf]. The output \code{tailarea} gives
 the achieved Gaussian tail area for reported interval---these should be close to alpha/2,
 and can be used for error-checking purposes. 
 
-NOTE: typically it is best to standardize the features x before running lasso. This function  standardizes  so that colMeans(x)=0, colMeans(x^2)=1 (at least when intercept=TRUE).  For ease of interpretation, we recommend  standarding the data in this way before running fixedLassoInf.
- You can do this via   x <- scale(x,T,T)/(sqrt(nrow(x))-1).  If you use some other standardization
-like x <- scale(x,T,T), this gives colSums(x^2)= n-1  and you will have to adjust the coef estimates and interval endpoints by dividing by  the factor sqrt(n-1).
+NOTE: typically it is best to standardize the features x before running lasso. This function  standardizes  so that colMeans(x)=0, colMeans(x^2)=1 (at least when intercept=TRUE).  We recommend  standardizing the data in this way before running the L1 fitter (eg glmnet) and  fixedLassoInf.
+ You can do this via   x <- scale(x,T,T)/(sqrt(nrow(x))-1). See the examples below.
+  If you choose not to scale the features,
+you need to at last center them  via  x <- scale(x,T,F).
 }
 \value{  
 \item{type}{Type of coefficients tested (partial or fall)}

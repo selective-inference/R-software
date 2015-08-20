@@ -1,5 +1,5 @@
-library(selectiveInference)
-#library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+#library(selectiveInference)
+library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
 set.seed(0)
 n = 100
@@ -115,7 +115,7 @@ for(ii in 1:nsim){
   
    y=mu+sigma*rnorm(n)
     y=y-mean(y)  
-   fsfit=fs(x,y,norm=F)
+   fsfit=fs(x,y,norm=T)
   
      junk= fsInf(fsfit,sigma=sigma)
     pv[ii]=junk$pv[1]

@@ -130,7 +130,8 @@ ch=function(bhat,tol.beta=1e-5,tol.kkt=0.1){
 #
 x=read.table("/Users/tibs/dropbox/PAPERS/FourOfUs/data64.txt")
 x=as.matrix(x)
-x=scale(x,T,T)
+x=scale(x,T,F)
+#x=scale(x,T,T)
 n=length(y)
 nams=scan("/Users/tibs/dropbox/PAPERS/FourOfUs/data64.names",what="")
 y=scan("/Users/tibs/dropbox/PAPERS/FourOfUs/diab.y")
@@ -145,6 +146,8 @@ gfit=glmnet(x,y,standardize=F)
  
 bhat=coef(gfit, s=lambda/n, exact=TRUE)[-1]
 bhat2=lasso2lam(x,y,lambda,int=F,stand=F)$coef
+
+plot(bhat,bhat2)
 
 critf(bhat,lambda,x,y)
 critf(bhat2,lambda,x,y)
@@ -272,90 +275,3 @@ btrue[ii]=lsfit(X[,oo],mu)$coef[2]
 sint = fixedLassoInf(X,y,coef,lam,sigma=sigma,alpha=alpha)
 int[ii,]=sint$ci[1,]
 }
-
-
-areaf=function(tt,mean,sigma.eta,a,b,nd=20){
- #compute Prob_mean (W<tt| W in [a,b]
-  val=NA
-  if(tt>=a & tt <=b){
-#      val0=pnorm(mpfr((tt-mean)/sigma.eta,nd),log.p=TRUE)
- #     val1=pnorm(mpfr((a-mean)/sigma.eta,nd),log.p=TRUE)
- #     val2=pnorm(mpfr((b-mean)/sigma.eta,nd),log.p=TRUE)
-
-#  val=(1-mpfr(exp(val2-val0),nd))/(mpfr(exp(val1-val0),nd)-mpfr(exp(val2-val0),nd))
-      val0=pnorm(mpfr((tt-mean)/sigma.eta,nd),log.p=F)
-      val1=pnorm(mpfr((a-mean)/sigma.eta,nd),log.p=F)
-      val2=pnorm(mpfr((b-mean)/sigma.eta,nd),log.p=F)
- if(val1!=val2)  val=(val0-val2)/(val1-val2)
-}
-return(val)
-}
-
-tnorm.surv <- function(z, mean, sd, a, b) {
-  z = max(min(z,b),a)
-
-  # Check silly boundary cases
-  p = numeric(length(mean))
-  p[mean==-Inf] = 0
-  p[mean==Inf] = 1
-
-  o = is.finite(mean)
-  p[o] = bryc.tnorm.surv(z,mean[o],sd,a,b)
-  #p[o] = gsell.tnorm.surv(z,mean[o],sd,a,b)
-  return(p)
-}
-
-# Returns Prob(Z>z | Z in [a,b]), where mean can be a vector, based on
-# A UNIFORM APPROXIMATION TO THE RIGHT NORMAL TAIL INTEGRAL, W Bryc
-# Applied Mathematics and Computation
-# Volume 127, Issues 23, 15 April 2002, Pages 365--374
-# https://math.uc.edu/~brycw/preprint/z-tail/z-tail.pdf
-
-bryc.tnorm.surv <- function(z, mean=0, sd=1, a, b) {
-  z = (z-mean)/sd
-  a = (a-mean)/sd
-  b = (b-mean)/sd
-  n = length(mean)
-
-  term1 = exp(z*z)
-  o = a > -Inf
-  term1[o] = ff(a[o])*exp(-(a[o]^2-z[o]^2)/2)
-  term2 = rep(0,n)
-  oo = b < Inf
-  term2[oo] = ff(b[oo])*exp(-(b[oo]^2-z[oo]^2)/2)
-  p = (ff(z)-term2)/(term1-term2)
-
-  # Sometimes the approximation can give wacky p-values,
-  # outside of [0,1] ..
-  #p[p<0 | p>1] = NA
-  p = pmin(1,pmax(0,p))
-  return(p)
-}
-ff <- function(z) {
-  return((z^2+5.575192695*z+12.7743632)/
-         (z^3*sqrt(2*pi)+14.38718147*z*z+31.53531977*z+2*12.77436324))
-}
-
-areaf2=function(x,a,b,mean=0,sigma=1,nd=500){
-   x = max(x, a)
-    x = min(x, b)
-    if (a > 0 & b > 0){
-        Fx= pnorm(mpfr(pnorm(-x,mean=mean,sd=sigma),nd)); Fa=pnorm(mpfr(pnorm(-a,mean=mean,sd=sigma),nd)); Fb= pnorm(mpfr(pnorm(-b,mean=mean,sd=sigma),nd))
-        return (1- ( Fa - Fx ) / ( Fa - Fb ) )
-    }
-    else{
-        Fx= pnorm(mpfr(pnorm(x,mean=mean,sd=sigma),nd));Fa=pnorm(mpfr(pnorm(a,mean=mean,sd=sigma),nd));Fb= pnorm(mpfr(pnorm(b,mean=mean,sd=sigma),nd))
-        return ( 1-( Fx - Fa ) / ( Fb - Fa ) )
-      }
-    }
-
-library(Rmpfr)
-a=10
-b=14
-x=12
-mean=0
-sigma=1.4
-tnorm.surv(x,mean,sigma,a,b)
-areaf(x,mean,sigma,a,b)
-areaf2(x,a,b,mean=mean,sigma=sigma)
- 

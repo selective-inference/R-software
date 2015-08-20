@@ -116,7 +116,7 @@ sigma=2
 x=matrix(rnorm(n*p),n,p)
 #x=scale(x,T,T)/sqrt(n-1)    #try with and without standardization
 
-beta=c(5,4,3,2,1,rep(0,p-5))
+beta=c(5,4,3,2,1,rep(0,p-5))*3
 
 nsim=100
 seeds=sample(1:9999,size=nsim)
@@ -130,7 +130,7 @@ for(ii in 1:nsim){
   
    y=mu+sigma*rnorm(n)
     y=y-mean(y)  
-   fsfit=lar(x,y,norm=T)
+   fsfit=lar(x,y,norm=F)
   
      junk= larInf(fsfit,sigma=sigma)
     pv[ii]=junk$pv[1]

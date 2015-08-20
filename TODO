@@ -1,1 +1,6 @@
-all done
+
+Ryan's ideas:
+
+use mpfr  (multi-prec) for tnorm.surv etc
+
+use root finding too 
