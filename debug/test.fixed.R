@@ -205,20 +205,52 @@ b <- 1
 b0 <- 0
 sigma <- .5
 alpha = 0.05
+
+X = matrix(rnorm(n*p),n,p)
+X = scale(X,center=T,scale=T)
+
+m = 1000
+eps = matrix(rnorm(m*n),n,m)
+lam = 2*mean(apply(t(X)%*%eps,2,max))
+
+
+theta0 <- c(rep(b,s0),rep(0,p-s0));
+w <- sigma*rnorm(n);
+y <- (b0+X%*%theta0+w);
+
+
+
+tic = proc.time()
+gfit = glmnet(X,y,standardize=F)
+coef = coef(gfit, s=lam/n, exact=T)[-1]
+sint = fixedLassoInf(X,y,coef,lam,sigma=sigma,alpha=alpha)
+
+### lucas example with sims
+
+set.seed(44)
+
+p <- 300
+n <- 200
+s0 <- 2
+b <- 1
+b0 <- 0
+sigma <- .5
+alpha = 0.05
 #set.seed('1')
 
 #X <- rbinom(p*n,1,prob=0.15);
 #dim(X) <- c(n,p);
 #X <- X %*% diag(1+9*runif(p))
 X = matrix(rnorm(n*p),n,p)
-#X = scale(X,center=T,scale=T)  # original
-X = scale(X,center=T,scale=T)/sqrt(n-1)   #CHANGED
+X = scale(X,center=T,scale=T)  # original
+#X = scale(X,center=T,scale=T)/sqrt(n-1)   #CHANGED
 
 m = 1000
 eps = matrix(rnorm(m*n),n,m)
-#lam = 2*mean(apply(t(X)%*%eps,2,max))   #original
-#theta0 <- c(rep(b,s0),rep(0,p-s0))*sqrt(n-1)  #original
-theta0 <- c(rep(b,s0),rep(0,p-s0))*sqrt(n-1)  #CHANGED
+
+lam = 2*mean(apply(t(X)%*%eps,2,max))   #original
+theta0 <- c(rep(b,s0),rep(0,p-s0))  #original
+#theta0 <- c(rep(b,s0),rep(0,p-s0))*sqrt(n-1)  #CHANGED
   mu=b0+X%*%theta0
 nsim=100
 int=matrix(NA,nsim,2)
@@ -232,8 +264,8 @@ y <- (mu+w);
 tic = proc.time()
 gfit = glmnet(X,y,standardize=F)
     nz=colSums(gfit$beta!=0)
-    lam=gfit$lambda[nz>=2]/1.1 # CHANGED
-    lam=lam[1]*n               #CHANGED
+ #   lam=gfit$lambda[nz>=2]/1.1 # CHANGED
+ #   lam=lam[1]*n               #CHANGED
 coef = coef(gfit, s=lam/n, exact=T)[-1]
 oo=which(coef!=0)
 btrue[ii]=lsfit(X[,oo],mu)$coef[2]
