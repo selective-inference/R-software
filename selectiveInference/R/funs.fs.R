@@ -27,7 +27,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
 
   #####
   # Find the first variable to enter and its sign
-  xx = scale(x,center=F,scale=sqrt(colSums(x^2)))
+  xx = scale(x,center=F,scale=colSums(x^2))
   uhat = t(xx)%*%y
   ihit = which.max(abs(uhat))   # Hitting coordinate
   s = Sign(uhat[ihit])          # Sign
@@ -92,7 +92,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
     # Key quantities for the next entry
     a = backsolve(R,t(Q1)%*%y)
     mat = X2 - X1 %*% backsolve(R,t(Q1)%*%X2)
-    xx = scale(mat,center=F,scale=sqrt(colSums(mat^2)))
+    xx = scale(mat,center=F,scale=colSums(mat^2))
     aa = as.numeric(t(xx)%*%y)
     
     # If the inactive set is empty, nothing will hit
