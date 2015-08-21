@@ -104,3 +104,40 @@ larInf(obj,sigma=sigma,k=7,type="all")
 larInf(obj,sigma=sigma,k=8,type="all")
 larInf(obj,sigma=sigma,k=9,type="all")
 larInf(obj,sigma=sigma,k=10,type="all")
+
+
+# check coverage
+set.seed(32)
+
+n=50
+p=10
+sigma=2
+
+x=matrix(rnorm(n*p),n,p)
+#x=scale(x,T,T)/sqrt(n-1)    #try with and without standardization
+
+beta=c(5,4,3,2,1,rep(0,p-5))*3
+
+nsim=100
+seeds=sample(1:9999,size=nsim)
+pv=rep(NA,nsim)
+ci=matrix(NA,nsim,2)
+btrue=rep(NA,nsim)
+  mu=x%*%beta
+for(ii in 1:nsim){
+    cat(ii)
+    set.seed(seeds[ii])
+  
+   y=mu+sigma*rnorm(n)
+    y=y-mean(y)  
+   fsfit=lar(x,y,norm=F)
+  
+     junk= larInf(fsfit,sigma=sigma)
+    pv[ii]=junk$pv[1]
+    oo=junk$var[1]
+     btrue[ii]=lsfit(x[,oo],mu)$coef[2]
+     ci[ii,]=junk$ci[1,]
+}
+
+sum(ci[,1]> btrue)
+sum(ci[,2]< btrue)

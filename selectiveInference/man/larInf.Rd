@@ -9,7 +9,7 @@ angle regression
 }
 \usage{
 larInf(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic"), 
-       gridrange=c(-100,100), gridpts=1000, mult=2, ntimes=2, verbose=FALSE) 
+       gridrange=c(-100,100), gridpts=10000, mult=2, ntimes=2, verbose=FALSE) 
 }
 \arguments{
  \item{obj}{
@@ -60,11 +60,11 @@ This function computes selective p-values and confidence intervals (selection in
 for least angle regression. The default is to report the results for 
 each predictor after its entry into the model. See the "type" argument for other options.
 The confidence interval construction involves numerical search and can be fragile:
-if the observed statistics are too close to either end of the truncation intervals 
-(vlo and vup, see references), then the interval of desired coverage
-cannot be computed and is set to [-Inf, +Inf]. The output \code{tailarea} gives 
-the achieved Gaussian tail area for reported interval---these should be close to alpha/2,
-and can be used for error-checking purposes.
+if the observed statistic is too close to either end of the truncation interval
+(vlo and vup, see references), then one or possibly both endpoints of the interval of 
+desired coverage cannot be computed, and default to +/- Inf. The output \code{tailarea} 
+gives the achieved Gaussian tail areas for the reported intervals---these should be close 
+to alpha/2, and can be used for error-checking purposes.
 }
 
 \value{

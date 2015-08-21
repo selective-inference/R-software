@@ -11,7 +11,7 @@ fixed value of the tuning parameter lambda
 \usage{
 fixedLassoInf(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
          type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
-         gridrange=c(-100,100), gridpts=1000, verbose=FALSE) 
+         gridrange=c(-100,100), gridpts=10000, verbose=FALSE) 
 }
 \arguments{
   \item{x}{
@@ -47,7 +47,8 @@ should use \code{\link{estimateSigma}} function for a more accurate estimate
 Significance level for confidence intervals (target is miscoverage alpha/2 in each tail)
 }
 \item{intercept}{
-Was glmnet run with an intercept=TRUE? Default is TRUE
+Was the lasso problem solved (e.g., by glmnet) with an intercept in the model? 
+Default is TRUE
 }
 \item{type}{Contrast type for p-values and confidence intervals: default is
 "partial"---meaning that the contrasts tested are the partial population 
@@ -72,17 +73,13 @@ Print out progress along the way? Default is FALSE}
 
 \details{
 This function computes selective p-values and confidence intervals for the lasso,
-given a fixed value of the tuning parameter lambda. The confidence interval 
-construction involves numerical search and can be fragile:
-if the observed statistics are too close to either end of the truncation intervals 
-(vlo and vup, see references), then the interval of desired coverage
-cannot be computed and is set to [-Inf, +Inf]. The output \code{tailarea} gives 
-the achieved Gaussian tail area for reported interval---these should be close to alpha/2,
-and can be used for error-checking purposes. 
-
-NOTE: typically it is best to standardize the features x before running lasso. This function  standardizes  so that colMeans(x)=0, colMeans(x^2)=1 (at least when intercept=TRUE).  For ease of interpretation, we recommend  standarding the data in this way before running fixedLassoInf.
- You can do this via   x <- scale(x,T,T)/(sqrt(nrow(x))-1).  If you use some other standardization
-like x <- scale(x,T,T), this gives colSums(x^2)= n-1  and you will have to adjust the coef estimates and interval endpoints by dividing by  the factor sqrt(n-1).
+given a fixed value of the tuning parameter lambda. 
+The confidence interval construction involves numerical search and can be fragile:
+if the observed statistic is too close to either end of the truncation interval
+(vlo and vup, see references), then one or possibly both endpoints of the interval of 
+desired coverage cannot be computed, and default to +/- Inf. The output \code{tailarea} 
+gives the achieved Gaussian tail areas for the reported intervals---these should be close 
+to alpha/2, and can be used for error-checking purposes.
 }
 \value{  
 \item{type}{Type of coefficients tested (partial or fall)}

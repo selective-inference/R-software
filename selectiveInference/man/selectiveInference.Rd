@@ -97,7 +97,7 @@ arXiv:1405.3340.
 # compute fixed lambda p-values and selection intervals
 #aa=fixedLassoInf(x,y,bhat,lam,sigma=sigma)
 #
-##least angle regressionfrom mean squared residual
+##least angle regression from mean squared residual
 #set.seed(43)
 #n=50
 #p=10
