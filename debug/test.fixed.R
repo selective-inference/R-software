@@ -184,14 +184,15 @@ y=state.x77[,4]
 x=scale(x,T,T)
 n=nrow(x)
 
-cvf=cv.glmnet(x,y)
+
 sigmahat=estimateSigma(x,y,stand=F)$si
 
-lambda=n*cvf$lambda.min
+lambda=65
 
-gfit=glmnet(x,y,standardize=F)
+gfit=glmnet(x,y,standardize=F, thresh=1e-9)
  
 bhat=coef(gfit, s=lambda/n, exact=TRUE)[-1]
+#bhat2=lasso2lam(x,y,lambda,int=F,stand=F)$coef
 
 fixedLassoInf(x,y,bhat,lambda,sigma=sigmahat)
 
@@ -245,7 +246,7 @@ alpha = 0.05
 #dim(X) <- c(n,p);
 #X <- X %*% diag(1+9*runif(p))
 X = matrix(rnorm(n*p),n,p)
-X = scale(X,center=T,scale=T)  # original
+#X = scale(X,center=T,scale=T)  # original
 #X = scale(X,center=T,scale=T)/sqrt(n-1)   #CHANGED
 
 m = 1000
