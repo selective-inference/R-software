@@ -47,7 +47,8 @@ should use \code{\link{estimateSigma}} function for a more accurate estimate
 Significance level for confidence intervals (target is miscoverage alpha/2 in each tail)
 }
 \item{intercept}{
-Was glmnet run with an intercept=TRUE? Default is TRUE
+Was the lasso problem solved (e.g., by glmnet) with an intercept in the model? 
+Default is TRUE
 }
 \item{type}{Contrast type for p-values and confidence intervals: default is
 "partial"---meaning that the contrasts tested are the partial population 
@@ -72,18 +73,13 @@ Print out progress along the way? Default is FALSE}
 
 \details{
 This function computes selective p-values and confidence intervals for the lasso,
-given a fixed value of the tuning parameter lambda. The confidence interval 
-construction involves numerical search and can be fragile:
-if the observed statistics are too close to either end of the truncation intervals 
-(vlo and vup, see references), then the interval of desired coverage
-cannot be computed and is set to [-Inf, +Inf]. The output \code{tailarea} gives 
-the achieved Gaussian tail area for reported interval---these should be close to alpha/2,
-and can be used for error-checking purposes. 
-
-NOTE: typically it is best to standardize the features x before running lasso. This function  standardizes  so that colMeans(x)=0, colMeans(x^2)=1 (at least when intercept=TRUE).  We recommend  standardizing the data in this way before running the L1 fitter (eg glmnet) and  fixedLassoInf.
- You can do this via   x <- scale(x,T,T)/(sqrt(nrow(x))-1). See the examples below.
-  If you choose not to scale the features,
-you need to at last center them  via  x <- scale(x,T,F).
+given a fixed value of the tuning parameter lambda. 
+The confidence interval construction involves numerical search and can be fragile:
+if the observed statistic is too close to either end of the truncation interval
+(vlo and vup, see references), then one or possibly both endpoints of the interval of 
+desired coverage cannot be computed, and default to +/- Inf. The output \code{tailarea} 
+gives the achieved Gaussian tail areas for the reported intervals---these should be close 
+to alpha/2, and can be used for error-checking purposes.
 }
 \value{  
 \item{type}{Type of coefficients tested (partial or fall)}
