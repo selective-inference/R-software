@@ -193,6 +193,7 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, Sigma, ...) {
 #' @return An interval or union of intervals
 interval.groupfs <- function(fit, x, y, index, k = 0, normalize = TRUE, tol = 1e-15) {
 
+  if (is.list(fit$projections[[1]])) fit$projections <- flatten(fit$projections)
   pvals <- c()
   y <- y - mean(y)
   
@@ -231,7 +232,7 @@ interval.groupfs <- function(fit, x, y, index, k = 0, normalize = TRUE, tol = 1e
     L <- check_inequalities(fit, x, y, index, k, R)
     
     # Compute intersection:
-    E <- do.call(interval_intersection, unlist(L, recursive = F))
+    E <- do.call(interval_intersection, L)
     
     # E is now potentially a union of intervals
     if (length(E) == 0) {
@@ -328,7 +329,10 @@ scale_groups.default <- function(x, index, center = TRUE, scale = TRUE, ...) {
   return(x)
 }
 
-
+flatten <- function(L) {
+    if (is.list(L[[1]])) return(unlist(L, recursive=FALSE))
+    return(L)
+}
 
 
 

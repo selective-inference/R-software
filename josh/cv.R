@@ -59,7 +59,7 @@ cv_fs <- function(x, y, steps, nfolds = 10) {
     projections <- list()
     active.sets <- list()
     cv_perm <- sample(1:n)
-    Y <- y[cv_perm]
+    Y <- y[cv_perm] - mean(y)
     X <- x[cv_perm, ]
     
     for (f in 1:nfolds) {
@@ -84,14 +84,18 @@ cv_fs <- function(x, y, steps, nfolds = 10) {
         RSSquads[[s]] <- cv_RSSquad(X, folds, initial.active)
     }
 
-    RSSs <- lapply(RSSquads, function(Q) t(y) %*% Q %*% y)
+    RSSs <- lapply(RSSquads, function(Q) t(Y) %*% Q %*% Y)
     sstar <- which.min(RSSs)
     quadstar <- RSSquads[sstar][[1]]
 
-    RSSquads <- lapply(RSSquads, function(quad) quadstar - quad)
+    RSSquads <- lapply(RSSquads, function(quad) quad - quadstar)
+    RSSquads[[sstar]] <- NULL # remove the all zeroes case
 
     fit <- groupfs(X, Y, steps=sstar)
-    fit$projections <- c(fit$projections, projections, RSSquads)
+    fit$projections <- flatten(fit$projections)
+    fit$foldprojections <- flatten(projections)
+    fit$rssprojections <- flatten(RSSquads)
+
     fit$cvperm <- cv_perm
 
     invisible(fit)
