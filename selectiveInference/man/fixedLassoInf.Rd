@@ -10,7 +10,7 @@ fixed value of the tuning parameter lambda
 }
 \usage{
 fixedLassoInf(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
-         type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
+         type=c("partial","full"), tol.beta=1e-8, tol.kkt=0.1,
          gridrange=c(-100,100), gridpts=10000, verbose=FALSE) 
 }
 \arguments{

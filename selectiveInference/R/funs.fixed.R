@@ -3,7 +3,7 @@
 # min 1/2 || y - \beta_0 - X \beta ||_2^2 + \lambda || \beta ||_1
 
 fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
-                     type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
+                     type=c("partial","full"), tol.beta=1e-8, tol.kkt=0.1,
                      gridrange=c(-100,100), gridpts=10000, verbose=FALSE) {
   
   this.call = match.call()
@@ -113,7 +113,7 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
 
 ##############################
 
-fixedLasso.poly <- function(x, y, beta, lambda, tol.beta=1e-5) {
+fixedLasso.poly <- function(x, y, beta, lambda, tol.beta=1e-8) {
   a = abs(beta) > tol.beta
   xa = x[,a,drop=F]
   xac = x[,!a,drop=F]
