@@ -3,7 +3,7 @@
 # min 1/2 || y - \beta_0 - X \beta ||_2^2 + \lambda || \beta ||_1
 
 fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
-                     type=c("partial","full"), tol.beta=1e-8, tol.kkt=0.1,
+                     type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
                      gridrange=c(-100,100), gridpts=10000, verbose=FALSE) {
   
   this.call = match.call()
@@ -28,10 +28,11 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
 
   # Check the KKT conditions
   g = t(x)%*%(y-x%*%beta) / lambda
-  if (any(abs(g) > 1+tol.kkt*sd(y)))
+  if (any(abs(g) > 1+tol.kkt * sqrt(sum(y^2))))
     warning(paste("Solution beta does not satisfy the KKT conditions",
                   "(to within specified tolerances)"))
-  vars = which(abs(beta) > tol.beta)
+
+  vars = which(abs(beta) > tol.beta / sqrt(colSums(x^2)))
   if (any(sign(g[vars]) != sign(beta[vars])))
     warning(paste("Solution beta does not satisfy the KKT conditions",
                   "(to within specified tolerances). You might try rerunning",
@@ -39,13 +40,13 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
                   "'thresh' parameter, for a more accurate convergence."))
   
   # Get lasso polyhedral region, of form Gy >= u
-  out = fixedLasso.poly(x,y,beta,lambda,tol.beta)
+  out = fixedLasso.poly(x,y,beta,lambda,vars)
   G = out$G
   u = out$u
 
   # Check polyhedral region
   tol.poly = 0.01 
-  if (min(G %*% y - u) < -tol.poly * sd(y))
+  if (min(G %*% y - u) < -tol.poly * sqrt(sum(y^2)))
     stop(paste("Polyhedral constraints not satisfied; you must recompute beta",
                "more accurately. With glmnet, make sure to use exact=TRUE in coef(),",
                "and check whether the specified value of lambda is too small",
@@ -113,8 +114,7 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
 
 ##############################
 
-fixedLasso.poly <- function(x, y, beta, lambda, tol.beta=1e-8) {
-  a = abs(beta) > tol.beta
+fixedLasso.poly <- function(x, y, beta, lambda, a) {
   xa = x[,a,drop=F]
   xac = x[,!a,drop=F]
   xai = pinv(crossprod(xa))
