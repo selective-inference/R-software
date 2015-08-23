@@ -82,7 +82,7 @@ gives the achieved Gaussian tail areas for the reported intervals---these should
 to alpha/2, and can be used for error-checking purposes.
 }
 \value{  
-\item{type}{Type of coefficients tested (partial or fall)}
+\item{type}{Type of coefficients tested (partial or full)}
 \item{lambda}{Value of tuning parameter lambda used}
 \item{pv}{P-values for active variables}
 \item{ci}{Confidence intervals}
