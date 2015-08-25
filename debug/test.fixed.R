@@ -269,10 +269,37 @@ tic = proc.time()
 gfit = glmnet(X,y,standardize=F)
     nz=colSums(gfit$beta!=0)
  #   lam=gfit$lambda[nz>=2]/1.1 # CHANGED
- #   lam=lam[1]*n               #CHANGED
+                                        #   lam=lam[1]*n               #CHANGED
 coef = coef(gfit, s=lam/n, exact=T)[-1]
 oo=which(coef!=0)
 btrue[ii]=lsfit(X[,oo],mu)$coef[2]
 sint = fixedLassoInf(X,y,coef,lam,sigma=sigma,alpha=alpha)
 int[ii,]=sint$ci[1,]
 }
+## new bugs from lucas
+library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+
+set.seed(1)
+p <- 500
+n <- 400
+s0 <- 10
+b <- 1.2
+b0 <- 0
+sigma <- 5
+alpha = 0.05
+
+X = matrix(rnorm(n*p),n,p)
+X = scale(X,center=T,scale=T)
+theta0 <- c(rep(b,s0),rep(0,p-s0))
+w <- sigma*rnorm(n)
+y <- b0 + X%*%theta0 + w
+
+# Pick lambda as in Negahban et al. (2012), as done in Lee et al. (2015)
+m = 1000
+eps = sigma*matrix(rnorm(m*n),n,m)
+lam = 2*mean(apply(abs(t(X)%*%eps),2,max))
+
+gfit = glmnet(X,y,standardize=F)
+coef = coef(gfit, s=lam/n, exact=T)[-1]
+sint = fixedLassoInf(X,y,coef,lam,sigma=sigma,alpha=alpha,type="partial")
+# Error in v %*% diag(d) : non-conformable arguments
