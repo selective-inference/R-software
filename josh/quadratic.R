@@ -1,32 +1,24 @@
 
 check_inequalities <- function(fit, x, y, index, k, R, tol = 1e-15) {
 
-  projs <- fit$projections
   U <- R/sqrt(sum(R^2))
-  
-  # Compute p-value for each active group
-    
-  # For each step
-  L <- lapply(1:length(projs), function(j) {
-    Q <- projs[[j]]
+  L <- lapply(1:length(fit$projections), function(l) {
 
-    # For each inactive group at that step
-    LL <- lapply(names(Q), function(l) {
-
+      Q <- fit$projections[[l]]
       # The quadratic form corresponding to
-      # (t*U + Z)^T %*% Q[[l]] %*% (t*U + Z) \geq 0
+      # (t*U + Z)^T %*% Q %*% (t*U + Z) \geq 0
       # we find the roots in t, if there are any
       # and return the interval of potential t
-      Ql <- Q[[l]]
-      kl <- ifelse(k > 0, k * sum(diag(Ql)), 0)
-      if (t(y) %*% Ql %*% y - kl < -.Machine$double.eps) {
+      kl <- ifelse(k > 0, k * sum(diag(Q)), 0)
+      if (t(y) %*% Q %*% y - kl < -.Machine$double.eps) {
+        print(paste("Problematic projection:", l))
         stop("Observation does not belong to selection region")
       }
 
       Z <- y - R
-      a = t(U) %*% Q[[l]] %*% U
-      b = 2 * t(U) %*% Q[[l]] %*% Z
-      c = t(Z) %*% Q[[l]] %*% Z - kl
+      a = t(U) %*% Q %*% U
+      b = 2 * t(U) %*% Q %*% Z
+      c = t(Z) %*% Q %*% Z - kl
       disc <- b^2 - 4*a*c
       b2a <- -b/(2*a)
 
@@ -89,11 +81,6 @@ check_inequalities <- function(fit, x, y, index, k, R, tol = 1e-15) {
         }
       }
     })
-     # LL is a list of intervals
-     return(LL)
-  })
-    
-  # L is now a list of lists of intervals
-
-  return(L)
+    # L is now a list of lists of intervals
+    return(L)
 }
