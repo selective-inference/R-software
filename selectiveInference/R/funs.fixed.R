@@ -73,9 +73,12 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
   ci = tailarea = matrix(0,k,2)
   sign = numeric(k)
 
-  if (type=="partial" || p > n) {
-    if (p > n) warning(paste("type='full' does not make sense when p > n;",
+  if (type=="full" & p > n)
+      warning(paste("type='full' does not make sense when p > n;",
                              "switching to type='partial'"))
+  
+  if (type=="partial" || p > n) {
+    
     xa = x[,vars,drop=F]
     M = pinv(crossprod(xa)) %*% t(xa)
   }
@@ -142,7 +145,9 @@ pinv <- function(A, tol=.Machine$double.eps) {
   d = Re(e$val)
   d[d > tol] = 1/d[d > tol]
   d[d < tol] = 0
-  return(v %*% diag(d) %*% t(v))
+  if(length(d)>1) {out=v %*% diag(d) %*% t(v)}
+              else {out=v*d*v}
+  return(out)
 }
 
 ##############################
