@@ -8,7 +8,8 @@ export(lar,fs,
        fixedLassoInf,print.fixedLassoInf,
        forwardStop,
        estimateSigma,
-       manyMeans,print.manyMeans
+       manyMeans,print.manyMeans,
+       tnorm.surv
     )
 
 S3method("coef", "lar")

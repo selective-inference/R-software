@@ -62,18 +62,21 @@ lar <- function(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
   Gamma[gi+Seq(1,p-1),] = t(s*x[,ihit]+x[,-ihit]); gi = gi+p-1
   Gamma[gi+Seq(1,p-1),] = t(s*x[,ihit]-x[,-ihit]); gi = gi+p-1
   Gamma[gi+1,] = t(s*x[,ihit]) / sum(x[,ihit]^2); gi = gi+1
-  nk = gi
 
-  # M plus
+  # nk, lambda contrast, M plus
+  nk = numeric(maxsteps)
+  vlam = mp = matrix(0,maxsteps,n)
+
+  nk[1] = gi
+  vlam[1,] = s*x[,ihit]
   if (p > 1) {
     c = t(as.numeric(Sign(t(x)%*%y)) * t(x))
     ratio = t(c[,-ihit])%*%c[,ihit]/sum(c[,ihit]^2)
     ip = 1-ratio > 0
     crit = (t(c[,-ihit])%*%y - ratio*sum(c[,ihit]*y))/(1-ratio)
-    mp = max(max(crit[ip]),0)
+    mp[1,] = max(max(crit[ip]),0)
   }
-  else mp = 0
-  
+
   # Other things to keep track of, but not return
   r = 1                      # Size of active set
   A = ihit                   # Active set
@@ -146,16 +149,16 @@ lar <- function(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
     Gamma[gi+Seq(1,p-r),] = shits*t(X2perp); gi = gi+p-r
     Gamma[gi+Seq(1,p-r-1),] = t(c[,ihit]-c[,-ihit]); gi = gi+p-r-1
     Gamma[gi+1,] = t(shit*X2perp[,ihit]) / sum(X2perp[,ihit]^2); gi = gi+1
-    nk = c(nk,gi)
-    
-    # M plus
+
+    # nk, lambda contrast, M plus
+    nk[k] = gi
+    vlam[k,] = c[,ihit]
     if (ncol(c) > 1) {
       ratio = t(c[,-ihit])%*%c[,ihit]/sum(c[,ihit]^2)
       ip = 1-ratio > 0
       crit = (t(c[,-ihit])%*%y - ratio*sum(c[,ihit]*y))/(1-ratio)
-      mp = c(mp,max(max(crit[ip]),0))
+      mp[k,] = max(max(crit[ip]),0)
     }
-    else mp = c(mp,0)
     
     # Update all of the variables
     r = r+1
@@ -229,7 +232,7 @@ lar <- function(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
 
   out = list(lambda=lambda,action=action,sign=s,df=df,beta=beta,
     completepath=completepath,bls=bls,
-    Gamma=Gamma,nk=nk,mp=mp,x=x,y=y,bx=bx,by=by,sx=sx,
+    Gamma=Gamma,nk=nk,vlam=vlam,mp=mp,x=x,y=y,bx=bx,by=by,sx=sx,
     intercept=intercept,normalize=normalize,call=this.call) 
   class(out) = "lar"
   return(out)
@@ -472,7 +475,7 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
 ##############################
 
 spacing.pval <- function(obj, sigma, k) {
-  v = obj$Gamma[obj$nk[k],]
+  v = obj$vlam[k,]
   sd = sigma*sqrt(sum(v^2))
   a = obj$mp[k]
   
@@ -483,7 +486,7 @@ spacing.pval <- function(obj, sigma, k) {
 }
 
 asymp.pval <- function(obj, sigma, k) {
-  v = obj$Gamma[obj$nk[k],]
+  v = obj$vlam[k,]
   sd = sigma*sqrt(sum(v^2))
 
   if (k < length(obj$action)) a = obj$lambda[k+1]

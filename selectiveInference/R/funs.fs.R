@@ -55,7 +55,10 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   Gamma[gi+Seq(1,p-1),] = t(s*xx[,ihit]+xx[,-ihit]); gi = gi+p-1
   Gamma[gi+Seq(1,p-1),] = t(s*xx[,ihit]-xx[,-ihit]); gi = gi+p-1
   Gamma[gi+1,] = t(s*xx[,ihit]); gi = gi+1
-  nk = gi
+
+  # nk
+  nk = numeric(maxsteps)
+  nk[1] = gi
 
   # Other things to keep track of, but not return
   r = 1                      # Size of active set
@@ -117,7 +120,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
     Gamma[gi+Seq(1,p-r),] = t(xx); gi = gi+p-r
     Gamma[gi+Seq(1,p-r-1),] = t(xx[,ihit]-xx[,-ihit]); gi = gi+p-r-1
     Gamma[gi+1,] = t(xx[,ihit]); gi = gi+1
-    nk = c(nk,gi)
+    nk[k] = gi
 
     # Update all of the variables
     r = r+1
