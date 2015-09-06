@@ -489,7 +489,8 @@ asymp.pval <- function(obj, sigma, k) {
   if (k < length(obj$action)) a = obj$lambda[k+1]
   else if (obj$completepath) a = 0
   else {
-    stop(sprintf("Asymptotic p-values at step %i require %i steps of the lar path",k,k+1))
+    warning(sprintf("Asymptotic p-values at step %i require %i steps of the lar path",k,k+1))
+    return(NA)
   }
       
   if (k==1) b = Inf
@@ -511,7 +512,8 @@ covtest.pval <- function(obj, sigma, k) {
     lam2 = 0
     sj = sign(obj$bls[j])
   } else {
-    stop(sprintf("Cov test p-values at step %i require %i steps of the lar path",k,k+1))
+    warning(sprintf("Cov test p-values at step %i require %i steps of the lar path",k,k+1))
+    return(NA)
   }
 
   x = obj$x
@@ -553,7 +555,7 @@ print.larInf <- function(x, tailarea=TRUE, ...) {
       round(x$sign*x$vmat%*%x$y/(x$sigma*sqrt(rowSums(x$vmat^2))),3),
       round(x$pv,3),round(x$ci,3),round(x$pv.spacing,3),round(x$pv.cov,3)) 
     colnames(tab) = c("Step", "Var", "Coef", "Z-score", "P-value",
-              "LowConfPt", "UpConfPt", "Spacing-pval", "CovTest-pval")
+              "LowConfPt", "UpConfPt", "Spacing", "CovTest")
     if (tailarea) {
       tab = cbind(tab,round(x$tailarea,3))
       colnames(tab)[(ncol(tab)-1):ncol(tab)] = c("LowTailArea","UpTailArea")
