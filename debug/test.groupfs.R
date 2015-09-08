@@ -23,14 +23,16 @@ instance <- function(n, p, sparsity, snr, index, steps) {
     return(list(variable = fit$variable, pvals = pvals))
 }
 
-n <- 15
+n <- 40
 p <- 80
 index <- sort(rep(1:(p/2), 2))
-steps <- 4
-sparsity <- 2
+steps <- 10
+sparsity <- 5
 snr <- 3
 
-output <- replicate(5, instance(n, p, sparsity, snr, index, steps))
+print(system.time({
+output <- replicate(10, instance(n, p, sparsity, snr, index, steps))
+}))
 
 pvals <- do.call(rbind, output[2,])
 vars <- do.call(rbind, output[1,])
