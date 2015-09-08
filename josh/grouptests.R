@@ -65,7 +65,7 @@ interval.groupfs <- function(fit, x, y, index, k = 0, normalize = TRUE, tol = 1e
     L <- check_inequalities(fit, x, y, index, k, TC, R, Ugtilde)
     
     # Compute intersection:
-    E <- do.call(interval_intersection, L)
+    E <- interval_complement(do.call(interval_union, L), check_valid = FALSE)
     
     # E is now potentially a union of intervals
     if (length(E) == 0) {
@@ -115,6 +115,7 @@ interval.groupfs <- function(fit, x, y, index, k = 0, normalize = TRUE, tol = 1e
   names(pvals) <- fit$variable
   invisible(pvals)
 }
+
 
 # -----------------------------------------------------------
 

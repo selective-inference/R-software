@@ -1,7 +1,4 @@
-################################
-# need to pass two projections #
-#   Ug and \tilde Ug           #
-################################
+
 check_inequalities <- function(fit, x, y, index, k, TC, R, Ugtilde, tol = 1e-15) {
 
   eta <- Ugtilde %*% R / TC
@@ -46,7 +43,7 @@ check_inequalities <- function(fit, x, y, index, k, TC, R, Ugtilde, tol = 1e-15)
         # No real roots
         #if (a > 0) {
           # Quadratic form always positive
-          return(Intervals(c(0,Inf)))
+          return(Intervals(c(-Inf,0)))
         #} else { #### Assume this never happens ####
           # Quadratic form always negative
         #  stop("Infeasible!")
@@ -57,10 +54,10 @@ check_inequalities <- function(fit, x, y, index, k, TC, R, Ugtilde, tol = 1e-15)
         # Parabola opens upward
         if (min(endpoints) > 0) {
           # Both roots positive, union of intervals
-          return(Intervals(rbind(c(0, min(endpoints)), c(max(endpoints), Inf))))
+          return(Intervals(rbind(c(-Inf,0), c(min(endpoints), max(endpoints)))))
         } else {
           # At least one negative root
-          return(Intervals(c(max(0, max(endpoints)), Inf)))
+          return(Intervals(c(-Inf, max(0, max(endpoints)))))
         }
       } else {
         if (a < -tol) {
@@ -71,20 +68,20 @@ check_inequalities <- function(fit, x, y, index, k, TC, R, Ugtilde, tol = 1e-15)
             stop("Error: infeasible")
           } else {
             # Part which is positive
-            return(Intervals(c(max(0, min(endpoints)), max(endpoints))))
+            return(Intervals(rbind(c(-Inf, max(0, min(endpoints))), c(max(endpoints), Inf))))
           }
         } else {
           # a is too close to 0, quadratic is actually linear
           if (abs(b) > tol) {
             if (b > 0) {
-              return(Intervals(c(max(0, -c/b), Inf)))
+              return(Intervals(c(-Inf, max(0, -c/b))))
             } else {
               if (-c/b < 0) stop("Error: infeasible linear equation")
-              return(Intervals(c(0, -c/b)))
+              return(Intervals(rbind(c(-Inf, 0), c(-c/b, Inf))))
             }
           } else {
             warning("Ill-conditioned quadratic")
-            return(Intervals(c(0, Inf)))
+            return(Intervals(c(-Inf,0)))
           }
         }
       }
@@ -92,8 +89,9 @@ check_inequalities <- function(fit, x, y, index, k, TC, R, Ugtilde, tol = 1e-15)
     # LL is a list of intervals
   })
   # L is now a list of lists of intervals
-  return(unlist(L, recursive = FALSE))
+  return(unlist(L, recursive = FALSE, use.names = FALSE))
 }
+
 
 roots_to_checkpoints <- function(roots) {
     checkpoints <- unique(sort(c(0, roots)))

@@ -30,7 +30,7 @@ steps <- 4
 sparsity <- 2
 snr <- 3
 
-output <- replicate(100, instance(n, p, sparsity, snr, index, steps))
+output <- replicate(5, instance(n, p, sparsity, snr, index, steps))
 
 pvals <- do.call(rbind, output[2,])
 vars <- do.call(rbind, output[1,])
