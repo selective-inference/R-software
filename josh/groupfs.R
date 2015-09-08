@@ -52,6 +52,7 @@ groupfs.default <- function(x, y, index, Sigma, steps, normalize = TRUE, k = 0, 
 
   # Store all projections computed along the path
   projections <- list()
+  maxprojs <- list()
 
   # Store other information from each step
   path.info <- data.frame(imax=integer(), k=integer(), L=numeric(), RSS=numeric(), RSSdrop=numeric(), chisq=numeric(), projections=numeric())
@@ -65,35 +66,24 @@ groupfs.default <- function(x, y, index, Sigma, steps, normalize = TRUE, k = 0, 
     
     # Group to be added
     imax <- added$imax
-
-    # Projection to added group
-    P.imax <- added$projections[[as.character(imax)]]
-    
     inactive <- setdiff(inactive, imax)
     active <- union(active, imax)    
     inactive.inds <- which(!index %in% active)
 
     # Rank of group
-    added$k <- sum(diag(P.imax))
+    added$k <- ncol(added$maxproj)
     modelrank <- modelrank + added$k
 
     # Stop without adding if model has become saturated
     if (modelrank >= n) break
 
     # Regress added group out of y and inactive x
+    P.imax <- added$maxproj %*% t(added$maxproj)
     y.update <- y.update - P.imax %*% y.update
     x.update[, inactive.inds] <- x.update[, inactive.inds] - P.imax %*% x.update[, inactive.inds]
 
-    # Form projections P_{imax} - P_{inactive}
-    # These are the quadratic forms Q characterizing imax
-    # by t(y) %*% Q %*% y >= 0
-    projs <- lapply(names(added$projections), function(i) {
-      return(P.imax - added$projections[[i]])
-    })
-    names(projs) <- names(added$projections)
-    # Delete the 0 element formed by P_imax - P_imax
-    # and store the rest
-    projections[[step]] <- projs[-which(names(projs) == as.character(imax))]
+    projections[[step]] <- added$projections
+    maxprojs[[step]] <- added$maxproj
 
     # Compute RSS for unadjusted chisq p-values
     if (is.matrix(Sigma)) {
@@ -109,13 +99,14 @@ groupfs.default <- function(x, y, index, Sigma, steps, normalize = TRUE, k = 0, 
 
     # Projections are stored separately
     added$projections <- NULL
+    added$maxproj <- NULL
     path.info <- rbind(path.info, data.frame(added))
     
     if (verbose) print(added)
   }
 
   # Create output object
-  value <- list(variable=path.info$imax, L=path.info$L, projections = projections, log = path.info)
+  value <- list(variable=path.info$imax, L=path.info$L, projections = projections, maxprojs = maxprojs, log = path.info)
   class(value) <- "groupfs"
   attr(value, "n") <- nrow(x)
   attr(value, "p") <- ncol(x)
@@ -158,11 +149,12 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, Sigma, ...) {
   ### Question for later: does this slow down lapply?
   keys = as.character(inactive)  
 
-  # Compute projections: X_i %*% X_i^\dagger
+  # Compute singular vectors of projections
+  # X_i %*% X_i^\dagger
   projections <- lapply(keys, function(i) {
     inds <- which(index == i)
     xi <- x[,inds]
-    return(xi %*% ginv(xi))
+    return(svd(xi)$u)
   })
 
   names(projections) <- keys
@@ -170,139 +162,20 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, Sigma, ...) {
   # Compute sums of squares to determine which group is added
   # penalized by rank of group if k > 0
   terms <- lapply(keys, function(i) {
-    t(y) %*% projections[[i]] %*% y - ifelse(k > 0, k * sum(diag(projections[[i]])), 0)
+    Py <- t(projections[[i]]) %*% y
+    sum(Py^2) - ifelse(k > 0, k * ncol(projections[[i]]), 0)
   })
 
   # Maximizer = group to be added
   terms.maxind <- which.max(terms)
   imax <- inactive[terms.maxind]
-  maxinds <- which(index == imax)
+  keyind <- which(keys == imax)
+  maxproj <- projections[[keyind]]
+  projections[[keyind]] <- NULL
+  
   L <- terms[[terms.maxind]]
 
-  return(list(imax=imax, L=L, projections = projections))
-}
-
-# -----------------------------------------------------------
-
-#' Form univariate selection interval for a given contrast
-#'
-#' @param fit fitted model, the result of \link{groupfs}
-#' @param x Design matrix
-#' @param y Outcome
-#' @param index index of variable grouping
-#' @return An interval or union of intervals
-interval.groupfs <- function(fit, x, y, index, k = 0, normalize = TRUE, tol = 1e-15) {
-
-  if (is.list(fit$projections[[1]])) fit$projections <- flatten(fit$projections)
-  pvals <- c()
-  y <- y - mean(y)
-  
-  if (normalize) {
-    x <- scale_groups(x, index)
-  }  
-
-  active <- fit$variable
-  
-  # Compute p-value for each active group
-  for (i in active) {
-
-    # Form projection onto active set \i
-    # and project x_i orthogonally
-    x_i <- x[,which(index == i), drop = FALSE]      
-    if (length(active) > 1) {
-        minus_i <- setdiff(active, i)
-        x_minus_i <- x[,which(index %in% minus_i), drop = FALSE]
-        x_i <- x_i - x_minus_i %*% ginv(x_minus_i) %*% x_i    
-    }
-
-    # Project y onto what remains of x_i
-    P <- x_i %*% ginv(x_i)
-    R <- P %*% y
-    # R ~ N(0, \sigma^2 P) under H_0 : P\mu = 0
-    # Z is independent of R, we effectively condition on Z
-    # Unit vector used for finding the truncation interval
-          # Fix scale
-          # What is conditional variance?
-    scale <- 1
-    df <- sum(diag(P))
-    # The truncated chi
-    TC <- sqrt(sum(R^2))
-    
-    # For each step...
-    L <- check_inequalities(fit, x, y, index, k, R)
-    
-    # Compute intersection:
-    E <- do.call(interval_intersection, L)
-    
-    # E is now potentially a union of intervals
-    if (length(E) == 0) {
-#        print(L)
-        stop("Trivial intersection")
-    }
-
-    # Sum truncated cdf over each part of E
-    denom <- do.call(sum, lapply(1:nrow(E), function(v) {
-      tchi_interval(E[v,1], E[v,2], scale, df)
-    }))
-    
-    # Sum truncated cdf from observed value to max of
-    # truncation region
-    numer <- do.call(sum, lapply(1:nrow(E), function(v) {
-      lower <- E[v,1]
-      upper <- E[v,2]
-      if (upper > TC) {
-        # Observed value is left of this interval's right endpoint
-          
-        if (lower < TC) {
-          # Observed value is in this interval
-          return(tchi_interval(TC, upper, scale, df))
-          
-        } else {
-          # Observed value is not in this interval
-          return(tchi_interval(lower, upper, scale, df))
-        }
-        
-      } else {
-        # Observed value is right of this entire interval
-        return(0)
-      }
-    }))
-
-    # Survival function
-    value <- numer/denom
-    if (is.nan(value)) {
-      value <- 0
-      warning("P-value NaN of the form 0/0 converted to 0.")
-    }
-    # Force p-value to lie in the [0,1] interval
-    # in case of numerical issues 
-    # value <- max(0, min(1, value))
-    pvals <- c(pvals, value)    
-  }
-  names(pvals) <- fit$variable
-  invisible(pvals)
-}
-
-# -----------------------------------------------------------
-
-tchi_interval <- function(lower, upper, scale, df) {
-  a <- (lower/scale)^2
-  b <- (upper/scale)^2    
-  if (b == Inf) {
-      integral <- pchisq(a, df, lower.tail = FALSE)
-  } else {
-      integral <- pchisq(b, df) - pchisq(a, df)
-  }
-  if ((integral < .Machine$double.eps) && (b < Inf)) {
-      integral <- numerically_integrate(a, b, df)
-  }
-  return(integral)
-}
-
-numerically_integrate <- function(a, b, df, nsamp = 10000) {
-  grid <- seq(from=a, to=b, length.out=nsamp)
-  integrand <- dchisq(grid, df)
-  return((b-a)*mean(integrand))
+  return(list(imax=imax, L=L, projections = projections, maxproj = maxproj))
 }
 
 
