@@ -1,11 +1,11 @@
-#library(selectiveInference)
-library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+library(selectiveInference)
+#library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
 set.seed(0)
 n = 100
-p = 25
+p = 100
 s = 3
-size = 10
+size = 5
 
 sigma = 1
 x = matrix(rnorm(n*p),n,p)
@@ -37,7 +37,8 @@ out3 = fsInf(obj,sigma=sigma,k=k,type="all")
 out3
 
 # Least squares inference
-out.ls = lm(y~x[,obj$action[1:k]])
+X = x[,obj$action[1:k]]
+out.ls = lm(y~X+0)
 summary(out.ls)
 
 # Don't lose much, in terms of conditioning on AIC event,

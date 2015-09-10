@@ -1,4 +1,4 @@
-# We compute the least angle regression (LAR) path given
+x# We compute the least angle regression (LAR) path given
 # a response vector y and predictor matrix x.  We assume
 # that x has columns in general position.
 
@@ -64,8 +64,8 @@ lar <- function(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
   Gamma[gi+1,] = t(s*x[,ihit]) / sum(x[,ihit]^2); gi = gi+1
 
   # nk, lambda contrast, M plus
-  nk = numeric(maxsteps)
-  vlam = mp = matrix(0,maxsteps,n)
+  nk = mp = numeric(maxsteps)
+  vlam = matrix(0,maxsteps,n)
 
   nk[1] = gi
   vlam[1,] = s*x[,ihit]
@@ -74,7 +74,7 @@ lar <- function(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
     ratio = t(c[,-ihit])%*%c[,ihit]/sum(c[,ihit]^2)
     ip = 1-ratio > 0
     crit = (t(c[,-ihit])%*%y - ratio*sum(c[,ihit]*y))/(1-ratio)
-    mp[1,] = max(max(crit[ip]),0)
+    mp[1] = max(max(crit[ip]),0)
   }
 
   # Other things to keep track of, but not return
@@ -157,7 +157,7 @@ lar <- function(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
       ratio = t(c[,-ihit])%*%c[,ihit]/sum(c[,ihit]^2)
       ip = 1-ratio > 0
       crit = (t(c[,-ihit])%*%y - ratio*sum(c[,ihit]*y))/(1-ratio)
-      mp[k,] = max(max(crit[ip]),0)
+      mp[k] = max(max(crit[ip]),0)
     }
     
     # Update all of the variables
@@ -377,13 +377,13 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
     }
   }
   
-  pv.spacing = pv.asymp = pv.covtest = khat = NULL
+  pv.spacing = pv.modspac = pv.covtest = khat = NULL
   
   if (type == "active") {
     pv = vlo = vup = numeric(k) 
     vmat = matrix(0,k,n)
     ci = tailarea = matrix(0,k,2)
-    pv.spacing = pv.asymp = pv.covtest = numeric(k)
+    pv.spacing = pv.modspac = pv.covtest = numeric(k)
     sign = obj$sign[1:k]
     vars = obj$action[1:k]
 
@@ -408,7 +408,7 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
       tailarea[j,] = a$tailarea
       
       pv.spacing[j] = spacing.pval(obj,sigma,j)
-      pv.asymp[j] = asymp.pval(obj,sigma,j)
+      pv.modspac[j] = modspac.pval(obj,sigma,j)
       pv.covtest[j] = covtest.pval(obj,sigma,j)
     }
 
@@ -465,7 +465,7 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
   
   out = list(type=type,k=k,khat=khat,pv=pv,ci=ci,
     tailarea=tailarea,vlo=vlo,vup=vup,vmat=vmat,y=y,
-    pv.spacing=pv.spacing,pv.asymp=pv.asymp,pv.covtest=pv.covtest,
+    pv.spacing=pv.spacing,pv.modspac=pv.modspac,pv.covtest=pv.covtest,
     vars=vars,sign=sign,sigma=sigma,alpha=alpha,
     call=this.call)
   class(out) = "larInf"
@@ -485,14 +485,14 @@ spacing.pval <- function(obj, sigma, k) {
   return(tnorm.surv(obj$lambda[k],0,sd,a,b))
 }
 
-asymp.pval <- function(obj, sigma, k) {
+modspac.pval <- function(obj, sigma, k) {
   v = obj$vlam[k,]
   sd = sigma*sqrt(sum(v^2))
 
   if (k < length(obj$action)) a = obj$lambda[k+1]
   else if (obj$completepath) a = 0
   else {
-    warning(sprintf("Asymptotic p-values at step %i require %i steps of the lar path",k,k+1))
+    warning(sprintf("Modified spacing p-values at step %i require %i steps of the lar path",k,k+1))
     return(NA)
   }
       
