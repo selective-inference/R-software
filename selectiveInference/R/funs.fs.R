@@ -57,7 +57,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   Gamma[gi+1,] = t(s*xx[,ihit]); gi = gi+1
 
   # nk
-  nk = numeric(maxsteps)
+  nk = numeric(buf)
   nk[1] = gi
 
   # Other things to keep track of, but not return
@@ -90,6 +90,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
       action = c(action,numeric(buf))
       df = c(df,numeric(buf))
       beta = cbind(beta,matrix(0,p,buf))
+      nk = c(nk,numeric(buf))
     }
 
     # Key quantities for the next entry
@@ -149,6 +150,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   df = df[Seq(1,k-1),drop=FALSE]
   beta = beta[,Seq(1,k-1),drop=FALSE]
   Gamma = Gamma[Seq(1,gi),,drop=FALSE]
+  nk = nk[Seq(1,k-1)]
   
   # If we reached the maximum number of steps
   if (k>maxsteps) {
