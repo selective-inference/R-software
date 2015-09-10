@@ -1,4 +1,4 @@
-x# We compute the least angle regression (LAR) path given
+# We compute the least angle regression (LAR) path given
 # a response vector y and predictor matrix x.  We assume
 # that x has columns in general position.
 
