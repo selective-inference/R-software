@@ -82,7 +82,7 @@ value chosen by the modified AIC scheme}
 \item{vmat}{Linear contrasts that define the observed statistics}
 \item{y}{Vector of outcomes}
 \item{pv.spacing}{P-values from the spacing test (here M+ is used)}
-\item{pv.asymp}{P-values from the asymptotic form of the spacing test (here M+ is replaced by the last knot)}
+\item{pv.modspac}{P-values from the modified form of the spacing test (here M+ is replaced by the next knot)}
 \item{pv.covtest}{P-values from covariance test}
 \item{vars}{Variables in active set}
 \item{sign}{Signs of active coefficients}
