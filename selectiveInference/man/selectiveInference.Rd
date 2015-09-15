@@ -5,7 +5,7 @@
 Tools for selective inference
 }
 \description{
-Functions to perform inference after selection for forward
+Functions to perform post-selection inference for forward
 stepwise regression, least angle regression, the lasso and the 
 many normal means problem
 }
@@ -13,8 +13,6 @@ many normal means problem
 \tabular{ll}{
 Package: \tab selectiveInference\cr
 Type: \tab Package\cr
-Version: \tab 1.0\cr
-Date: \tab 2015-09-01\cr
 License: \tab GPL-2\cr
 }
 
