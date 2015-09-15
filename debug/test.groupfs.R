@@ -1,5 +1,4 @@
 
-library(MASS)
 library(intervals)
 source("../josh/quadratic.R")
 source("../josh/grouptests.R")
@@ -17,8 +16,8 @@ instance <- function(n, p, sparsity, snr, index, steps) {
       y <- y + x %*% beta
     }
 
-    fit <- groupfs(x, y, index, steps = steps)
-    pvals <- interval.groupfs(fit, x, y, index)
+    fit <- groupfs(x, y, index, maxsteps = steps)
+    pvals <- groupfsInf(fit)
     
     return(list(variable = fit$variable, pvals = pvals))
 }

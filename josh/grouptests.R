@@ -17,25 +17,36 @@
 
 #' Form univariate selection interval for a given contrast
 #'
-#' @param fit fitted model, the result of \link{groupfs}
+#' @param obj Object returned by \link{groupfs} function
 #' @param x Design matrix
 #' @param y Outcome
 #' @param index index of variable grouping
 #' @return An interval or union of intervals
-interval.groupfs <- function(fit, x, y, index, k = 0, normalize = TRUE, tol = 1e-15) {
+groupfsInf <- function(obj, sigma = NULL, normalize = TRUE, projs = NULL, tol = 1e-15) {
 
-  #if (is.list(fit$projections[[1]])) fit$projections <- flatten(fit$projections)
-  pvals <- c()
-  y <- y - mean(y)
+  x <- obj$x
+  n <- nrow(x)
+  p <- ncol(x)
+  y <- obj$y
+  active <- obj$action
+  maxsteps <- attr(obj, "maxsteps")
+  sp <- attr(obj, "sp")
+  index <- obj$index
   
-  if (normalize) {
-    x <- scale_groups(x, index)
-  }  
+  pvals <- numeric(maxsteps)
 
-  active <- fit$variable
+  if (is.null(sigma)) {
+    if (n >= 2*p) {
+      sigma <- sqrt(sum(lsfit(x, y, intercept = obj$intercept)$res^2))/(n-p-obj$intercept)
+    } else {
+      #sigma = sd(y)
+      sigma = sqrt(obj$log$RSS[length(obj$log$RSS)])
+      warning(paste(sprintf("p > n/2, and sd(y) = %0.3f used as an estimate of sigma;",sigma), "you may want to use the estimateSigma function"))
+    }
+  }
   
   # Compute p-value for each active group
-  for (j in 1:length(active)) {
+  for (j in 1:maxsteps) {
     i <- active[j]
     #Ug <- fit$maxprojs[[j]]
 
@@ -56,13 +67,16 @@ interval.groupfs <- function(fit, x, y, index, k = 0, normalize = TRUE, tol = 1e
     # Unit vector used for finding the truncation interval
           # Fix scale
           # What is conditional variance?
-    scale <- 1
+    scale <- sigma
     df <- ncol(Ugtilde)
     # The truncated chi
     TC <- sqrt(sum(R^2))
     
     # For each step...
-    L <- check_inequalities(fit, x, y, index, k, TC, R, Ugtilde)
+    L <- check_inequalities(obj, x, y, index, sp, TC, R, Ugtilde)
+
+    # Any additional projections, e.g. from cross-validation?
+    if (!is.null(projs)) L <- c(L, projs)
     
     # Compute intersection:
     E <- interval_complement(do.call(interval_union, L), check_valid = FALSE)
@@ -110,9 +124,9 @@ interval.groupfs <- function(fit, x, y, index, k = 0, normalize = TRUE, tol = 1e
     # Force p-value to lie in the [0,1] interval
     # in case of numerical issues 
     # value <- max(0, min(1, value))
-    pvals <- c(pvals, value)    
+    pvals[j] <- value
   }
-  names(pvals) <- fit$variable
+  names(pvals) <- obj$action
   invisible(pvals)
 }
 

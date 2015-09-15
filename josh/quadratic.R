@@ -1,15 +1,15 @@
 
-check_inequalities <- function(fit, x, y, index, k, TC, R, Ugtilde, tol = 1e-15) {
+check_inequalities <- function(obj, x, y, index, k, TC, R, Ugtilde, tol = 1e-15) {
 
   eta <- Ugtilde %*% R / TC
 
-  L <- lapply(1:length(fit$variable), function(step) {
+  L <- lapply(1:length(obj$action), function(step) {
       
-    Ug <- fit$maxprojs[[step]]
+    Ug <- obj$maxprojs[[step]]
   
-    lapply(1:length(fit$projections[[step]]), function(l) {
+    lapply(1:length(obj$projections[[step]]), function(l) {
 
-      Uh <- fit$projections[[step]][[l]]
+      Uh <- obj$projections[[step]][[l]]
       # The quadratic form corresponding to
       # (t*U + Z)^T %*% Q %*% (t*U + Z) \geq 0
       # we find the roots in t, if there are any
