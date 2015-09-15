@@ -32,16 +32,18 @@ groupfsInf <- function(obj, sigma = NULL, normalize = TRUE, projs = NULL, tol = 
   maxsteps <- attr(obj, "maxsteps")
   sp <- attr(obj, "sp")
   index <- obj$index
+  Eindex <- which(index %in% active)
+  Ep <- length(Eindex)
   
   pvals <- numeric(maxsteps)
 
   if (is.null(sigma)) {
     if (n >= 2*p) {
-      sigma <- sqrt(sum(lsfit(x, y, intercept = obj$intercept)$res^2))/(n-p-obj$intercept)
+      sigma <- sqrt(sum(lsfit(x, y, intercept = obj$intercept)$res^2)/(n-p-obj$intercept))
     } else {
       #sigma = sd(y)
-      sigma = sqrt(obj$log$RSS[length(obj$log$RSS)])
-      warning(paste(sprintf("p > n/2, and sd(y) = %0.3f used as an estimate of sigma;",sigma), "you may want to use the estimateSigma function"))
+      sigma = sqrt(obj$log$RSS[length(obj$log$RSS)]/(n-Ep-obj$intercept))
+      warning(paste(sprintf("p > n/2, and sigmahat = %0.3f used as an estimate of sigma;",sigma), "you may want to use the estimateSigma function"))
     }
   }
   

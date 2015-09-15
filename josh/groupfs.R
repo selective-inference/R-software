@@ -29,7 +29,8 @@ groupfs.default <- function(x, y, index, maxsteps, intercept = TRUE, normalize =
   
   # Initialize copies of data for loop
   by <- mean(y)
-  y.update <- y - by
+  y.update <- y
+  if (intercept) y.update <- y - by
   y.last <- y.update  
   x.update <- x
 
