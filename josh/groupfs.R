@@ -3,55 +3,48 @@
 
 #' Forward stepwise
 #'
-#' @param x Design matrix
-#' @param y Response vector
+#' @param x Matrix of predictors (n by p)
+#' @param y Vector of outcomes (length n)
 #' @param index Group membership indicator of length p
-#' @param Sigma Error covariance matrix
-#' @param steps Maximum number of steps for forward stepwise
+#' @param maxsteps Maximum number of steps for forward stepwise
 #' @param normalize Should the design matrix be normalized?
+#' @param sp Size penalty used when comparing groups of different sizes.
 #' @return Index \code{imax} of added group, residualized data, truncated chi p-value
-groupfs <- function(x, y, index, Sigma, steps, normalize = TRUE, k = 0, ...) UseMethod("groupfs")
+groupfs <- function(x, y, index, maxsteps, intercept = TRUE, normalize = TRUE, sp = 0, ...) UseMethod("groupfs")
 
-groupfs.default <- function(x, y, index, Sigma, steps, normalize = TRUE, k = 0, verbose=FALSE, ...) {
+groupfs.default <- function(x, y, index, maxsteps, intercept = TRUE, normalize = TRUE, sp = 0, verbose=FALSE, ...) {
 
   p <- ncol(x)
   n <- nrow(x)
 
-  if (steps >= n) steps <- n-1
-
   # Assume no groups if index not specified
-  if (missing(index)) index <- 1:p
+  if (missing(index)) stop("Missing argument: index.")
 
   # Group labels
   labels <- unique(index)
+  G <- length(labels)
   inactive <- labels
   active <- c()
-  
-  if (missing(Sigma)) {
-    Sigma <- 1
-    #warning("Error covariance unspecified, using diag(1)")
-  }
-  
-  if (missing(steps)) steps <- min(n, p) - 1
-  
-  # Form whitening matrix Sigma^(-1/2)
-  if (is.matrix(Sigma)) {
-    svdSigma <- svd(Sigma)
-    whitener <- svdSigma$u %*% diag(1/sqrt(svdSigma$d)) %*% t(svdSigma$u)
-  }
+  if (missing(maxsteps) || maxsteps >= min(n, G)) maxsteps <- min(n-1, G)
   
   # Initialize copies of data for loop
-  y.update <- y - mean(y)
+  by <- mean(y)
+  y.update <- y
+  if (intercept) y.update <- y - by
   y.last <- y.update  
   x.update <- x
 
   # Center and scale design matrix
-  if (normalize) {
-    x.update <- scale_groups(x.update, index)
-  }
+  xscaled <- scale_groups(x.update, index, scale = normalize)
+  xm <- xscaled$xm
+  xs <- xscaled$xs
+  x.update <- xscaled$x
 
+  x.begin <- x.update
+  y.begin <- y.update
   # Store all projections computed along the path
   projections <- list()
+  maxprojs <- list()
 
   # Store other information from each step
   path.info <- data.frame(imax=integer(), k=integer(), L=numeric(), RSS=numeric(), RSSdrop=numeric(), chisq=numeric(), projections=numeric())
@@ -59,75 +52,59 @@ groupfs.default <- function(x, y, index, Sigma, steps, normalize = TRUE, k = 0, 
   modelrank <- 1
   
   # Begin main loop
-  for (step in 1:steps) {
+  for (step in 1:maxsteps) {
       
-    added <- add1.groupfs(x.update, y.update, index, labels, inactive, k, Sigma)
+    added <- add1.groupfs(x.update, y.update, index, labels, inactive, sp)
     
     # Group to be added
     imax <- added$imax
-
-    # Projection to added group
-    P.imax <- added$projections[[as.character(imax)]]
-    
     inactive <- setdiff(inactive, imax)
     active <- union(active, imax)    
     inactive.inds <- which(!index %in% active)
 
     # Rank of group
-    added$k <- sum(diag(P.imax))
+    added$k <- ncol(added$maxproj)
     modelrank <- modelrank + added$k
 
     # Stop without adding if model has become saturated
     if (modelrank >= n) break
 
     # Regress added group out of y and inactive x
+    P.imax <- added$maxproj %*% t(added$maxproj)
     y.update <- y.update - P.imax %*% y.update
     x.update[, inactive.inds] <- x.update[, inactive.inds] - P.imax %*% x.update[, inactive.inds]
 
-    # Form projections P_{imax} - P_{inactive}
-    # These are the quadratic forms Q characterizing imax
-    # by t(y) %*% Q %*% y >= 0
-    projs <- lapply(names(added$projections), function(i) {
-      return(P.imax - added$projections[[i]])
-    })
-    names(projs) <- names(added$projections)
-    # Delete the 0 element formed by P_imax - P_imax
-    # and store the rest
-    projections[[step]] <- projs[-which(names(projs) == as.character(imax))]
+    projections[[step]] <- added$projections
+    maxprojs[[step]] <- added$maxproj
 
     # Compute RSS for unadjusted chisq p-values
-    if (is.matrix(Sigma)) {
-      added$RSS <- t(y.update) %*% whitener %*% y.update
-      scale.chisq <- 1
-    } else {
-      added$RSS <- sum(y.update^2)
-      scale.chisq <- Sigma
-    }
+    added$RSS <- sum(y.update^2)
+    scale.chisq <- 1
+
     added$RSSdrop <- sum((y.last - y.update)^2)
     added$chisq <- pchisq(added$RSSdrop/scale.chisq, lower.tail=FALSE, df = added$k)
     y.last <- y.update
 
     # Projections are stored separately
     added$projections <- NULL
+    added$maxproj <- NULL
     path.info <- rbind(path.info, data.frame(added))
     
     if (verbose) print(added)
   }
 
   # Create output object
-  value <- list(variable=path.info$imax, L=path.info$L, projections = projections, log = path.info)
+  value <- list(action=path.info$imax, L=path.info$L, projections = projections, maxprojs = maxprojs, log = path.info, index = index, y = y.begin, x = x.begin, bx = xm, sx = xs, intercept = intercept)
   class(value) <- "groupfs"
-  attr(value, "n") <- nrow(x)
-  attr(value, "p") <- ncol(x)
   attr(value, "labels") <- labels
   attr(value, "index") <- index
-  attr(value, "steps") <- steps
-  if (!is.null(attr(x, "varnames"))) {
-    attr(value, "varnames") <- attr(x, "varnames")
-  } else {
+  attr(value, "maxsteps") <- maxsteps
+  attr(value, "sp") <- sp
+  if (is.null(attr(x, "varnames"))) {
     attr(value, "varnames") <- colnames(x)
+  } else {
+    attr(value, "varnames") <- attr(x, "varnames")
   }
-  if (!is.matrix(Sigma)) attr(value, "scale") <- Sigma
 
   invisible(value)
 }
@@ -140,169 +117,44 @@ groupfs.default <- function(x, y, index, Sigma, steps, normalize = TRUE, k = 0, 
 #' @param y Response vector
 #' @param index Group membership indicator of length p
 #' @param inactive Indices of inactive groups
-#' @param Sigma Error covariance matrix
 #' @return Index \code{imax} of added group, residualized data, truncated chi p-value
-add1.groupfs <- function(x, y, index, labels, inactive, k, Sigma, ...) {
-
-  n <- nrow(x)
-  p <- ncol(x)
-
-  if (missing(Sigma)) {
-    Sigma <- 1
-    warning("Error covariance unspecified, using diag(1)")
-  }
+add1.groupfs <- function(x, y, index, labels, inactive, sp, ...) {
 
   # Use characters to avoid issues where
   # list() populates NULL lists in the positions
-  # the active variables
+  # of the active variables
   ### Question for later: does this slow down lapply?
   keys = as.character(inactive)  
 
-  # Compute projections: X_i %*% X_i^\dagger
+  # Compute singular vectors of projections
+  # X_i %*% X_i^\dagger
   projections <- lapply(keys, function(i) {
     inds <- which(index == i)
     xi <- x[,inds]
-    return(xi %*% ginv(xi))
+    return(svd(xi)$u)
   })
 
   names(projections) <- keys
 
   # Compute sums of squares to determine which group is added
-  # penalized by rank of group if k > 0
+  # penalized by rank of group if sp > 0
   terms <- lapply(keys, function(i) {
-    t(y) %*% projections[[i]] %*% y - ifelse(k > 0, k * sum(diag(projections[[i]])), 0)
+    Py <- t(projections[[i]]) %*% y
+    val <- sum(Py^2)
+    if (sp > 0) val <- val - sp * ncol(projections[[i]])
+    return(val)
   })
 
   # Maximizer = group to be added
   terms.maxind <- which.max(terms)
   imax <- inactive[terms.maxind]
-  maxinds <- which(index == imax)
+  keyind <- which(keys == imax)
+  maxproj <- projections[[keyind]]
+  projections[[keyind]] <- NULL
+  
   L <- terms[[terms.maxind]]
 
-  return(list(imax=imax, L=L, projections = projections))
-}
-
-# -----------------------------------------------------------
-
-#' Form univariate selection interval for a given contrast
-#'
-#' @param fit fitted model, the result of \link{groupfs}
-#' @param x Design matrix
-#' @param y Outcome
-#' @param index index of variable grouping
-#' @return An interval or union of intervals
-interval.groupfs <- function(fit, x, y, index, k = 0, normalize = TRUE, tol = 1e-15) {
-
-  if (is.list(fit$projections[[1]])) fit$projections <- flatten(fit$projections)
-  pvals <- c()
-  y <- y - mean(y)
-  
-  if (normalize) {
-    x <- scale_groups(x, index)
-  }  
-
-  active <- fit$variable
-  
-  # Compute p-value for each active group
-  for (i in active) {
-
-    # Form projection onto active set \i
-    # and project x_i orthogonally
-    x_i <- x[,which(index == i), drop = FALSE]      
-    if (length(active) > 1) {
-        minus_i <- setdiff(active, i)
-        x_minus_i <- x[,which(index %in% minus_i), drop = FALSE]
-        x_i <- x_i - x_minus_i %*% ginv(x_minus_i) %*% x_i    
-    }
-
-    # Project y onto what remains of x_i
-    P <- x_i %*% ginv(x_i)
-    R <- P %*% y
-    # R ~ N(0, \sigma^2 P) under H_0 : P\mu = 0
-    # Z is independent of R, we effectively condition on Z
-    # Unit vector used for finding the truncation interval
-          # Fix scale
-          # What is conditional variance?
-    scale <- 1
-    df <- sum(diag(P))
-    # The truncated chi
-    TC <- sqrt(sum(R^2))
-    
-    # For each step...
-    L <- check_inequalities(fit, x, y, index, k, R)
-    
-    # Compute intersection:
-    E <- do.call(interval_intersection, L)
-    
-    # E is now potentially a union of intervals
-    if (length(E) == 0) {
-#        print(L)
-        stop("Trivial intersection")
-    }
-
-    # Sum truncated cdf over each part of E
-    denom <- do.call(sum, lapply(1:nrow(E), function(v) {
-      tchi_interval(E[v,1], E[v,2], scale, df)
-    }))
-    
-    # Sum truncated cdf from observed value to max of
-    # truncation region
-    numer <- do.call(sum, lapply(1:nrow(E), function(v) {
-      lower <- E[v,1]
-      upper <- E[v,2]
-      if (upper > TC) {
-        # Observed value is left of this interval's right endpoint
-          
-        if (lower < TC) {
-          # Observed value is in this interval
-          return(tchi_interval(TC, upper, scale, df))
-          
-        } else {
-          # Observed value is not in this interval
-          return(tchi_interval(lower, upper, scale, df))
-        }
-        
-      } else {
-        # Observed value is right of this entire interval
-        return(0)
-      }
-    }))
-
-    # Survival function
-    value <- numer/denom
-    if (is.nan(value)) {
-      value <- 0
-      warning("P-value NaN of the form 0/0 converted to 0.")
-    }
-    # Force p-value to lie in the [0,1] interval
-    # in case of numerical issues 
-    # value <- max(0, min(1, value))
-    pvals <- c(pvals, value)    
-  }
-  names(pvals) <- fit$variable
-  invisible(pvals)
-}
-
-# -----------------------------------------------------------
-
-tchi_interval <- function(lower, upper, scale, df) {
-  a <- (lower/scale)^2
-  b <- (upper/scale)^2    
-  if (b == Inf) {
-      integral <- pchisq(a, df, lower.tail = FALSE)
-  } else {
-      integral <- pchisq(b, df) - pchisq(a, df)
-  }
-  if ((integral < .Machine$double.eps) && (b < Inf)) {
-      integral <- numerically_integrate(a, b, df)
-  }
-  return(integral)
-}
-
-numerically_integrate <- function(a, b, df, nsamp = 10000) {
-  grid <- seq(from=a, to=b, length.out=nsamp)
-  integrand <- dchisq(grid, df)
-  return((b-a)*mean(integrand))
+  return(list(imax=imax, L=L, projections = projections, maxproj = maxproj))
 }
 
 
@@ -313,27 +165,33 @@ numerically_integrate <- function(a, b, df, nsamp = 10000) {
 #' @param center Center groups, default TRUE
 #' @param scale Scale groups by Frobeniusm norm, default TRUE
 #' @return Scaled design matrix
-scale_groups <- function(x, index, center = TRUE, scale = TRUE, ...) UseMethod("scale_groups")
-
-scale_groups.default <- function(x, index, center = TRUE, scale = TRUE, ...) {
-
-  for (j in unique(index)) {
+scale_groups <- function(x, index, center = TRUE, scale = TRUE, ...) {
+  keys <- unique(index)
+  xm <- rep(0, ncol(x))
+  xs <- rep(1, ncol(x))
+  
+  for (j in keys) {
     inds <- which(index == j)
-    if (center) x[, inds] <- x[, inds] - mean(x[, inds])
+    if (center) {
+        xmj <- mean(x[, inds])
+        xm[inds] <- xmj
+        x[, inds] <- x[, inds] - xmj
+    }
     if (scale) {
       normsq <- sum(x[, inds]^2)
-      if (normsq > 0) x[, inds] <- x[, inds] / sqrt(normsq)
+      xsj <- sqrt(normsq)
+      xs[inds] <- xsj
+      if (xsj > 0) x[, inds] <- x[, inds] / xsj
     }
 
   }
-  return(x)
+  return(list(x=x, xm=xm, xs=xs))
 }
 
 flatten <- function(L) {
     if (is.list(L[[1]])) return(unlist(L, recursive=FALSE))
     return(L)
 }
-
 
 
     
@@ -346,7 +204,6 @@ flatten <- function(L) {
 # -----------------------------------------------------------
 
 # -----------------------------------------------------------
-
 
 
 
@@ -402,7 +259,7 @@ model_select <- function(fit, alpha = .1, ...) {
   if (is.null(ind)) {
     models$last <- 0
   } else {
-    models$last <- fit$variable[1:ind]
+    models$last <- fit$action[1:ind]
   }
 
   # ForwardStop
@@ -411,16 +268,16 @@ model_select <- function(fit, alpha = .1, ...) {
   if (is.null(ind)) {
     models$forward <- 0
   } else {
-    models$forward <- fit$variable[1:ind]
+    models$forward <- fit$action[1:ind]
   }
 
   # RIC
   ind <- which.min(extractAIC(fit, k = 2*log(p))[, 2])
-  models$RIC <- fit$variable[1:ind]
+  models$RIC <- fit$action[1:ind]
 
   # BIC
   ind <- which.min(extractAIC(fit, k = log(n))[, 2])
-  models$BIC <- fit$variable[1:ind]
+  models$BIC <- fit$action[1:ind]
 
   return(models)
 }
@@ -434,7 +291,7 @@ plot.groupfs <- function(fit, ...) {
   xrange <- 1:attr(fit, "steps")
   plot.default(x = xrange,  y = fit$p.value, xlab = "Variable", ylab = "P-value", cex = .5, xaxt = "n", pch = 19, ylim = c(0,1))
   points.default(x = xrange, y = fit$log$chisq, cex = .5)
-  varnames <- attr(fit, "varnames")[fit$variable]
+  varnames <- attr(fit, "varnames")[fit$action]
   if (!is.null(varnames)) {
     axis(1, at = xrange, labels=FALSE)
     text(x = xrange, y=-.08, labels = varnames, srt = 45, pos = 1, xpd = TRUE, cex = .4)
