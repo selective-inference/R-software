@@ -1,18 +1,3 @@
-## Psub <- x %*% ginv(x)
-## Pfull <- X %*% ginv(X)
-## Pz <- diag(rep(1,n)) - Psub
-## PM <- diag(rep(1,n)) - Pfull
-## R1 <- Pz %*% y
-## R2 <- PM %*% y
-## z <- y - R1
-## C <- sum(diag(Pfull-Psub))/sum(diag(Psub))
-## norm2R1 <- sum(R1^2)
-## norm2R2 <- sum(R2^2)
-## TF <- (norm2R1-norm2R2)/(C*norm2R2)
-## r = sqrt(norm2R2)
-## Vdelta <- (R1-R2)/sqrt(norm2R1-norm2R2)
-## V2 <- R2/r
-
 # -----------------------------------------------------------
 
 #' Form univariate selection interval for a given contrast
@@ -50,9 +35,7 @@ groupfsInf <- function(obj, sigma = NULL, normalize = TRUE, projs = NULL, tol = 
   # Compute p-value for each active group
   for (j in 1:maxsteps) {
     i <- active[j]
-    #Ug <- fit$maxprojs[[j]]
-
-    # Form projection onto active set \i
+    # Form projection onto active set minus i
     # and project x_i orthogonally
     x_i <- x[,which(index == i), drop = FALSE]      
     if (length(active) > 1) {
@@ -75,7 +58,7 @@ groupfsInf <- function(obj, sigma = NULL, normalize = TRUE, projs = NULL, tol = 
     TC <- sqrt(sum(R^2))
     
     # For each step...
-    L <- check_inequalities(obj, x, y, index, sp, TC, R, Ugtilde)
+    L <- interval_groupfs(obj$action, obj$projections, obj$maxprojs, x, y, index, sp, TC, R, Ugtilde)
 
     # Any additional projections, e.g. from cross-validation?
     if (!is.null(projs)) L <- c(L, projs)
@@ -84,10 +67,7 @@ groupfsInf <- function(obj, sigma = NULL, normalize = TRUE, projs = NULL, tol = 
     E <- interval_complement(do.call(interval_union, L), check_valid = FALSE)
     
     # E is now potentially a union of intervals
-    if (length(E) == 0) {
-#        print(L)
-        stop("Trivial intersection")
-    }
+    if (length(E) == 0) stop("Trivial intersection")
 
     # Sum truncated cdf over each part of E
     denom <- do.call(sum, lapply(1:nrow(E), function(v) {
@@ -101,16 +81,13 @@ groupfsInf <- function(obj, sigma = NULL, normalize = TRUE, projs = NULL, tol = 
       upper <- E[v,2]
       if (upper > TC) {
         # Observed value is left of this interval's right endpoint
-          
         if (lower < TC) {
           # Observed value is in this interval
           return(tchi_interval(TC, upper, scale, df))
-          
         } else {
           # Observed value is not in this interval
           return(tchi_interval(lower, upper, scale, df))
         }
-        
       } else {
         # Observed value is right of this entire interval
         return(0)
@@ -125,13 +102,12 @@ groupfsInf <- function(obj, sigma = NULL, normalize = TRUE, projs = NULL, tol = 
     }
     # Force p-value to lie in the [0,1] interval
     # in case of numerical issues 
-    # value <- max(0, min(1, value))
+    value <- max(0, min(1, value))
     pvals[j] <- value
   }
   names(pvals) <- obj$action
   invisible(pvals)
 }
-
 
 # -----------------------------------------------------------
 
