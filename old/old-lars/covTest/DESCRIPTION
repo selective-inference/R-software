@@ -1,9 +1,0 @@
-Package: covTest
-Title: Computes covariance test for adaptive linear modelling
-Version: 1.02
-Depends: lars,glmnet,glmpath (>= 0.97),MASS
-Author: Richard Lockhart, Jon Taylor, Ryan Tibshirani, Rob Tibshirani
-Maintainer: Rob Tibshirani <tibs@stanford.edu>
-Description: This package computes covariance test for the lasso. 
-License: GPL-2
-Packaged: 2013-09-09 22:33:29 UTC; tibs
