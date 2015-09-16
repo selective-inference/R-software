@@ -22,8 +22,23 @@ The functions compute p-values and selection intervals that properly account for
 the inherent selection carried out by the procedure. These have exact finite sample 
 type I error and coverage under Gaussian errors.
 
-This R code was developed in coordination with an analogous Python package developed 
-by Jonathan Taylor and others, see http://github.com/selective-inference/selective-inference.
+This R package was developed as part of the selective inference software project
+in Python and R:
+
+ https://github.com/selective-inference
+
+
+Some of the R code in this work is a modification of python code.
+Here is the current selective inference software team:
+
+Yuval Benjamini, Leonard Blier, Will Fithian, Jason Lee, Joshua Loftus,
+Stephen Reid,
+Dennis Sun,
+Yuekai Sun,
+Jonathan Taylor,
+Xiaoying Tian,
+Ryan Tibshirani,
+Rob Tibshirani
 
 The main functions included in the package are:
 \code{\link{fs}},

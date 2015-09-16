@@ -1,34 +1,13 @@
 Package: selectiveInference
 Type: Package
 Title: Tools for Selective Inference
-Version: 1.0.2
+Version: 1.0.3
 Date: 2015-09-01
-Author: Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid
+Author: Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, 
+  Stephen Reid
 Maintainer: Rob Tibshirani <tibs@stanford.edu>
 Depends: glmnet
-Description: New tools for inference after selection, for use with forward stepwise regression, least angle regression, the lasso, and the many normal means problem.
-
-This R package was developed 
-as part of the selective inference software project
-in Python and R: 
-
-https://github.com/selective-inference
-
-Some of the R code in this work is a  modification of python code.
-Here is the current selective inference software team:
- 
-Yuval Benjamini
-Leonard Blier
-Will Fithian
-Jason Lee
-Joshua Loftus
-Stephen Reid
-Dennis Sun
-Yuekai Sun
-Jonathan Taylor
-Xiaoying Tian
-Ryan Tibshirani
-Robert Tibshirani
-
+Description: New tools for inference after selection, for use
+  with forward stepwise regression, least angle regression, the 
+  lasso, and the many means problem.
 License: GPL-2
-
