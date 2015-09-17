@@ -83,11 +83,11 @@ snr <- 3
  fit <- groupfs(x, y, index=1:p, maxsteps = steps)
    a=fs(x,y,normalize=T)
 
-fit2=myfs(x,y)
-fit3=fs(x,y)
+fit2=myfs(x,y) #my old fs
+fit3=fs(x,y)   #current
 
 minmodel=lm(y~1)
-step(minmodel,direction="forward")
+step(minmodel,direction="forward")   #R step
 fm = step(minmodel, direction='forward', scope=(~x[,1]+x[,2]+x[,3]+x[,4]+x[,5]+x[,6]+x[,7]+x[,8]+x[,9]+x[,10]))
 
 rbind(fit$act,fit2$pred[1:10],fit3$act[1:10])
