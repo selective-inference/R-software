@@ -1,8 +1,8 @@
 
 library(intervals)
-source("../josh/quadratic.R")
-source("../josh/grouptests.R")
-source("../josh/groupfs.R")
+source("../selectiveInference/R/funs.groupfs.R")
+source("../selectiveInference/R/funs.quadratic.R")
+
 
 set.seed(1)
 
@@ -17,7 +17,7 @@ instance <- function(n, p, sparsity, snr, index, steps) {
     }
 
     fit <- groupfs(x, y, index, maxsteps = steps)
-    pvals <- groupfsInf(fit)
+    pvals <- groupfsInf(fit, sigma = 1)
     
     return(list(variable = fit$variable, pvals = pvals))
 }

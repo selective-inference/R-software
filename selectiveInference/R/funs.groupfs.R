@@ -229,7 +229,7 @@ groupfsInf <- function(obj, sigma = NULL, normalize = TRUE, projs = NULL, tol = 
     
     # Compute intersection:
     E <- interval_complement(do.call(interval_union, L), check_valid = FALSE)
-    supports[j] <- E
+    supports[[j]] <- E
     
     # E is now potentially a union of intervals
     if (length(E) == 0) stop("Trivial intersection")
@@ -271,7 +271,9 @@ groupfsInf <- function(obj, sigma = NULL, normalize = TRUE, projs = NULL, tol = 
     pvals[j] <- value
   }
   names(pvals) <- obj$action
-  invisible(list(vars = active, pv=pvals, sigma=sigma, TC=TCs, support=supports))
+  out <- list(vars = active, pv=pvals, sigma=sigma, TC=TCs, df = dfs, support=supports)
+  class(out) <- "groupfsInf"
+  invisible(out)
 }
 
 # -----------------------------------------------------------
@@ -339,14 +341,16 @@ print.groupfs <- function(x, ...) {
     colnames(tab) = c("Step", "Group")
     rownames(tab) = rep("", nrow(tab))
     print(tab)
+    cat("\nUse groupfsInf() function to compute P-values\n")
     invisible()
 }
 
 print.groupfsInf <- function(x, ...) {
     cat(sprintf("\nStandard deviation of noise (specified or estimated) sigma = %0.3f\n",
                               x$sigma))
-    tab = cbind(x$vars, round(x$TC, 3), x$df, round(x$pv, 3))
-    colnames(tab) = c("Var", "Tchi", "df", "P-value")
+    tab = cbind(x$vars, round(x$TC, 3), x$df, round(x$pv, 3),
+        round(unlist(lapply(lapply(pvals$support, size), sum)), 3))
+    colnames(tab) = c("Var", "Tchi", "df", "P-value", "Length of interval")
     rownames(tab) = rep("", nrow(tab))
     print(tab)
     invisible()
@@ -440,7 +444,7 @@ model_select <- function(fit, alpha = .1, ...) {
 #'
 #' @param fit fitted model, the result of \link{groupfs}
 plot.groupfs <- function(fit, ...) {
-  xrange <- 1:attr(fit, "steps")
+  xrange <- 1:attr(fit, "maxsteps")
   plot.default(x = xrange,  y = fit$p.value, xlab = "Variable", ylab = "P-value", cex = .5, xaxt = "n", pch = 19, ylim = c(0,1))
   points.default(x = xrange, y = fit$log$chisq, cex = .5)
   varnames <- attr(fit, "varnames")[fit$action]
