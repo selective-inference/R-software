@@ -349,11 +349,15 @@ print.groupfs <- function(x, ...) {
 print.groupfsInf <- function(x, ...) {
     cat(sprintf("\nStandard deviation of noise (specified or estimated) sigma = %0.3f\n",
                               x$sigma))
-    tab = cbind(x$vars, round(x$TC, 3), x$df,
-        round(unlist(lapply(lapply(pvals$support, size), sum)), 3), round(x$pv, 3))
-    colnames(tab) = c("Var", "Tchi", "df", "Interval size", "P-value")
+    tab = cbind(x$vars, round(x$pv, 3), round(x$TC, 3), x$df,
+        round(unlist(lapply(lapply(pvals$support, size), sum)), 3),
+        unlist(lapply(pvals$support, nrow)), round(unlist(lapply(pvals$support, min)), 3),
+        round(unlist(lapply(pvals$support, max)), 3))
+    colnames(tab) = c("Var", "P-value", "Tchi", "df", "Interval size", "Components",
+                "Int. inf", "Int. sup")
     rownames(tab) = rep("", nrow(tab))
     print(tab)
+    cat("\nInt. inf and Int. sup are the lowest and highest endpoints of the truncation interval.\nNo confidence intervals are reported by groupfsInf.\n")
     invisible()
 }
 
