@@ -338,8 +338,8 @@ flatten <- function(L) {
 print.groupfs <- function(x, ...) {
     cat("\nSequence of added groups:\n")
     nsteps = length(x$action)
-    tab = cbind(1:nsteps, x$action)
-    colnames(tab) = c("Step", "Group")
+    tab = cbind(1:nsteps, x$action, x$log$k)
+    colnames(tab) = c("Step", "Group", "Rank")
     rownames(tab) = rep("", nrow(tab))
     print(tab)
     cat("\nUse groupfsInf() function to compute P-values\n")
@@ -349,9 +349,9 @@ print.groupfs <- function(x, ...) {
 print.groupfsInf <- function(x, ...) {
     cat(sprintf("\nStandard deviation of noise (specified or estimated) sigma = %0.3f\n",
                               x$sigma))
-    tab = cbind(x$vars, round(x$TC, 3), x$df, round(x$pv, 3),
-        round(unlist(lapply(lapply(pvals$support, size), sum)), 3))
-    colnames(tab) = c("Var", "Tchi", "df", "P-value", "Length of interval")
+    tab = cbind(x$vars, round(x$TC, 3), x$df,
+        round(unlist(lapply(lapply(pvals$support, size), sum)), 3), round(x$pv, 3))
+    colnames(tab) = c("Var", "Tchi", "df", "Interval size", "P-value")
     rownames(tab) = rep("", nrow(tab))
     print(tab)
     invisible()
