@@ -16,9 +16,8 @@ groupfs.default <- function(x, y, index, maxsteps, intercept = TRUE, normalize =
 
   p <- ncol(x)
   n <- nrow(x)
-
-  # Assume no groups if index not specified
-  if (missing(index)) stop("Missing argument: index.")
+  checkargs.xy(x=x, y=y)
+  checkargs.groupfs(x, index, maxsteps)
 
   # Group labels
   labels <- unique(index)
@@ -26,12 +25,12 @@ groupfs.default <- function(x, y, index, maxsteps, intercept = TRUE, normalize =
   inactive <- labels
   active <- c()
   if (missing(maxsteps) || maxsteps >= min(n, G)) maxsteps <- min(n-1, G)
-  
+
   # Initialize copies of data for loop
   by <- mean(y)
   y.update <- y
   if (intercept) y.update <- y - by
-  y.last <- y.update  
+  y.last <- y.update
   x.update <- x
 
   # Center and scale design matrix
@@ -50,16 +49,16 @@ groupfs.default <- function(x, y, index, maxsteps, intercept = TRUE, normalize =
   path.info <- data.frame(imax=integer(), k=integer(), L=numeric(), RSS=numeric(), RSSdrop=numeric(), chisq=numeric(), projections=numeric())
 
   modelrank <- 1
-  
+
   # Begin main loop
   for (step in 1:maxsteps) {
-      
+
     added <- add1.groupfs(x.update, y.update, index, labels, inactive, sp)
-    
+
     # Group to be added
     imax <- added$imax
     inactive <- setdiff(inactive, imax)
-    active <- union(active, imax)    
+    active <- union(active, imax)
     inactive.inds <- which(!index %in% active)
 
     # Rank of group
@@ -89,7 +88,7 @@ groupfs.default <- function(x, y, index, maxsteps, intercept = TRUE, normalize =
     added$projections <- NULL
     added$maxproj <- NULL
     path.info <- rbind(path.info, data.frame(added))
-    
+
     if (verbose) print(added)
   }
 
@@ -124,7 +123,7 @@ add1.groupfs <- function(x, y, index, labels, inactive, sp, ...) {
   # list() populates NULL lists in the positions
   # of the active variables
   ### Question for later: does this slow down lapply?
-  keys = as.character(inactive)  
+  keys = as.character(inactive)
 
   # Compute singular vectors of projections
   # X_i %*% X_i^\dagger
@@ -151,7 +150,7 @@ add1.groupfs <- function(x, y, index, labels, inactive, sp, ...) {
   keyind <- which(keys == imax)
   maxproj <- projections[[keyind]]
   projections[[keyind]] <- NULL
-  
+
   L <- terms[[terms.maxind]]
 
   return(list(imax=imax, L=L, projections = projections, maxproj = maxproj))
@@ -178,7 +177,8 @@ groupfsInf <- function(obj, sigma = NULL, normalize = TRUE, projs = NULL, tol = 
   index <- obj$index
   Eindex <- which(index %in% active)
   Ep <- length(Eindex)
-  
+
+  nanconv <- FALSE
   pvals <- numeric(maxsteps)
   dfs <- numeric(maxsteps)
   TCs <- numeric(maxsteps)
@@ -193,17 +193,17 @@ groupfsInf <- function(obj, sigma = NULL, normalize = TRUE, projs = NULL, tol = 
       warning(paste(sprintf("p > n/2, and sigmahat = %0.3f used as an estimate of sigma;",sigma), "you may want to use the estimateSigma function"))
     }
   }
-  
+
   # Compute p-value for each active group
   for (j in 1:maxsteps) {
     i <- active[j]
     # Form projection onto active set minus i
     # and project x_i orthogonally
-    x_i <- x[,which(index == i), drop = FALSE]      
+    x_i <- x[,which(index == i), drop = FALSE]
     if (length(active) > 1) {
         minus_i <- setdiff(active, i)
         x_minus_i <- svd(x[,which(index %in% minus_i), drop = FALSE])$u
-        x_i <- x_i - x_minus_i %*% t(x_minus_i) %*% x_i    
+        x_i <- x_i - x_minus_i %*% t(x_minus_i) %*% x_i
     }
 
     # Project y onto what remains of x_i
@@ -220,17 +220,17 @@ groupfsInf <- function(obj, sigma = NULL, normalize = TRUE, projs = NULL, tol = 
     # The truncated chi
     TC <- sqrt(sum(R^2))
     TCs[j] <- TC
-    
+
     # For each step...
     L <- interval_groupfs(obj$action, obj$projections, obj$maxprojs, x, y, index, sp, TC, R, Ugtilde)
 
     # Any additional projections, e.g. from cross-validation?
     if (!is.null(projs)) L <- c(L, projs)
-    
+
     # Compute intersection:
     E <- interval_complement(do.call(interval_union, L), check_valid = FALSE)
     supports[[j]] <- E
-    
+
     # E is now potentially a union of intervals
     if (length(E) == 0) stop("Trivial intersection")
 
@@ -238,7 +238,7 @@ groupfsInf <- function(obj, sigma = NULL, normalize = TRUE, projs = NULL, tol = 
     denom <- do.call(sum, lapply(1:nrow(E), function(v) {
       tchi_interval(E[v,1], E[v,2], scale, df)
     }))
-    
+
     # Sum truncated cdf from observed value to max of
     # truncation region
     numer <- do.call(sum, lapply(1:nrow(E), function(v) {
@@ -263,13 +263,14 @@ groupfsInf <- function(obj, sigma = NULL, normalize = TRUE, projs = NULL, tol = 
     value <- numer/denom
     if (is.nan(value)) {
       value <- 0
-      warning("P-value NaN of the form 0/0 converted to 0.")
+      nanconv <- TRUE
     }
     # Force p-value to lie in the [0,1] interval
-    # in case of numerical issues 
+    # in case of numerical issues
     value <- max(0, min(1, value))
     pvals[j] <- value
   }
+  if (nanconv) warning("P-value NaNs of the form 0/0 converted to 0. This typically occurs for numerical reasons in the presence of a large signal-to-noise ratio.")
   names(pvals) <- obj$action
   out <- list(vars = active, pv=pvals, sigma=sigma, TC=TCs, df = dfs, support=supports)
   class(out) <- "groupfsInf"
@@ -280,7 +281,7 @@ groupfsInf <- function(obj, sigma = NULL, normalize = TRUE, projs = NULL, tol = 
 
 tchi_interval <- function(lower, upper, scale, df) {
   a <- (lower/scale)^2
-  b <- (upper/scale)^2    
+  b <- (upper/scale)^2
   if (b == Inf) {
       integral <- pchisq(a, df, lower.tail = FALSE)
   } else {
@@ -310,7 +311,7 @@ scale_groups <- function(x, index, center = TRUE, scale = TRUE, ...) {
   keys <- unique(index)
   xm <- rep(0, ncol(x))
   xs <- rep(1, ncol(x))
-  
+
   for (j in keys) {
     inds <- which(index == j)
     if (center) {
@@ -337,8 +338,8 @@ flatten <- function(L) {
 print.groupfs <- function(x, ...) {
     cat("\nSequence of added groups:\n")
     nsteps = length(x$action)
-    tab = cbind(1:nsteps, x$action)
-    colnames(tab) = c("Step", "Group")
+    tab = cbind(1:nsteps, x$action, x$log$k)
+    colnames(tab) = c("Step", "Group", "Rank")
     rownames(tab) = rep("", nrow(tab))
     print(tab)
     cat("\nUse groupfsInf() function to compute P-values\n")
@@ -348,14 +349,27 @@ print.groupfs <- function(x, ...) {
 print.groupfsInf <- function(x, ...) {
     cat(sprintf("\nStandard deviation of noise (specified or estimated) sigma = %0.3f\n",
                               x$sigma))
-    tab = cbind(x$vars, round(x$TC, 3), x$df, round(x$pv, 3),
-        round(unlist(lapply(lapply(pvals$support, size), sum)), 3))
-    colnames(tab) = c("Var", "Tchi", "df", "P-value", "Length of interval")
+    tab = cbind(x$vars, round(x$pv, 3), round(x$TC, 3), x$df,
+        round(unlist(lapply(lapply(pvals$support, size), sum)), 3),
+        unlist(lapply(pvals$support, nrow)), round(unlist(lapply(pvals$support, min)), 3),
+        round(unlist(lapply(pvals$support, max)), 3))
+    colnames(tab) = c("Var", "P-value", "Tchi", "df", "Interval size", "Components",
+                "Int. inf", "Int. sup")
     rownames(tab) = rep("", nrow(tab))
     print(tab)
+    cat("\nInt. inf and Int. sup are the lowest and highest endpoints of the truncation interval.\nNo confidence intervals are reported by groupfsInf.\n")
     invisible()
 }
-    
+
+checkargs.groupfs <- function(x, index, maxsteps) {
+    if (missing(index)) stop("Missing argument: index.")
+    if (length(index) != ncol(x)) stop("Length of index does not match number of columns of x")
+    G <- length(unique(index))
+    if (maxsteps > G) stop("maxsteps is larger than number of groups")
+    gsizes <- sort(rle(sort(index))$lengths, decreasing = TRUE)
+    if (sum(gsizes[1:maxsteps]) > nrow(x)) stop("maxsteps is too large. If the largest groups are included the model is overdetermined")
+}
+
 # -----------------------------------------------------------
 
 # ----------------- Ignore code below here ------------------
