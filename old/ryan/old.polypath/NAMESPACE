@@ -1,4 +1,0 @@
-export("lar",
-       "lasso",
-       "Seq","Sign","updateQR","downdateQR")
-useDynLib("polypath")
