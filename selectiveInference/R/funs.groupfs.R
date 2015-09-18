@@ -8,11 +8,11 @@
 #' @param index Group membership indicator of length p
 #' @param maxsteps Maximum number of steps for forward stepwise
 #' @param normalize Should the design matrix be normalized?
-#' @param sp Size penalty used when comparing groups of different sizes.
+#' @param k k Multiplier of model size penalty, use \code{k = 2} for AIC, \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.
 #' @return Index \code{imax} of added group, residualized data, truncated chi p-value
-groupfs <- function(x, y, index, maxsteps, intercept = TRUE, normalize = TRUE, sp = 0, ...) UseMethod("groupfs")
+groupfs <- function(x, y, index, sigma = NULL, maxsteps, intercept = TRUE, normalize = TRUE, k = 2) UseMethod("groupfs")
 
-groupfs.default <- function(x, y, index, maxsteps, intercept = TRUE, normalize = TRUE, sp = 0, verbose=FALSE, ...) {
+groupfs.default <- function(x, y, index, sigma = NULL, maxsteps, intercept = TRUE, normalize = TRUE, k = 2, verbose=FALSE) {
 
   p <- ncol(x)
   n <- nrow(x)
@@ -46,14 +46,14 @@ groupfs.default <- function(x, y, index, maxsteps, intercept = TRUE, normalize =
   maxprojs <- list()
 
   # Store other information from each step
-  path.info <- data.frame(imax=integer(), k=integer(), L=numeric(), RSS=numeric(), RSSdrop=numeric(), chisq=numeric(), projections=numeric())
+  path.info <- data.frame(imax=integer(), df=integer(), L=numeric(), RSS=numeric(), RSSdrop=numeric(), chisq=numeric(), projections=numeric())
 
   modelrank <- 1
 
   # Begin main loop
   for (step in 1:maxsteps) {
 
-    added <- add1.groupfs(x.update, y.update, index, labels, inactive, sp)
+    added <- add1.groupfs(x.update, y.update, index, labels, inactive, k, sigma)
 
     # Group to be added
     imax <- added$imax
@@ -62,8 +62,8 @@ groupfs.default <- function(x, y, index, maxsteps, intercept = TRUE, normalize =
     inactive.inds <- which(!index %in% active)
 
     # Rank of group
-    added$k <- ncol(added$maxproj)
-    modelrank <- modelrank + added$k
+    added$df <- ncol(added$maxproj)
+    modelrank <- modelrank + added$df
 
     # Stop without adding if model has become saturated
     if (modelrank >= n) break
@@ -81,7 +81,7 @@ groupfs.default <- function(x, y, index, maxsteps, intercept = TRUE, normalize =
     scale.chisq <- 1
 
     added$RSSdrop <- sum((y.last - y.update)^2)
-    added$chisq <- pchisq(added$RSSdrop/scale.chisq, lower.tail=FALSE, df = added$k)
+    added$chisq <- pchisq(added$RSSdrop/scale.chisq, lower.tail=FALSE, df = added$df)
     y.last <- y.update
 
     # Projections are stored separately
@@ -98,7 +98,7 @@ groupfs.default <- function(x, y, index, maxsteps, intercept = TRUE, normalize =
   attr(value, "labels") <- labels
   attr(value, "index") <- index
   attr(value, "maxsteps") <- maxsteps
-  attr(value, "sp") <- sp
+  attr(value, "k") <- k
   if (is.null(attr(x, "varnames"))) {
     attr(value, "varnames") <- colnames(x)
   } else {
@@ -117,7 +117,7 @@ groupfs.default <- function(x, y, index, maxsteps, intercept = TRUE, normalize =
 #' @param index Group membership indicator of length p
 #' @param inactive Indices of inactive groups
 #' @return Index \code{imax} of added group, residualized data, truncated chi p-value
-add1.groupfs <- function(x, y, index, labels, inactive, sp, ...) {
+add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
 
   # Use characters to avoid issues where
   # list() populates NULL lists in the positions
@@ -130,17 +130,18 @@ add1.groupfs <- function(x, y, index, labels, inactive, sp, ...) {
   projections <- lapply(keys, function(i) {
     inds <- which(index == i)
     xi <- x[,inds]
+
     return(svd(xi)$u)
   })
 
   names(projections) <- keys
 
   # Compute sums of squares to determine which group is added
-  # penalized by rank of group if sp > 0
+  # penalized by rank of group if k > 0
   terms <- lapply(keys, function(i) {
     Py <- t(projections[[i]]) %*% y
     val <- sum(Py^2)
-    if (sp > 0) val <- val - sp * ncol(projections[[i]])
+    if (k > 0) val <- val - k * ncol(projections[[i]])
     return(val)
   })
 
@@ -173,7 +174,7 @@ groupfsInf <- function(obj, sigma = NULL, normalize = TRUE, projs = NULL, tol = 
   y <- obj$y
   active <- obj$action
   maxsteps <- attr(obj, "maxsteps")
-  sp <- attr(obj, "sp")
+  k <- attr(obj, "k")
   index <- obj$index
   Eindex <- which(index %in% active)
   Ep <- length(Eindex)
@@ -222,7 +223,7 @@ groupfsInf <- function(obj, sigma = NULL, normalize = TRUE, projs = NULL, tol = 
     TCs[j] <- TC
 
     # For each step...
-    L <- interval_groupfs(obj$action, obj$projections, obj$maxprojs, x, y, index, sp, TC, R, Ugtilde)
+    L <- interval_groupfs(obj$action, obj$projections, obj$maxprojs, x, y, index, k, TC, R, Ugtilde)
 
     # Any additional projections, e.g. from cross-validation?
     if (!is.null(projs)) L <- c(L, projs)
@@ -307,7 +308,7 @@ num_int_chi <- function(a, b, df, nsamp = 10000) {
 #' @param center Center groups, default TRUE
 #' @param scale Scale groups by Frobeniusm norm, default TRUE
 #' @return Scaled design matrix
-scale_groups <- function(x, index, center = TRUE, scale = TRUE, ...) {
+scale_groups <- function(x, index, center = TRUE, scale = TRUE) {
   keys <- unique(index)
   xm <- rep(0, ncol(x))
   xs <- rep(1, ncol(x))
@@ -338,7 +339,7 @@ flatten <- function(L) {
 print.groupfs <- function(x, ...) {
     cat("\nSequence of added groups:\n")
     nsteps = length(x$action)
-    tab = cbind(1:nsteps, x$action, x$log$k)
+    tab = cbind(1:nsteps, x$action, x$log$df)
     colnames(tab) = c("Step", "Group", "Rank")
     rownames(tab) = rep("", nrow(tab))
     print(tab)
@@ -381,7 +382,7 @@ checkargs.groupfs <- function(x, index, maxsteps) {
 #'
 #' @param fit fitted model, the result of \link{groupfs}
 #' @param scale Known/estimated scaling parameter
-#' @param k Multiplier of model size, use \code{k = 2} for AIC, \code{k = log(n)} for BIC, or \code{k = 2log(p)} for RIC.
+#' @param k Multiplier of model size, use \code{k = 2} for AIC, \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.
 #' @return Matrix with two columns, edf and aic of fit, with rows indexed by step
 extractAIC.groupfs <- function(fit, scale, k = 2, ...) {
 
@@ -396,7 +397,7 @@ extractAIC.groupfs <- function(fit, scale, k = 2, ...) {
   }
 
   index <- attr(fit, "index")
-  edf <- cumsum(fit$log$k)
+  edf <- cumsum(fit$log$df)
   aic <- fit$log$RSS + k * edf
 
   return(cbind(edf, aic))
@@ -442,7 +443,7 @@ model_select <- function(fit, alpha = .1, ...) {
   }
 
   # RIC
-  ind <- which.min(extractAIC(fit, k = 2*log(p))[, 2])
+  ind <- which.min(extractAIC(fit, k = log(p))[, 2])
   models$RIC <- fit$action[1:ind]
 
   # BIC
