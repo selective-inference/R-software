@@ -10,9 +10,9 @@
 #' @param normalize Should the design matrix be normalized?
 #' @param k k Multiplier of model size penalty, use \code{k = 2} for AIC, \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.
 #' @return Index \code{imax} of added group, residualized data, truncated chi p-value
-groupfs <- function(x, y, index, sigma = NULL, maxsteps, intercept = TRUE, normalize = TRUE, k = 2) UseMethod("groupfs")
+groupfs <- function(x, y, index, maxsteps, sigma = NULL, intercept = TRUE, normalize = TRUE, k = 2) UseMethod("groupfs")
 
-groupfs.default <- function(x, y, index, sigma = NULL, maxsteps, intercept = TRUE, normalize = TRUE, k = 2, verbose=FALSE) {
+groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, intercept = TRUE, normalize = TRUE, k = 2, verbose=FALSE) {
 
   p <- ncol(x)
   n <- nrow(x)
@@ -70,6 +70,11 @@ groupfs.default <- function(x, y, index, sigma = NULL, maxsteps, intercept = TRU
 
     # Regress added group out of y and inactive x
     P.imax <- added$maxproj %*% t(added$maxproj)
+    if (is.null(sigma)) {
+        P.imax <- P.imax / exp(k*added$df)
+    } else {
+        P.imax <- P.imax * sigma^2
+    }
     y.update <- y.update - P.imax %*% y.update
     x.update[, inactive.inds] <- x.update[, inactive.inds] - P.imax %*% x.update[, inactive.inds]
 
@@ -124,14 +129,21 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
   # of the active variables
   ### Question for later: does this slow down lapply?
   keys = as.character(inactive)
+  n2y <- sum(y^2)
 
   # Compute singular vectors of projections
   # X_i %*% X_i^\dagger
   projections <- lapply(keys, function(i) {
     inds <- which(index == i)
     xi <- x[,inds]
-
-    return(svd(xi)$u)
+    ui <- svd(xi)$u
+    dfi <- ncol(ui)
+    if (is.null(sigma)) {
+        ui <- ui * exp(k*dfi/2)
+    } else {
+        ui <- ui / sigma
+    }
+    return(ui)
   })
 
   names(projections) <- keys
@@ -139,9 +151,14 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
   # Compute sums of squares to determine which group is added
   # penalized by rank of group if k > 0
   terms <- lapply(keys, function(i) {
-    Py <- t(projections[[i]]) %*% y
-    val <- sum(Py^2)
-    if (k > 0) val <- val - k * ncol(projections[[i]])
+    Ui <- projections[[i]]
+    dfi <- ncol(Ui)
+    Uy <- t(Ui) %*% y
+    if (is.null(sigma)) {
+        val <- sum(Uy^2) - n2y * exp(k*dfi)
+    } else {
+        val <- sum(Uy^2) - k * dfi - n2y
+    }
     return(val)
   })
 
