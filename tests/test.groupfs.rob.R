@@ -3,9 +3,9 @@ library(intervals)
 source("../selectiveInference/R/funs.common.R")
 source("../selectiveInference/R/funs.groupfs.R")
 source("../selectiveInference/R/funs.quadratic.R")
-source("../selectiveInference/R/funs.fs.R")
-source("../selectiveInference/R/funs.lar.R")
-library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+#source("../selectiveInference/R/funs.fs.R")
+#source("../selectiveInference/R/funs.lar.R")
+library(selectiveInference)#,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
 
 
@@ -84,15 +84,19 @@ snr <- 3
    a=fs(x,y,normalize=T)
 
 fit2=myfs(x,y) #my old fs
-fit3=fs(x,y)   #current
-
-minmodel=lm(y~1)
-step(minmodel,direction="forward")   #R step
-fm = step(minmodel, direction='forward', scope=(~x[,1]+x[,2]+x[,3]+x[,4]+x[,5]+x[,6]+x[,7]+x[,8]+x[,9]+x[,10]))
+fit3=fs(x,y,norm=FALSE)   #current
 
 rbind(fit$act,fit2$pred[1:10],fit3$act[1:10])
+fsInf(fit3,sigma=1)
+fsInf(fit3,sigma=1,bits=200)
+
+#minmodel=lm(y~1)
+#step(minmodel,direction="forward")   #R step
+#fm = step(minmodel, direction='forward', scope=(~x[,1]+x[,2]+x[,3]+x[,4]+x[,5]+x[,6]+x[,7]+x[,8]+x[,9]+x[,10]))
+# fm$terms
+
       
 
-fm$terms
+
 
 

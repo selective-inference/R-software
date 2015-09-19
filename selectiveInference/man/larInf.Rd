@@ -9,7 +9,7 @@ angle regression
 }
 \usage{
 larInf(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic"), 
-       gridrange=c(-100,100), gridpts=10000, mult=2, ntimes=2, verbose=FALSE) 
+       gridrange=c(-100,100), bits=NULL, mult=2, ntimes=2, verbose=FALSE) 
 }
 \arguments{
  \item{obj}{
@@ -45,9 +45,14 @@ can be specified through the \code{mult} argument (see below)
 \item{gridrange}{
 Grid range for constructing confidence intervals, on the standardized scale
 }
-\item{gridpts}{
-Number of grid points for constructing confidence intervals, within the specified
-grid range}
+\item{bits}{
+Number of bits to be used for p-value and confidence interval calculations. Default is 
+NULL, in which case standard floating point calculations are performed. When not NULL, 
+multiple precision floating point calculations are performed with the specified number 
+of bits, using the R package \code{Rmpfr}. (If this package is not installed, then the
+argument \code{bits} is silently ignored.) Note: standard double precision uses 53 bits
+so, e.g., a choice of 200 bits uses about 4 times double precision.
+}
 \item{mult}{Multiplier for the AIC-style penalty. Hence a value of 2 (default) 
 gives AIC, whereas a value of log(n) would give BIC}
 \item{ntimes}{Number of steps for which AIC-style criterion has to increase before 

@@ -1,6 +1,6 @@
 # Main p-value function
 
-poly.pval <- function(y, G, u, v, sigma) {
+poly.pval <- function(y, G, u, v, sigma, bits=NULL) {
   z = sum(v*y)
   vv = sum(v^2)
   sd = sigma*sqrt(vv)
@@ -10,14 +10,14 @@ poly.pval <- function(y, G, u, v, sigma) {
   vlo = suppressWarnings(max(vec[rho>0]))
   vup = suppressWarnings(min(vec[rho<0]))
 
-  pv = tnorm.surv(z,0,sd,vlo,vup)
+  pv = tnorm.surv(z,0,sd,vlo,vup,bits)
   return(list(pv=pv,vlo=vlo,vup=vup))
 }
 
 # Main confidence interval function
 
 poly.int <- function(y, G, u, v, sigma, alpha, gridrange=c(-100,100),
-                     gridpts=10000, flip=FALSE) {
+                     gridpts=100, griddepth=2, flip=FALSE, bits=NULL) {
   
   z = sum(v*y)
   vv = sum(v^2)
@@ -27,12 +27,12 @@ poly.int <- function(y, G, u, v, sigma, alpha, gridrange=c(-100,100),
   vec = (u - G %*% y + rho*z) / rho
   vlo = suppressWarnings(max(vec[rho>0]))
   vup = suppressWarnings(min(vec[rho<0]))
-
+  
   xg = seq(gridrange[1]*sd,gridrange[2]*sd,length=gridpts)
-  vals = tnorm.surv(z,xg,sd,vlo,vup)
-  int = grid.search(xg,vals,alpha/2,1-alpha/2)
-  tailarea = c(tnorm.surv(z,int[1],sd,vlo,vup),
-    1-tnorm.surv(z,int[2],sd,vlo,vup))
+  fun = function(x) { tnorm.surv(z,x,sd,vlo,vup,bits) }
+
+  int = grid.search(xg,fun,alpha/2,1-alpha/2,gridpts,griddepth)
+  tailarea = c(fun(int[1]),1-fun(int[2]))
 
   if (flip) {
     int = -int[2:1]
@@ -47,28 +47,66 @@ poly.int <- function(y, G, u, v, sigma, alpha, gridrange=c(-100,100),
 # Assuming that grid is in sorted order from smallest to largest,
 # and vals are monotonically increasing function values over the
 # grid, returns the grid end points such that the corresponding
-# vals are approximately equal to {left, right}
+# vals are approximately equal to {val1, val2}
 
-grid.search <- function(grid, vals, left, right) {
+grid.search <- function(grid, fun, val1, val2, gridpts=100, griddepth=2) {
   n = length(grid)
-  il = which(vals >= left)
-  ir = which(vals <= right)
-  if (length(il)==0) return(c(grid[n],Inf))   # All vals < left
-  if (length(ir)==0) return(c(-Inf,grid[1]))  # All vals > right
+  vals = fun(grid)
+    
+  ii = which(vals >= val1)
+  jj = which(vals <= val2)
+  if (length(ii)==0) return(c(grid[n],Inf))   # All vals < val1
+  if (length(jj)==0) return(c(-Inf,grid[1]))  # All vals > val2
   # RJT: the above logic is correct ... but for simplicity, instead,
   # we could just return c(-Inf,Inf) 
 
-  i1 = min(il); i2 = max(ir)
+  i1 = min(ii); i2 = max(jj)
   if (i1==1) lo = -Inf
-  else lo = grid[i1-1]
+  else lo = grid.bsearch(grid[i1-1],grid[i1],fun,val1,gridpts,
+         griddepth-1,below=TRUE)
   if (i2==n) hi = Inf
-  else hi = grid[i2+1]
+  else hi = grid.bsearch(grid[i2],grid[i2+1],fun,val2,gridpts,
+         griddepth-1,below=FALSE)
   return(c(lo,hi))
+}
+
+# Repeated bin search to find the point x in the interval [left, right]
+# that satisfies f(x) approx equal to val. If below=TRUE, then we seek
+# x such that the above holds and f(x) <= val; else we seek f(x) >= val.
+
+grid.bsearch <- function(left, right, fun, val, gridpts=100, griddepth=1, below=TRUE) {
+  n = gridpts
+  depth = 1
+
+  while (depth <= griddepth) {
+    grid = seq(left,right,length=n)
+    vals = fun(grid)
+    
+    if (below) {
+      ii = which(vals >= val)
+      if (length(ii)==0) return(grid[n])   # All vals < val (shouldn't happen)
+      if ((i0=min(ii))==1) return(grid[1]) # All vals > val (shouldn't happen)
+      left = grid[i0-1]
+      right = grid[i0]
+    }
+    
+    else {
+      ii = which(vals <= val)
+      if (length(ii)==0) return(grid[1])   # All vals > val (shouldn't happen)
+      if ((i0=max(ii))==n) return(grid[n]) # All vals < val (shouldn't happen)
+      left = grid[i0]
+      right = grid[i0+1]
+    }
+
+    depth = depth+1
+  }
+
+  return(ifelse(below, left, right))
 }
 
 # Returns Prob(Z>z | Z in [a,b]), where mean can be a vector
 
-tnorm.surv <- function(z, mean, sd, a, b) {
+tnorm.surv <- function(z, mean, sd, a, b, bits=NULL) {
   z = max(min(z,b),a)
   
   # Check silly boundary cases
@@ -79,14 +117,11 @@ tnorm.surv <- function(z, mean, sd, a, b) {
   # Try the multi precision floating point calculation first
   o = is.finite(mean)
   mm = mean[o]
-  pp = mpfr.tnorm.surv(z,mm,sd,a,b) 
+  pp = mpfr.tnorm.surv(z,mm,sd,a,b,bits) 
 
   # If there are any NAs, then settle for an approximation
   oo = is.na(pp)
-  if (any(oo)) {
-    pp[oo] = bryc.tnorm.surv(z,mm[oo],sd,a,b)
-    #pp[oo] = gsell.tnorm.surv(z,mm[oo],sd,a,b)
-  }
+  if (any(oo)) pp[oo] = bryc.tnorm.surv(z,mm[oo],sd,a,b)
   
   p[o] = pp
   return(p)
@@ -95,10 +130,17 @@ tnorm.surv <- function(z, mean, sd, a, b) {
 # Returns Prob(Z>z | Z in [a,b]), where mean cane be a vector, using
 # multi precision floating point calculations thanks to the Rmpfr package
 
-mpfr.tnorm.surv <- function(z, mean=0, sd=1, a, b, bits=250) {
-  ## z = mpfr((z-mean)/sd, bits)
-  ## a = mpfr((a-mean)/sd, bits)
-  ## b = mpfr((b-mean)/sd, bits)
+mpfr.tnorm.surv <- function(z, mean=0, sd=1, a, b, bits=NULL) {
+  # Check if Rmpfr is available, and if so, use it
+  if (!is.null(bits) && requireNamespace("Rmpfr")) {
+    z = Rmpfr::mpfr((z-mean)/sd, precBits=bits)
+    a = Rmpfr::mpfr((a-mean)/sd, precBits=bits)
+    b = Rmpfr::mpfr((b-mean)/sd, precBits=bits)
+    return(as.numeric((Rmpfr::pnorm(b)-Rmpfr::pnorm(z))/
+                      (Rmpfr::pnorm(b)-Rmpfr::pnorm(a))))
+  }
+  
+  # Else, just use standard floating point calculations
   z = (z-mean)/sd
   a = (a-mean)/sd
   b = (b-mean)/sd

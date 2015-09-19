@@ -96,8 +96,9 @@ checkargs.xy <- function(x, y) {
 }
 
 checkargs.misc <- function(sigma=NULL, alpha=NULL, k=NULL,
-                           gridrange=NULL, gridpts=NULL, mult=NULL, ntimes=NULL,
-                           beta=NULL, lambda=NULL, tol.beta=NULL ,tol.kkt=NULL,
+                           gridrange=NULL, gridpts=NULL, griddepth=NULL,
+                           mult=NULL, ntimes=NULL,
+                           beta=NULL, lambda=NULL, tol.beta=NULL, tol.kkt=NULL,
                            bh.q=NULL) {
   
   if (!is.null(sigma) && sigma <= 0) stop("sigma must be > 0")
@@ -107,8 +108,10 @@ checkargs.misc <- function(sigma=NULL, alpha=NULL, k=NULL,
   if (!is.null(k) && (k < 1 || k != floor(k))) stop("k must be an integer >= 1")
   if (!is.null(gridrange) && (length(gridrange) != 2 || gridrange[1] > gridrange[2]))
     stop("gridrange must be an interval of the form c(a,b) with a <= b")
-  if (!is.null(gridpts) && (gridpts < 50 || gridpts != round(gridpts)))
-    stop("gridpts must be an integer >= 50")
+  if (!is.null(gridpts) && (gridpts < 20 || gridpts != round(gridpts)))
+    stop("gridpts must be an integer >= 20")
+  if (!is.null(griddepth) && (griddepth > 10 || griddepth != round(griddepth)))
+    stop("griddepth must be an integer <= 10")
   if (!is.null(mult) && mult < 0) stop("mult must be >= 0")
   if (!is.null(ntimes) && (ntimes <= 0 || ntimes != round(ntimes)))
     stop("ntimes must be an integer > 0")

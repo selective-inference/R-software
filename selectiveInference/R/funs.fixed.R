@@ -4,7 +4,7 @@
 
 fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
                      type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
-                     gridrange=c(-100,100), gridpts=10000, verbose=FALSE) {
+                     gridrange=c(-100,100), bits=NULL, verbose=FALSE) {
   
   this.call = match.call()
   type = match.arg(type)
@@ -12,8 +12,7 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
   if (missing(beta) || is.null(beta)) stop("Must supply the solution beta")
   if (missing(lambda) || is.null(lambda)) stop("Must supply the tuning parameter value lambda") 
   checkargs.misc(beta=beta,lambda=lambda,sigma=sigma,alpha=alpha,
-                 gridrange=gridrange,gridpts=gridpts,
-                 tol.beta=tol.beta,tol.kkt=tol.kkt)
+                 gridrange=gridrange,tol.beta=tol.beta,tol.kkt=tol.kkt)
   n = nrow(x)
   p = ncol(x)
   beta = as.numeric(beta)
@@ -94,14 +93,14 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
     vj = vj / mj        # Standardize (divide by norm of vj)
     sign[j] = sign(sum(vj*y))
     vj = sign[j] * vj
-    a = poly.pval(y,G,u,vj,sigma)
+    a = poly.pval(y,G,u,vj,sigma,bits)
     pv[j] = a$pv * mj   # Unstandardize (mult by norm of vj)
     vlo[j] = a$vlo * mj # Unstandardize (mult by norm of vj)
     vup[j] = a$vup * mj # Unstandardize (mult by norm of vj)
     vmat[j,] = vj * mj  # Unstandardize (mult by norm of vj)
 
     a = poly.int(y,G,u,vj,sigma,alpha,gridrange=gridrange,
-      gridpts=gridpts,flip=(sign[j]==-1))
+      flip=(sign[j]==-1),bits=bits)
     ci[j,] = a$int * mj # Unstandardize (mult by norm of vj)
     tailarea[j,] = a$tailarea
   }

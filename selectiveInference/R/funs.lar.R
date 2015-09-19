@@ -351,13 +351,12 @@ predict.lasso <- predict.lar
 # Lar inference function
 
 larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic"), 
-                   gridrange=c(-100,100), gridpts=10000, mult=2, ntimes=2, verbose=FALSE) {
+                   gridrange=c(-100,100), bits=NULL, mult=2, ntimes=2, verbose=FALSE) {
   
   this.call = match.call()
   type = match.arg(type)
   checkargs.misc(sigma=sigma,alpha=alpha,k=k,
-                 gridrange=gridrange,gridpts=gridpts,
-                 mult=mult,ntimes=ntimes)
+                 gridrange=gridrange,mult=mult,ntimes=ntimes)
   if (class(obj) != "lar") stop("obj must be an object of class lar")
   if (is.null(k) && type=="active") k = length(obj$action)
   if (is.null(k) && type=="all") stop("k must be specified when type = all")
@@ -401,7 +400,7 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
       vj = G[nk[j],]
       mj = sqrt(sum(vj^2))
       vj = vj / mj              # Standardize (divide by norm of vj)
-      a = poly.pval(y,Gj,uj,vj,sigma)
+      a = poly.pval(y,Gj,uj,vj,sigma,bits)
       pv[j] = a$pv
       sxj = sx[vars[j]]
       vlo[j] = a$vlo * mj / sxj # Unstandardize (mult by norm of vj / sxj)
@@ -409,7 +408,7 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
       vmat[j,] = vj * mj / sxj  # Unstandardize (mult by norm of vj / sxj)
     
       a = poly.int(y,Gj,uj,vj,sigma,alpha,gridrange=gridrange,
-        gridpts=gridpts,flip=(sign[j]==-1))
+        flip=(sign[j]==-1),bits=bits)
       ci[j,] = a$int * mj / sxj # Unstandardize (mult by norm of vj / sxj) 
       tailarea[j,] = a$tailarea
       
@@ -455,7 +454,7 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
       Gj = rbind(G,vj)
       uj = c(u,0)
 
-      a = poly.pval(y,Gj,uj,vj,sigma)
+      a = poly.pval(y,Gj,uj,vj,sigma,bits)
       pv[j] = a$pv
       sxj = sx[vars[j]]
       vlo[j] = a$vlo * mj / sxj # Unstandardize (mult by norm of vj / sxj)
@@ -463,7 +462,7 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
       vmat[j,] = vj * mj / sxj  # Unstandardize (mult by norm of vj / sxj)
 
       a = poly.int(y,Gj,uj,vj,sigma,alpha,gridrange=gridrange,
-        gridpts=gridpts,flip=(sign[j]==-1))
+        flip=(sign[j]==-1),bits=bits)
       ci[j,] = a$int * mj / sxj # Unstandardize (mult by norm of vj / sxj)
       tailarea[j,] = a$tailarea
     }
