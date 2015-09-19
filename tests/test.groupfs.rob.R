@@ -80,11 +80,9 @@ snr <- 3
       beta[which(index %in% 1:sparsity)] <- snr
       y <- y + x %*% beta
   
- fit <- groupfs(x, y, index=1:p, maxsteps = steps)
-   a=fs(x,y,normalize=T)
-
+fit <- groupfs(x, y, index=1:p, maxsteps = steps)
 fit2=myfs(x,y) #my old fs
-fit3=fs(x,y,norm=FALSE)   #current
+fit3=fs(x,y,mode="cor")   #current
 
 rbind(fit$act,fit2$pred[1:10],fit3$act[1:10])
 fsInf(fit3,sigma=1)

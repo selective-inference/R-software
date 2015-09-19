@@ -46,8 +46,9 @@ selective inference calculations.
 \item{completepath}{Was the complete stepwise path computed?}
 \item{bls}{If completepath is TRUE, the full least squares coefficients}
 \item{Gamma}{Matrix that captures the polyhedral selection at each step}
-\item{mp}{Value of M+ (for internal use with the spacing test)}	 
 \item{nk}{Number of polyhedral constraints, at each step in path}
+\item{vlam}{Linear contrasts for the lambda (knot) values}
+\item{mp}{Value of M+ (for internal use with the spacing test)}	 
 \item{x}{Matrix of predictors used}
 \item{y}{Vector of outcomes used}
 \item{bx}{Vector of column means of original x}

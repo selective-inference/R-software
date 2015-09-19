@@ -9,7 +9,8 @@ This function implements forward stepwise regression, for use in the
 selectiveInference package
 }
 \usage{
-fs(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE, verbose=FALSE)
+fs(x, y, maxsteps=2000, mode=c("cor","rss"), intercept=TRUE, normalize=TRUE, 
+   verbose=FALSE)
 }
 \arguments{
   \item{x}{
@@ -21,6 +22,9 @@ Vector of outcomes (length n)
   \item{maxsteps}{
 Maximum number of steps to take 
 }
+\item{mode}{One of "cor" or "rss", indicating whether variables should be
+added based on the maximal absolute correlation with the residual at each 
+step, or maximal drop in residual sum of squares at each step. Default is "cor"}
 \item{intercept}{Should an intercept be included on the model? Default is TRUE}
 \item{normalize}{Should the predictors be normalized? Default is TRUE}
 \item{verbose}{Print out progress along the way? Default is FALSE}
@@ -43,6 +47,7 @@ the residual).
 \item{bls}{If completepath is TRUE, the full least squares coefficients}
 \item{Gamma}{Matrix that captures the polyhedral selection at each step}
 \item{nk}{Number of polyhedral constraints, at each step in path}
+\item{vreg}{Linear contrasts for coefficients of variables to enter}
 \item{x}{Matrix of predictors used}
 \item{y}{Vector of outcomes used}
 \item{bx}{Vector of column means of original x}
