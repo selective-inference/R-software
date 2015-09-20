@@ -175,3 +175,12 @@ print.fixedLassoInf <- function(x, tailarea=TRUE, ...) {
   invisible()
 }
 
+
+
+estimateLambda=function(x,sigma,nsamp=1000){
+    n=nrow(x)
+    eps = sigma*matrix(rnorm(nsamp*n),n,nsamp)
+    lambda = 2*mean(apply(t(x)%*%eps,2,max))
+    return(lambda)
+}
+    

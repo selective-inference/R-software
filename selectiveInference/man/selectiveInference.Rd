@@ -152,6 +152,24 @@ arXiv:1405.3340.
 
 #out=estimateSigma(x,y)
 
+##estimation of lambda  for use in fixedLassoInf
+set.seed(43)
+#n=50
+#p=10
+#sigma=.7
+#x=matrix(rnorm(n*p),n,p)
+#x=scale(x,T,F)
+#beta=c(3,2,0,0,rep(0,p-4))
+#y=x%*%beta+sigma*rnorm(n)
+#y=y-mean(y)
+#
+#estimate lambda using the  known value of sigma
+#lamhat=estimateLambda(x,sigma=.7)
+#first estimate  sigma
+#sigmahat=estimateSigma(x,y)$sigmahat
+#lamhat=estimateLambda(x,sigma=sigmahat)
+#
+
 }
 \keyword{ package }
 

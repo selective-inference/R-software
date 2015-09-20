@@ -31,12 +31,11 @@ step, or maximal drop in residual sum of squares at each step. Default is "cor"}
 }
 
 \details{
-This function implements forward stepwise regression, adding the predictor that  
-achieves the largest drop in RSS when added to the active model, at each step.
-Note that this version of stepwise uses the more "standard" criterion for entering
-variables, while that in the \code{lars} package (with type="step") uses a different
-choice (entering the predictor that has the largest absolute correlation with the 
-the residual).
+This function implements forward stepwise regression, adding the predictor at each step that  
+ when added to the active model, achieves the largest maximal absolute correlation with the residual (with mode="cor") or the
+largest drop in RSS.
+These two models are very similar: the \code{step()} function in R uses  the maximal absolute correlation,
+as does  \code{lars} package (with type="step").
 }
 \value{
 \item{action}{Vector of predictors in order of entry}

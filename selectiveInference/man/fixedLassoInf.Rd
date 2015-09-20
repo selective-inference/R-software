@@ -71,6 +71,10 @@ multiple precision floating point calculations are performed with the specified 
 of bits, using the R package \code{Rmpfr}. (If this package is not installed, then the
 argument \code{bits} is silently ignored.) Note: standard double precision uses 53 bits
 so, e.g., a choice of 200 bits uses about 4 times double precision.
+ The confidence
+interval computation is sometimes numerically challenging,  and the  extra precision can be 
+ helpful. In particular, extra precision might be tried  if the values in the  output columns LowTailArea and UpTailArea differ
+noticeably from alpha/2.
 }
 \item{verbose}{
 Print out progress along the way? Default is FALSE}

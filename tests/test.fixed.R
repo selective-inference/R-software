@@ -4,31 +4,7 @@ library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 #options(error=dump.frames)
 #attach("/Users/tibs/dropbox/PAPERS/lasso/lasso3/.RData")
 
-set.seed(133)
-n=100
-p=10
-sigma=3
-
-x = matrix(rnorm(n*p),n,p)
-#x=scale(x,T,T)/sqrt(n-1)
-beta=c(-6,3,2,-1,rep(0,p-4))
-y=x%*%beta+sigma*rnorm(n)
-
-### RJT COMMENTS: this seems to work with every combination of
-### intercept and standardize, EXCEPT intercept=F and standardize=T.
-### In this case, glmnet simply refuses to fit very many lambdas
-### along the path, and so lambda=10 is way to small for it
-a = glmnet(x,y,intercept=F,standardize=F,lambda.min.ratio=1e-3,thresh=1e-10)
-nlam2=trunc(length(a$lam)/2)
-lambda = n*(a$lam[nlam2])
-bhat = (coef(a, s=lambda/n, exact=TRUE))[-1]
-out= fixedLassoInf(x,y,bhat,lambda,sigma=sigma,intercept=F)
-out
-
-##
-a=fs(x,y)
-aa=fsInf(a)
-
+c
 a=lar(x,y)
 aa=larInf(a)
 
