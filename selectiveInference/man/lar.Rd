@@ -42,11 +42,12 @@ selective inference calculations.
 \item{action}{Vector of predictors in order of entry}
 \item{sign}{Signs of coefficients of predictors, upon entry}
 \item{df}{Degrees of freedom of each active model}
-\item{beta}{Matrix of regression coefficients for each model along the path; one model per column}
+\item{beta}{Matrix of regression coefficients for each model along the path,
+one model per column}
 \item{completepath}{Was the complete stepwise path computed?}
 \item{bls}{If completepath is TRUE, the full least squares coefficients}
 \item{Gamma}{Matrix that captures the polyhedral selection at each step}
-\item{nk}{Number of polyhedral constraints, at each step in path}
+\item{nk}{Number of polyhedral constraints at each step in path}
 \item{vlam}{Linear contrasts for the lambda (knot) values}
 \item{mp}{Value of M+ (for internal use with the spacing test)}	 
 \item{x}{Matrix of predictors used}

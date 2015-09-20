@@ -29,5 +29,5 @@ useDynLib("selectiveInference")
 import(glmnet)
 importFrom("graphics", "abline", "axis", "matplot", "plot")
 importFrom("stats", "dnorm", "lsfit", "pexp", "pnorm", "predict",
-             "qnorm", "rnorm", "sd", "uniroot")
+           "qnorm", "rnorm", "sd", "uniroot")
 

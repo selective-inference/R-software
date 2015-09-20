@@ -31,21 +31,22 @@ step, or maximal drop in residual sum of squares at each step. Default is "cor"}
 }
 
 \details{
-This function implements forward stepwise regression, adding the predictor at each step that  
- when added to the active model, achieves the largest maximal absolute correlation with the residual (with mode="cor") or the
-largest drop in RSS.
-These two models are very similar: the \code{step()} function in R uses  the maximal absolute correlation,
-as does  \code{lars} package (with type="step").
+This function implements forward stepwise regression, adding the predictor at each 
+step that either maximizes the absolute correlation with the residual (when \code{mode="cor"}), 
+or that when added to the active model, maximizes the drop in RSS (\code{mode="rss"}). These
+two versions are very similar; the \code{step} function in R uses maximal absolute correlation, 
+as does the \code{lars} package (with type="step").
 }
 \value{
 \item{action}{Vector of predictors in order of entry}
 \item{sign}{Signs of coefficients of predictors, upon entry}
 \item{df}{Degrees of freedom of each active model}
-\item{beta}{Matrix of regression coefficients for each model along the path; one model per column}
+\item{beta}{Matrix of regression coefficients for each model along the path,
+one model per column}
 \item{completepath}{Was the complete stepwise path computed?}
 \item{bls}{If completepath is TRUE, the full least squares coefficients}
 \item{Gamma}{Matrix that captures the polyhedral selection at each step}
-\item{nk}{Number of polyhedral constraints, at each step in path}
+\item{nk}{Number of polyhedral constraints at each step in path}
 \item{vreg}{Linear contrasts for coefficients of variables to enter}
 \item{x}{Matrix of predictors used}
 \item{y}{Vector of outcomes used}

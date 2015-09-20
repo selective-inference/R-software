@@ -25,13 +25,16 @@ type I error and coverage under Gaussian errors.
 This R package was developed as part of the selective inference software project
 in Python and R:
 
- https://github.com/selective-inference
+\url{https://github.com/selective-inference}
 
+Some of the R code in this work is a modification of Python code from this
+repository. Here is the current selective inference software team:
 
-Some of the R code in this work is a modification of python code.
-Here is the current selective inference software team:
-
-Yuval Benjamini, Leonard Blier, Will Fithian, Jason Lee, Joshua Loftus,
+Yuval Benjamini, 
+Leonard Blier, 
+Will Fithian, 
+Jason Lee, 
+Joshua Loftus,
 Stephen Reid,
 Dennis Sun,
 Yuekai Sun,
@@ -55,10 +58,10 @@ Maintainer: Rob Tibshirani <tibs@stanford.edu>
 }
 
 \references{
-Jonathan Taylor, Richard Lockhart, Ryan Tibshirani, Rob Tibshirani (2014).
+Ryan Tibshirani,Jonathan Taylor, Richard Lockhart, Rob Tibshirani (2014).
 Exact post-selection inference for sequential regression procedures. arXiv:1401.3889.
 
-Jason Lee, Dennis Sun, Yuekai Sun, Jonathan Taylor (2014). 
+Jason Lee, Dennis Sun, Yuekai Sun, Jonathan Taylor (2013). 
 Exact post-selection inference, with application to the lasso. arXiv:1311.6238.
 
 Stephen Reid, Jonathan Taylor, Rob Tibshirani (2014).

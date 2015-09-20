@@ -51,11 +51,10 @@ NULL, in which case standard floating point calculations are performed. When not
 multiple precision floating point calculations are performed with the specified number 
 of bits, using the R package \code{Rmpfr}. (If this package is not installed, then the
 argument \code{bits} is silently ignored.) Note: standard double precision uses 53 bits
-so, e.g., a choice of 200 bits uses about 4 times double precision.
- The confidence
-interval computation is sometimes numerically challenging,  and the  extra precision can be 
- helpful. In particular, extra precision might be tried  if the values in the  output columns LowTailArea and UpTailArea differ
-noticeably from alpha/2.
+so, e.g., a choice of 200 bits uses about 4 times double precision. The confidence
+interval computation is sometimes numerically challenging, and the extra precision can be 
+helpful (though computationally more costly). In particular, extra precision might be tried 
+if the values in the output columns of \code{tailarea} differ noticeably from alpha/2.
 }
 \item{mult}{Multiplier for the AIC-style penalty. Hence a value of 2 (default) 
 gives AIC, whereas a value of log(n) would give BIC}
@@ -91,7 +90,8 @@ value chosen by the modified AIC scheme}
 \item{vmat}{Linear contrasts that define the observed statistics}
 \item{y}{Vector of outcomes}
 \item{pv.spacing}{P-values from the spacing test (here M+ is used)}
-\item{pv.modspac}{P-values from the modified form of the spacing test (here M+ is replaced by the next knot)}
+\item{pv.modspac}{P-values from the modified form of the spacing test 
+(here M+ is replaced by the next knot)}
 \item{pv.covtest}{P-values from covariance test}
 \item{vars}{Variables in active set}
 \item{sign}{Signs of active coefficients}
@@ -101,7 +101,7 @@ value chosen by the modified AIC scheme}
 }
 
 \references{
-Jonathan Taylor, Richard Lockhart, Ryan Tibshirani, Rob Tibshirani (2014).
+Ryan Tibshirani, Jonathan Taylor, Richard Lockhart, Rob Tibshirani (2014).
 Exact post-selection inference for sequential regression procedures. arXiv:1401.3889.
 }
 
