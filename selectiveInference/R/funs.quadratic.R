@@ -14,13 +14,15 @@ interval_groupfs <- function(action, projections, maxprojs, x, y, index, k, TC, 
       # (t*U + Z)^T %*% Q %*% (t*U + Z) \geq 0
       # we find the roots in t, if there are any
       # and return the interval of potential t
-      kl <- ifelse(k > 0, k * ncol(Uh), 0)
+      kl <- k * (ncol(Ug) - ncol(Uh))
       Uhy <- t(Uh) %*% y
-      if (sum(Uhy^2) - kl < -.Machine$double.eps) {
+      Ugy <- t(Ug) %*% y
+
+      if (sum(Ugy^2) - sum(Uhy^2) - kl < -.Machine$double.eps) {
         print(paste("Problematic projection:", l))
         stop("Observation does not belong to selection region")
       }
-
+      
       Z <- y - eta * TC
       Uheta <- t(Uh) %*% eta
       Ugeta <- t(Ug) %*% eta
@@ -30,6 +32,8 @@ interval_groupfs <- function(action, projections, maxprojs, x, y, index, k, TC, 
       b = 2 * (t(Ugeta) %*% UgZ - t(Uheta) %*% UhZ)
       c = sum(UgZ^2) - sum(UhZ^2) - kl 
 
+
+      
       disc <- b^2 - 4*a*c
       b2a <- -b/(2*a)
 
