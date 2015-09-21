@@ -5,8 +5,8 @@ source("../selectiveInference/R/funs.groupfs.R")
 source("../selectiveInference/R/funs.quadratic.R")
 source("../selectiveInference/R/funs.fs.R")
 source("../selectiveInference/R/funs.lar.R")
-library(selectiveInference)
-library(lars)
+#library(selectiveInference)
+#library(lars)
 
 set.seed(1)
 n <- 40
@@ -22,13 +22,10 @@ beta <- rep(0, p)
 beta[which(index %in% 1:sparsity)] <- snr
 y <- y + x %*% beta
 
-<<<<<<< HEAD
 system.time({
     fit <- groupfs(x, y, index, maxsteps = maxsteps, sigma = 1)
     pvals <- groupfsInf(fit, sigma = 1)
 })
-=======
->>>>>>> 3f4c72b95831096dfbe45fa1b900b72588fa67b5
 
 # Compare to step function in R
 index <- 1:ncol(x)
@@ -43,12 +40,15 @@ fit <- groupfs(x, y, index, maxsteps)
 names(fsfit$coefficients)[-1]
 paste0("x.", fit$action)
 
-junk=fs(x,y)
 # They all match
-<<<<<<< HEAD
 
 
 n <- nrow(state.x77)
+index <- rep(1:(ncol(state.x77)+1), gsizes)
+labels <- unique(index)
+maxsteps <- max(labels)-1
+sparsity <- 3
+snr <- 5
 ndiv <- length(levels(state.division))
 states <- data.frame(matrix(NA, nrow=n, ncol=ncol(state.x77)))
 colnames(states) <- colnames(state.x77)
@@ -80,11 +80,6 @@ X <- scale_groups(x, index)$x
 gsizes <- c(gsizes, ndiv)
 
 
-index <- rep(1:(ncol(state.x77)+1), gsizes)
-labels <- unique(index)
-maxsteps <- max(labels)-1
-sparsity <- 3
-snr <- 5
 
 p <- ncol(x)
 y <- rnorm(n)
@@ -94,14 +89,9 @@ beta[nzinds] <- snr
 y <- y + x %*% beta
 #y <- y-mean(y)
 df <- data.frame(y = y, states)
-fsfit <- step(lm(y ~ 0, df), direction="forward", scope = formula(lm(y~., df)), steps = 10, k = 2)
+fsfit <- step(lm(y ~ 1, df), direction="forward", scope = formula(lm(y~., df)), steps = 10, k = 2)
 fit <- groupfs(x, y, index, maxsteps, k = 2)
 
 names(fsfit$coefficients)
 c(colnames(state.x77), "state.division")[fit$action]
-=======
-junk2=lars(x,y,type="step")
-cbind(names(fsfit$coefficients)[-1],unlist(junk2$act)[1:20])
 
-
->>>>>>> 3f4c72b95831096dfbe45fa1b900b72588fa67b5
