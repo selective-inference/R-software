@@ -48,7 +48,8 @@ one model per column}
 \item{bls}{If completepath is TRUE, the full least squares coefficients}
 \item{Gamma}{Matrix that captures the polyhedral selection at each step}
 \item{nk}{Number of polyhedral constraints at each step in path}
-\item{vlam}{Linear contrasts for the lambda (knot) values}
+\item{vreg}{Matrix of linear contrasts that gives coefficients of variables
+to enter along the path}     
 \item{mp}{Value of M+ (for internal use with the spacing test)}	 
 \item{x}{Matrix of predictors used}
 \item{y}{Vector of outcomes used}

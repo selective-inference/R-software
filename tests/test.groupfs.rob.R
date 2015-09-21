@@ -1,4 +1,4 @@
-
+library(lars)
 library(intervals)
 source("../selectiveInference/R/funs.common.R")
 source("../selectiveInference/R/funs.groupfs.R")
@@ -82,9 +82,21 @@ snr <- 3
   
 fit <- groupfs(x, y, index=1:p, maxsteps = steps)
 fit2=myfs(x,y) #my old fs
-fit3=fs(x,y,mode="cor")   #current
+fit3=fs(x,y,norm=FALSE)   #current
+fit4=lars(x,y,type="step",norm=TRUE)
+
+fit2$pred
+fit3$act
+fit4$act
+max(abs(fit2$pred[1:38]-fit3$action[1:38]))
+# They differ at the last entry, but that's OK (not well-defined when p>n)
+
+max(abs(fit3$action[1:38]-unlist(fit4$action[1:38])))
+# These don't always match, they make different selections at times. What
+# is the lars function doing, in type="step"?
 
 rbind(fit$act,fit2$pred[1:10],fit3$act[1:10])
+
 fsInf(fit3,sigma=1)
 fsInf(fit3,sigma=1,bits=200)
 
