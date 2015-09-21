@@ -131,8 +131,12 @@ tnorm.surv <- function(z, mean, sd, a, b, bits=NULL) {
 # multi precision floating point calculations thanks to the Rmpfr package
 
 mpfr.tnorm.surv <- function(z, mean=0, sd=1, a, b, bits=NULL) {
-  # Check if Rmpfr is available, and if so, use it
-  if (!is.null(bits) && requireNamespace("Rmpfr")) {
+  # If bits is not NULL, then we are supposed to be using Rmpf
+  # (note that this was fail if Rmpfr is not installed; but
+  # by the time this function is being executed, this should
+  # have been properly checked at a higher level; and if Rmpfr
+  # is not installed, bits would have been previously set to NULL)
+  if (!is.null(bits)) {
     z = Rmpfr::mpfr((z-mean)/sd, precBits=bits)
     a = Rmpfr::mpfr((a-mean)/sd, precBits=bits)
     b = Rmpfr::mpfr((b-mean)/sd, precBits=bits)

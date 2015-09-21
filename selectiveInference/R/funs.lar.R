@@ -360,6 +360,10 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
   if (class(obj) != "lar") stop("obj must be an object of class lar")
   if (is.null(k) && type=="active") k = length(obj$action)
   if (is.null(k) && type=="all") stop("k must be specified when type = all")
+  if (!is.null(bits) && !requireNamespace("Rmpfr",quietly=TRUE)) {
+    warning("Package Rmpfr is not installed, reverting to standard precision")
+    bits = NULL
+  }
   
   k = min(k,length(obj$action)) # Round to last step
   x = obj$x
