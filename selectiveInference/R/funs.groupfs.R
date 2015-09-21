@@ -371,11 +371,11 @@ print.groupfsInf <- function(x, ...) {
         round(unlist(lapply(lapply(pvals$support, size), sum)), 3),
         unlist(lapply(pvals$support, nrow)), round(unlist(lapply(pvals$support, min)), 3),
         round(unlist(lapply(pvals$support, max)), 3))
-    colnames(tab) = c("Var", "P-value", "Tchi", "df", "Interval size", "Components",
+    colnames(tab) = c("Var", "P-value", "Tchi", "df", "Int. size", "Components",
                 "Int. inf", "Int. sup")
     rownames(tab) = rep("", nrow(tab))
     print(tab)
-    cat("\nInt. inf and Int. sup are the lowest and highest endpoints of the truncation interval.\nNo confidence intervals are reported by groupfsInf.\n")
+    cat("\nInt. inf and Int. sup are the lowest and highest endpoints of the truncation interval. No confidence intervals are reported by groupfsInf.\n")
     invisible()
 }
 
