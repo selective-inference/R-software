@@ -34,7 +34,7 @@ beta <- rep(0, p)
 beta[which(index %in% 1:sparsity)] <- snr
 y <- y + x %*% beta
 df <- data.frame(y = y, x = x)
-fsfit <- step(lm(y ~ 1, df), direction="forward", scope = formula(lm(y~., df)), steps = 20)
+fsfit <- step(lm(y ~ 1, df), direction="forward", scope = formula(lm(y~., df)), steps = maxsteps)
 fit <- groupfs(x, y, index, maxsteps)
 
 names(fsfit$coefficients)[-1]
@@ -42,18 +42,17 @@ paste0("x.", fit$action)
 
 # They all match
 
-
 n <- nrow(state.x77)
+ndiv <- length(levels(state.division))
+gsizes <- c(6,8,3,4,2,5,3,4, ndiv)
 index <- rep(1:(ncol(state.x77)+1), gsizes)
 labels <- unique(index)
 maxsteps <- max(labels)-1
 sparsity <- 3
 snr <- 5
-ndiv <- length(levels(state.division))
 states <- data.frame(matrix(NA, nrow=n, ncol=ncol(state.x77)))
 colnames(states) <- colnames(state.x77)
-gsizes <- c(6,8,3,4,2,5,3,4)
-x <- matrix(NA, nrow = n, ncol = sum(gsizes) + ndiv)
+x <- matrix(NA, nrow = n, ncol = sum(gsizes))
 colnames(x) <- 1:ncol(x)
 ind <- 1
 for (j in 1:ncol(state.x77)) {
@@ -77,9 +76,6 @@ inds <- ind:(ind+ndiv-1)
 x[, inds] <- submat
 colnames(x)[inds] <- paste("state.division", 1:ncol(submat), sep=":")
 X <- scale_groups(x, index)$x
-gsizes <- c(gsizes, ndiv)
-
-
 
 p <- ncol(x)
 y <- rnorm(n)
@@ -90,8 +86,8 @@ y <- y + x %*% beta
 #y <- y-mean(y)
 df <- data.frame(y = y, states)
 fsfit <- step(lm(y ~ 1, df), direction="forward", scope = formula(lm(y~., df)), steps = 10, k = 2)
-fit <- groupfs(x, y, index, maxsteps, k = 2)
+fit <- groupfs(x, y, index, maxsteps, k = 4)
 
-names(fsfit$coefficients)
+names(fsfit$coefficients)[-1]
 c(colnames(state.x77), "state.division")[fit$action]
 
