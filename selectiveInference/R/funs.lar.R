@@ -402,7 +402,7 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
       
       Gj = G[1:nk[j],]
       uj = rep(0,nk[j])
-      vj = vreg[j,]
+      vj = vreg[j,,drop=FALSE]
       mj = sqrt(sum(vj^2))
       vj = vj / mj              # Standardize (divide by norm of vj)
       a = poly.pval(y,Gj,uj,vj,sigma,bits)
