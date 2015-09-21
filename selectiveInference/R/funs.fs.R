@@ -2,11 +2,10 @@
 # a response vector y and predictor matrix x.  We assume
 # that x has columns in general position.
 
-fs <- function(x, y, maxsteps=2000, mode=c("cor","rss"), intercept=TRUE, normalize=TRUE,
+fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
                verbose=FALSE) {
 
   this.call = match.call()
-  mode = match.arg(mode)
   checkargs.xy(x=x,y=y)
   
   # Center and scale, etc.
@@ -28,9 +27,7 @@ fs <- function(x, y, maxsteps=2000, mode=c("cor","rss"), intercept=TRUE, normali
 
   #####
   # Find the first variable to enter and its sign
-  sc = colSums(x^2)
-  if (mode=="cor") sc = sqrt(sc)
-  xx = scale(x,center=F,scale=sc)
+  xx = scale(x,center=F,scale=sqrt(colSums(x^2)))
   uhat = t(xx)%*%y
   ihit = which.max(abs(uhat))   # Hitting coordinate
   s = Sign(uhat[ihit])          # Sign
@@ -63,7 +60,7 @@ fs <- function(x, y, maxsteps=2000, mode=c("cor","rss"), intercept=TRUE, normali
   nk = numeric(buf)
   vreg = matrix(0,buf,n)
   nk[1] = gi
-  vreg[1,] = s*x[,ihit]/sum(x[,ihit]^2)
+  vreg[1,] = s*x[,ihit] / sum(x[,ihit]^2)
 
   # Other things to keep track of, but not return
   r = 1                      # Size of active set
@@ -101,10 +98,8 @@ fs <- function(x, y, maxsteps=2000, mode=c("cor","rss"), intercept=TRUE, normali
 
     # Key quantities for the next entry
     a = backsolve(R,t(Q1)%*%y)
-    mat = X2 - X1 %*% backsolve(R,t(Q1)%*%X2)
-    sc = colSums(mat^2)
-    if (mode=="cor") sc = sqrt(sc)
-    xx = scale(mat,center=F,scale=sc)
+    X2perp = X2 - X1 %*% backsolve(R,t(Q1)%*%X2)
+    xx = scale(X2perp,center=F,scale=sqrt(colSums(X2perp^2)))
     aa = as.numeric(t(xx)%*%y)
     
     # If the inactive set is empty, nothing will hit
@@ -132,7 +127,7 @@ fs <- function(x, y, maxsteps=2000, mode=c("cor","rss"), intercept=TRUE, normali
 
     # nk, regression contrast
     nk[k] = gi
-    vreg[k,] = shit*mat[,ihit]/sum(mat[,ihit]^2)
+    vreg[k,] = shit*X2perp[,ihit] / sum(X2perp[,ihit]^2)
 
     # Update all of the variables
     r = r+1

@@ -1,5 +1,6 @@
 library(selectiveInference)
 #library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+library(lars)
 
 set.seed(0)
 n = 100
@@ -16,9 +17,17 @@ mu = x%*%b
 y = mu + sigma*rnorm(n)
 
 obj = fs(x,y,verb=T,intercept=T,norm=T)
+obj2 = lars(x,y,type="step",intercept=T,norm=T)
 
-# NOTE this does not line up with lars' stepwise function,
-# but that's OK, because they used different update rules
+max(abs(obj$action-obj2$action))
+# These don't always match ... what is the lars function doing?
+
+# Checks
+max(abs(obj$action-unlist(obj2$action))
+max(abs(coef(obj,s=4.5,mode="step")-
+        lars::predict.lars(obj2,s=4.5,type="coef",mode="step")$coef))
+max(abs(predict(obj,s=4.5,mode="step")-
+        lars::predict.lars(obj2,s=4.5,newx=x,mode="step")$fit))
 
 # Sequential inference
 out = fsInf(obj,sigma=sigma,k=20)

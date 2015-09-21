@@ -9,8 +9,7 @@ This function implements forward stepwise regression, for use in the
 selectiveInference package
 }
 \usage{
-fs(x, y, maxsteps=2000, mode=c("cor","rss"), intercept=TRUE, normalize=TRUE, 
-   verbose=FALSE)
+fs(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE, verbose=FALSE)
 }
 \arguments{
   \item{x}{
@@ -22,32 +21,31 @@ Vector of outcomes (length n)
   \item{maxsteps}{
 Maximum number of steps to take 
 }
-\item{mode}{One of "cor" or "rss", indicating whether variables should be
-added based on the maximal absolute correlation with the residual at each 
-step, or maximal drop in residual sum of squares at each step. Default is "cor"}
 \item{intercept}{Should an intercept be included on the model? Default is TRUE}
-\item{normalize}{Should the predictors be normalized? Default is TRUE}
+\item{normalize}{Should the predictors be normalized? Default is TRUE. (Note:
+this argument has no real effect on model selection since forward stepwise is 
+scale invariant already; however, it is included for completeness, and to match
+the interface for the \code{lar} function)
+}
 \item{verbose}{Print out progress along the way? Default is FALSE}
 }
 
 \details{
 This function implements forward stepwise regression, adding the predictor at each 
-step that either maximizes the absolute correlation with the residual (when \code{mode="cor"}), 
-or that when added to the active model, maximizes the drop in RSS (\code{mode="rss"}). These
-two versions are very similar; the \code{step} function in R uses maximal absolute correlation, 
-as does the \code{lars} package (with type="step").
+step that maximizes the absolute correlation with the residual. 
 }
 \value{
 \item{action}{Vector of predictors in order of entry}
 \item{sign}{Signs of coefficients of predictors, upon entry}
 \item{df}{Degrees of freedom of each active model}
 \item{beta}{Matrix of regression coefficients for each model along the path,
-one model per column}
+one column per model}
 \item{completepath}{Was the complete stepwise path computed?}
 \item{bls}{If completepath is TRUE, the full least squares coefficients}
 \item{Gamma}{Matrix that captures the polyhedral selection at each step}
 \item{nk}{Number of polyhedral constraints at each step in path}
-\item{vreg}{Linear contrasts for coefficients of variables to enter}
+\item{vreg}{Matrix of linear contrasts that gives coefficients of variables
+to enter along the path}
 \item{x}{Matrix of predictors used}
 \item{y}{Vector of outcomes used}
 \item{bx}{Vector of column means of original x}
