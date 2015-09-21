@@ -13,6 +13,11 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
   if (missing(lambda) || is.null(lambda)) stop("Must supply the tuning parameter value lambda") 
   checkargs.misc(beta=beta,lambda=lambda,sigma=sigma,alpha=alpha,
                  gridrange=gridrange,tol.beta=tol.beta,tol.kkt=tol.kkt)
+  if (!is.null(bits) && !requireNamespace("Rmpfr",quietly=TRUE)) {
+    warning("Package Rmpfr is not installed, reverting to standard precision")
+    bits = NULL
+  }
+  
   n = nrow(x)
   p = ncol(x)
   beta = as.numeric(beta)
@@ -176,6 +181,10 @@ print.fixedLassoInf <- function(x, tailarea=TRUE, ...) {
 }
 
 estimateLambda <- function(x, sigma, nsamp=1000){
+  checkargs.xy(x,rep(0,nrow(x)))
+  if (length(sigma)!=1) stop("sigma should be a number > 0")
+  if (sigma<=0) stop("sigma should be a number > 0")
+                                      
   n = nrow(x)
   eps = sigma*matrix(rnorm(nsamp*n),n,nsamp)
   lambda = 2*mean(apply(t(x)%*%eps,2,max))

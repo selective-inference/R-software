@@ -1,5 +1,5 @@
-library(selectiveInference)
-#library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+#library(selectiveInference)
+library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 library(lars)
 
 set.seed(0)
@@ -141,3 +141,21 @@ for(ii in 1:nsim){
 
 sum(ci[,1]> btrue)
 sum(ci[,2]< btrue)
+
+#diab
+  x=read.table("/Users/tibs/dropbox/PAPERS/FourOfUs/data64.txt")
+x=as.matrix(x)
+x=scale(x,T,F)
+#x=scale(x,T,T)
+n=length(y)
+nams=scan("/Users/tibs/dropbox/PAPERS/FourOfUs/data64.names",what="")
+y=scan("/Users/tibs/dropbox/PAPERS/FourOfUs/diab.y")
+y=y-mean(y)
+
+ larfit=lar(x,y,norm=F)
+   sigma= estimateSigma(x,y)$sigmahat
+     junk= larInf(larfit,sigma=sigma)
+ junk2= larInf(larfit,sigma=sigma,type="all",k=5)
+junk3= larInf(larfit,sigma=sigma,type="aic")
+ junk4= larInf(larfit,sigma=sigma,type="aic",bits=100)
+

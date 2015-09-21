@@ -1,5 +1,4 @@
 library(selectiveInference)
-#library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 library(lars)
 
 set.seed(0)
@@ -19,7 +18,7 @@ y = mu + sigma*rnorm(n)
 obj = fs(x,y,verb=T,intercept=T,norm=T)
 obj2 = lars(x,y,type="step",intercept=T,norm=T)
 
-max(abs(obj$action-obj2$action))
+max(abs(obj$action-unlist(obj2$action)))
 # These don't always match ... what is the lars function doing?
 
 # Checks
@@ -139,4 +138,31 @@ sum(ci[,2]< btrue)
 
 
 
+##diabetes example
+    x=read.table("/Users/tibs/dropbox/PAPERS/FourOfUs/data64.txt")
+x=as.matrix(x)
+x=scale(x,T,F)
+#x=scale(x,T,T)
+n=length(y)
+nams=scan("/Users/tibs/dropbox/PAPERS/FourOfUs/data64.names",what="")
+y=scan("/Users/tibs/dropbox/PAPERS/FourOfUs/diab.y")
+y=y-mean(y)
 
+obj = fs(x,y,verb=T,intercept=T,norm=T)
+
+# Sequential inference
+out = fsInf(obj,sigma=sigma,k=20)
+out
+sum(out$ci[,1]>out$ci[,2])
+plot(out$pv,ylim=c(0,1))
+
+# AIC inference
+k = 20
+out2 = fsInf(obj,sigma=sigma,k=k,type="aic")
+out2
+
+# Fixed step inference
+k = out2$khat
+out3 = fsInf(obj,sigma=sigma,k=k,type="all")
+out3
+    
