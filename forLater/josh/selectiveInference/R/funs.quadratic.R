@@ -1,13 +1,15 @@
 
 # TODO: fix a, b, c, below depending on if is.null(sigma)
-interval_groupfs <- function(action, projections, maxprojs, x, y, index, k, TC, R, Ugtilde, tol = 1e-15) {
+interval_groupfs <- function(action, projections, maxprojs, aicpens, maxpens, x, y, index, k, TC, R, Ugtilde, tol = 1e-15) {
 
   eta <- Ugtilde %*% R / TC
+  n <- nrow(x)
 
   L <- lapply(1:length(action), function(step) {
-      
+
     Ug <- maxprojs[[step]]
-  
+    maxpen <- maxpens[[step]]
+
     lapply(1:length(projections[[step]]), function(l) {
 
       Uh <- projections[[step]][[l]]
@@ -15,37 +17,34 @@ interval_groupfs <- function(action, projections, maxprojs, x, y, index, k, TC, 
       # (t*U + Z)^T %*% Q %*% (t*U + Z) \geq 0
       # we find the roots in t, if there are any
       # and return the interval of potential t
-      kl <- k * (ncol(Ug) - ncol(Uh))
+      aicpendiff <- maxpen - aicpens[[step]][[l]]
       Uhy <- t(Uh) %*% y
       Ugy <- t(Ug) %*% y
-      
 
-      if (sum(Ugy^2) - sum(Uhy^2) - kl < -.Machine$double.eps) {
+      if (sum(Ugy^2) - sum(Uhy^2) - aicpendiff < -.Machine$double.eps) {
         print(paste("Problematic projection:", l))
         stop("Observation does not belong to selection region")
       }
-      
+
       Z <- y - eta * TC
       Uheta <- t(Uh) %*% eta
       Ugeta <- t(Ug) %*% eta
       UhZ <- t(Uh) %*% Z
       UgZ <- t(Ug) %*% Z
-      a = sum(Ugeta^2) - sum(Uheta^2)
-      b = 2 * (t(Ugeta) %*% UgZ - t(Uheta) %*% UhZ)
-      c = sum(UgZ^2) - sum(UhZ^2) - kl 
+      A = sum(Ugeta^2) - sum(Uheta^2)
+      B = 2 * (t(Ugeta) %*% UgZ - t(Uheta) %*% UhZ)
+      C = sum(UgZ^2) - sum(UhZ^2) - aicpendiff
 
-
-      
-      disc <- b^2 - 4*a*c
-      b2a <- -b/(2*a)
+      disc <- B^2 - 4*A*C
+      b2a <- -B/(2*A)
 
       if (disc > tol) {
         # Real roots
-        pm <- sqrt(disc)/(2*a)
+        pm <- sqrt(disc)/(2*A)
         endpoints <- c(b2a - pm, b2a + pm)
-        
+
       } else {
-            
+
         # No real roots
         #if (a > 0) {
           # Quadratic form always positive
@@ -55,8 +54,8 @@ interval_groupfs <- function(action, projections, maxprojs, x, y, index, k, TC, 
         #  stop("Infeasible!")
         #}
       }
-          
-      if (a > tol) {
+
+      if (A > tol) {
         # Parabola opens upward
         if (min(endpoints) > 0) {
           # Both roots positive, union of intervals
@@ -66,10 +65,10 @@ interval_groupfs <- function(action, projections, maxprojs, x, y, index, k, TC, 
           return(Intervals(c(-Inf, max(0, max(endpoints)))))
         }
       } else {
-        if (a < -tol) {
+        if (A < -tol) {
           # Parabola opens downward
           if (max(endpoints) < 0) {
-             
+
             # Positive quadratic form only when t negative
             stop("Error: infeasible")
           } else {
@@ -78,12 +77,12 @@ interval_groupfs <- function(action, projections, maxprojs, x, y, index, k, TC, 
           }
         } else {
           # a is too close to 0, quadratic is actually linear
-          if (abs(b) > tol) {
-            if (b > 0) {
-              return(Intervals(c(-Inf, max(0, -c/b))))
+          if (abs(B) > tol) {
+            if (B > 0) {
+              return(Intervals(c(-Inf, max(0, -C/B))))
             } else {
-              if (-c/b < 0) stop("Error: infeasible linear equation")
-              return(Intervals(rbind(c(-Inf, 0), c(-c/b, Inf))))
+              if (-C/B < 0) stop("Error: infeasible linear equation")
+              return(Intervals(rbind(c(-Inf, 0), c(-C/B, Inf))))
             }
           } else {
             warning("Ill-conditioned quadratic")
@@ -139,24 +138,24 @@ TF_roots <- function(Q, a, b, Vdelta, V2, z, C, r, tol = 1e-14) {
     angleinds <- thetas >=0 & thetas <= pi/2
     roots <- unique(thetas[modinds * angleinds])
     troots <- tan(roots)^2/C
-    
+
     if (length(roots) == 0) {
         return(list(intervals = Intervals(c(0,Inf)), I=I))
     }
-    
+
     checkpoints <- roots_to_checkpoints(troots)
     signs <- sign(I(checkpoints))
     diffs <- c(0, diff(signs))
     changeinds <- which(diffs != 0)
-    
+
     if (length(changeinds) > 0) {
-        
+
         roots <- unlist(lapply(changeinds, function(ind) {
             uniroot(I, lower = checkpoints[ind-1], upper = checkpoints[ind])$root
         }))
         partition <- roots_to_partition(roots)
         positive <- which(I(partition$midpoints) > 0)
-        
+
         intervals <- matrix(NA, ncol=2)
         for (i in 1:length(positive)) {
             ind <- positive[i]
@@ -169,7 +168,7 @@ TF_roots <- function(Q, a, b, Vdelta, V2, z, C, r, tol = 1e-14) {
 
         return(list(intervals = Intervals(intervals[-1,]), I=I))
     }
-    
+
     return(list(intervals = Intervals(c(0,Inf)), I=I))
 }
 

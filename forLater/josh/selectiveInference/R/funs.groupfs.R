@@ -51,11 +51,10 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercep
   x.begin <- x.update
   y.begin <- y.update
   # Store all projections computed along the path
-  projections <- list()
-  maxprojs <- list()
+  projections = maxprojs = aicpens = maxpens = vector("list", maxsteps)
 
   # Store other information from each step
-  path.info <- data.frame(imax=integer(), df=integer(), L=numeric(), RSS=numeric(), RSSdrop=numeric(), chisq=numeric(), projections=numeric())
+  path.info <- data.frame(imax=integer(maxsteps), L=numeric(maxsteps), df=integer(maxsteps), RSS=numeric(maxsteps), RSSdrop=numeric(maxsteps), chisq=numeric(maxsteps))
 
   modelrank <- 1
 
@@ -71,7 +70,6 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercep
     inactive.inds <- which(!index %in% active)
 
     # Rank of group
-    added$df <- ncol(added$maxproj)
     modelrank <- modelrank + added$df
 
     # Stop without adding if model has become saturated
@@ -89,6 +87,8 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercep
 
     projections[[step]] <- added$projections
     maxprojs[[step]] <- added$maxproj
+    aicpens[[step]] <- added$aicpens
+    maxpens[[step]] <- added$maxpen
 
     # Compute RSS for unadjusted chisq p-values
     added$RSS <- sum(y.update^2)
@@ -99,19 +99,19 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercep
     y.last <- y.update
 
     # Projections are stored separately
-    added$projections <- NULL
-    added$maxproj <- NULL
-    path.info <- rbind(path.info, data.frame(added))
+    step.info <- data.frame(added[-c(4:7)])
+    path.info[step, ] <- step.info
 
-    if (verbose) print(added)
+    if (verbose) print(step.info)
   }
 
   # Create output object
-  value <- list(action=path.info$imax, L=path.info$L, projections = projections, maxprojs = maxprojs, log = path.info, index = index, y = y.begin, x = x.begin, bx = xm, sx = xs, intercept = intercept)
+  value <- list(action=path.info$imax, L=path.info$L, projections = projections, maxprojs = maxprojs, aicpens = aicpens, maxpens = maxpens, log = path.info, index = index, y = y.begin, x = x.begin, bx = xm, sx = xs, intercept = intercept)
   class(value) <- "groupfs"
   attr(value, "labels") <- labels
   attr(value, "index") <- index
   attr(value, "maxsteps") <- maxsteps
+  attr(value, "sigma") <- sigma
   attr(value, "k") <- k
   if (is.null(attr(x, "varnames"))) {
     attr(value, "varnames") <- colnames(x)
@@ -163,28 +163,34 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
 
   # Compute sums of squares to determine which group is added
   # penalized by rank of group if k > 0
-  terms <- lapply(keys, function(i) {
-    Ui <- projections[[i]]
-    dfi <- ncol(Ui)
-    Uy <- t(Ui) %*% y
-    if (is.null(sigma)) {
-        val <- sum(Uy^2)  - n2y * exp(k*dfi/n)
-    } else {
-        val <- sum(Uy^2) - k * dfi/n - n2y
-    }
-    return(val)
-  })
+  aicpens = terms = vector("list", length(keys))
+  names(terms) = names(aicpens) = keys
+  for (key in keys) {
+      Ui <- projections[[key]]
+      dfi <- ncol(Ui)
+      Uy <- t(Ui) %*% y
+      if (is.null(sigma)) {
+          aicpens[[key]] <- n2y * exp(k*dfi/n)
+          terms[[key]] <- sum(Uy^2)  - aicpens[[key]]
+
+      } else {
+          aicpens[[key]] <- k * dfi/n #- n2y / sigma^2
+          terms[[key]] <- sum(Uy^2) - aicpens[[key]]
+      }
+  }
 
   # Maximizer = group to be added
   terms.maxind <- which.max(terms)
   imax <- inactive[terms.maxind]
   keyind <- which(keys == imax)
   maxproj <- projections[[keyind]]
+  maxpen <- aicpens[[keyind]]
   projections[[keyind]] <- NULL
+  aicpens[[keyind]] <- NULL
 
   L <- terms[[terms.maxind]]
 
-  return(list(imax=imax, L=L, projections = projections, maxproj = maxproj))
+  return(list(imax=imax, L=L, df = ncol(maxproj), projections = projections, maxproj = maxproj, aicpens = aicpens, maxpen = maxpen))
 }
 
 # -----------------------------------------------------------
@@ -195,7 +201,7 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
 #' @param sigma Estimate of error standard deviation. If NULL (default), this is estimated using the mean squared residual of the full least squares fit when n >= 2p, and the mean squared residual of the selected model when n < 2p. In the latter case, the user should use \code{\link{estimateSigma}} function for a more accurate estimate.
 #' @param projs Additional projections to define model selection event. For use with cross-validation. Default is NULL and it is not recommended to change this.
 #' @return An object of class "groupfsInf" containing selective p-values for the fitted model \code{obj}. The default printing behavior should supply adequate information.
-#' 
+#'
 #' \describe{
 #'   \item{vars}{Labels of the active groups in the order they were included.}
 #'   \item{pv}{Selective p-values computed from appropriate truncated distributions.}
@@ -205,6 +211,8 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
 #'   \item{support}{List of intervals defining the truncation region of the truncated chi.}
 #' }
 groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
+
+  cat(paste("\nUsing sigma value:", attr(obj, "sigma"), "\n"))
 
   x <- obj$x
   n <- nrow(x)
@@ -261,7 +269,7 @@ groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
     TCs[j] <- TC
 
     # For each step...
-    L <- interval_groupfs(obj$action, obj$projections, obj$maxprojs, x, y, index, k, TC, R, Ugtilde)
+    L <- interval_groupfs(obj$action, obj$projections, obj$maxprojs, obj$aicpens, obj$maxpens, x, y, index, k, TC, R, Ugtilde)
 
     # Any additional projections, e.g. from cross-validation?
     if (!is.null(projs)) L <- c(L, projs)
