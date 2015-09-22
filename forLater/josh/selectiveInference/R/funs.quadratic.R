@@ -1,4 +1,5 @@
 
+# TODO: fix a, b, c, below depending on if is.null(sigma)
 interval_groupfs <- function(action, projections, maxprojs, x, y, index, k, TC, R, Ugtilde, tol = 1e-15) {
 
   eta <- Ugtilde %*% R / TC
@@ -17,6 +18,7 @@ interval_groupfs <- function(action, projections, maxprojs, x, y, index, k, TC, 
       kl <- k * (ncol(Ug) - ncol(Uh))
       Uhy <- t(Uh) %*% y
       Ugy <- t(Ug) %*% y
+      
 
       if (sum(Ugy^2) - sum(Uhy^2) - kl < -.Machine$double.eps) {
         print(paste("Problematic projection:", l))

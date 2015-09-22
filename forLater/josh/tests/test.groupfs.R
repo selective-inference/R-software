@@ -1,6 +1,6 @@
 
 library(intervals)
-source("../selectiveInference/R/funs.common.R")
+source("../../../selectiveInference/R/funs.common.R")
 source("../selectiveInference/R/funs.groupfs.R")
 source("../selectiveInference/R/funs.quadratic.R")
 source("../selectiveInference/R/funs.fs.R")
@@ -23,8 +23,8 @@ beta[which(index %in% 1:sparsity)] <- snr
 y <- y + x %*% beta
 
 system.time({
-    fit <- groupfs(x, y, index, maxsteps = maxsteps, sigma = 1)
-    pvals <- groupfsInf(fit, sigma = 1)
+    fit <- groupfs(x, y, index, maxsteps = maxsteps)
+    pvals <- groupfsInf(fit)
 })
 
 # Compare to step function in R
