@@ -1,18 +1,27 @@
-# Forward stepwise implementation with groups and truncated \chi p-values
-# -----------------------------------------------------------
-
-#' Forward stepwise
+#' Select a model with forward stepwise.
 #'
-#' @param x Matrix of predictors (n by p)
-#' @param y Vector of outcomes (length n)
-#' @param index Group membership indicator of length p
-#' @param maxsteps Maximum number of steps for forward stepwise
-#' @param normalize Should the design matrix be normalized?
-#' @param k k Multiplier of model size penalty, use \code{k = 2} for AIC, \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.
-#' @return Index \code{imax} of added group, residualized data, truncated chi p-value
-groupfs <- function(x, y, index, maxsteps, sigma = NULL, intercept = TRUE, normalize = TRUE, k = 2) UseMethod("groupfs")
+#' \code{groupfs} implements forward selection of linear models almost identically to \code{\link{stepAIC}} with \code{direction = "forward"}. The reason this is a separate function from \code{\link{fs}} is that groups of variables (e.g. dummies encoding levels of a categorical variable) must be handled differently in the selective inference framework.
+#'
+#' @param x Matrix of predictors (n by p).
+#' @param y Vector of outcomes (length n).
+#' @param index Group membership indicator of length p.
+#' @param maxsteps Maximum number of steps for forward stepwise.
+#' @param sigma Estimate of error standard deviation for use in AIC criterion. This determines the relative scale between RSS and the degrees of freedom penalty. Default is NULL corresponding to unknown sigma. See \code{\link{extractAIC}} for details.
+#' @param k Multiplier of model size penalty, use \code{k = 2} for AIC, \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.
+#' @param intercept Should an intercept be included in the model? Default is TRUE.
+#' @param normalize Should the design matrix be normalized? Default is TRUE.
+#' @param verbose Print out progress along the way? Default is FALSE.
+#' @return An object of class "groupfs" containing information about the sequence of models in the forward stepwise algorithm. Call the function \code{\link{groupfsInf}} on this object to compute selective p-values.
+#' @examples
+#' x = matrix(rnorm(10*40, nrow=10))
+#' index = sort(rep(1:20, 2))
+#' y = rnorm(10) + x[,1] - x[,2]
+#' fit = groupfs(x, y, index)
+#' pvals = groupfsInf(fit)
+#' @seealso \code{\link{groupfsInf}}
+groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE, normalize = TRUE, verbose = FALSE) UseMethod("groupfs")
 
-groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, intercept = TRUE, normalize = TRUE, k = 2, verbose=FALSE) {
+groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE, normalize = TRUE, verbose=FALSE) {
 
   p <- ncol(x)
   n <- nrow(x)
@@ -115,13 +124,15 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, intercept = TRU
 
 # -----------------------------------------------------------
 
-#' Add one group to the model
+#' Add one group to the model. For internal use by \code{\link{groupfs}}.
 #'
-#' @param x Design matrix
-#' @param y Response vector
-#' @param index Group membership indicator of length p
-#' @param inactive Indices of inactive groups
-#' @return Index \code{imax} of added group, residualized data, truncated chi p-value
+#' @param x Design matrix.
+#' @param y Response vector.
+#' @param index Group membership indicator of length p.
+#' @param inactive Labels of inactive groups.
+#' @param k Multiplier of model size penalty, use \code{k = 2} for AIC, \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.
+#' @param sigma Estimate of error standard deviation for use in AIC criterion. This determines the relative scale between RSS and the degrees of freedom penalty. See \code{\link{extractAIC}} for details.
+#' @return Index \code{imax} of added group, value \code{L} of maximized negative AIC, lists of projection matrices defining quadratic model selection event.
 add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
 
   # Use characters to avoid issues where
@@ -180,12 +191,20 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
 
 #' Form univariate selection interval for a given contrast
 #'
-#' @param obj Object returned by \link{groupfs} function
-#' @param x Design matrix
-#' @param y Outcome
-#' @param index index of variable grouping
-#' @return An interval or union of intervals
-groupfsInf <- function(obj, sigma = NULL, normalize = TRUE, projs = NULL, tol = 1e-15) {
+#' @param obj Object returned by \code{\link{groupfs}} function
+#' @param sigma Estimate of error standard deviation. If NULL (default), this is estimated using the mean squared residual of the full least squares fit when n >= 2p, and the mean squared residual of the selected model when n < 2p. In the latter case, the user should use \code{\link{estimateSigma}} function for a more accurate estimate.
+#' @param projs Additional projections to define model selection event. For use with cross-validation. Default is NULL and it is not recommended to change this.
+#' @return An object of class "groupfsInf" containing selective p-values for the fitted model \code{obj}. The default printing behavior should supply adequate information.
+#' 
+#' \describe{
+#'   \item{vars}{Labels of the active groups in the order they were included.}
+#'   \item{pv}{Selective p-values computed from appropriate truncated distributions.}
+#'   \item{sigma}{Estimate of error variance used in computing p-values.}
+#'   \item{TC}{Observed value of truncated chi.}
+#'   \item{df}{Rank of group of variables when it was added to the model.}
+#'   \item{support}{List of intervals defining the truncation region of the truncated chi.}
+#' }
+groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
 
   x <- obj$x
   n <- nrow(x)
@@ -322,10 +341,10 @@ num_int_chi <- function(a, b, df, nsamp = 10000) {
 
 #' Center and scale design matrix by groups
 #'
-#' @param x Design matrix
-#' @param index Group membership indicator of length p
-#' @param center Center groups, default TRUE
-#' @param scale Scale groups by Frobeniusm norm, default TRUE
+#' @param x Design matrix.
+#' @param index Group membership indicator of length p.
+#' @param center Center groups, default is TRUE.
+#' @param scale Scale groups by Frobenius norm, default is TRUE.
 #' @return Scaled design matrix
 scale_groups <- function(x, index, center = TRUE, scale = TRUE) {
   keys <- unique(index)
@@ -388,103 +407,5 @@ checkargs.groupfs <- function(x, index, maxsteps) {
     if (maxsteps > G) stop("maxsteps is larger than number of groups")
     gsizes <- sort(rle(sort(index))$lengths, decreasing = TRUE)
     if (sum(gsizes[1:maxsteps]) > nrow(x)) stop("maxsteps is too large. If the largest groups are included the model is overdetermined")
-}
-
-# -----------------------------------------------------------
-
-# ----------------- Ignore code below here ------------------
-
-# -----------------------------------------------------------
-
-
-#' Compute AIC and return active set of model minimizing the criterion
-#'
-#' @param fit fitted model, the result of \link{groupfs}
-#' @param scale Known/estimated scaling parameter
-#' @param k Multiplier of model size, use \code{k = 2} for AIC, \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.
-#' @return Matrix with two columns, edf and aic of fit, with rows indexed by step
-extractAIC.groupfs <- function(fit, scale, k = 2, ...) {
-
-  if (class(fit) != "groupfs") stop("Incorrect object type of fit")
-
-  if (missing(scale)) {
-    scale <- attributes(fit)$scale
-    if (is.null(scale)) {
-      warning("Missing scale, assuming scale = 1")
-      scale <- 1
-    }
-  }
-
-  index <- attr(fit, "index")
-  edf <- cumsum(fit$log$df)
-  aic <- fit$log$RSS + k * edf
-
-  return(cbind(edf, aic))
-}
-
-# -----------------------------------------------------------
-
-#' Determine active sets using various stopping rules
-#'
-#' @param fit fitted model, the result of \link{groupfs}
-#' @return Matrix with two columns, edf and aic of fit, with rows indexed by step
-model_select <- function(fit, alpha = .1, ...) {
-
-  if (class(fit) != "groupfs") stop("Incorrect object type of fit")
-
-  # Avoid integer(0) issues with which()
-  max_which <- function(l) {
-    wl <- which(l)
-    if (any(wl)) return(max(wl))
-    return(NULL)
-  }
-
-  models <- list()
-
-  n <- attr(fit, "n")
-  p <- attr(fit, "p")
-
-  # Last rule
-  ind <- max_which(fit$p.value < alpha)
-  if (is.null(ind)) {
-    models$last <- 0
-  } else {
-    models$last <- fit$action[1:ind]
-  }
-
-  # ForwardStop
-  renyi.transform <- - cumsum(log(1-fit$p.value)) / 1:length(fit$p.value)
-  ind <- max_which(renyi.transform <= alpha)
-  if (is.null(ind)) {
-    models$forward <- 0
-  } else {
-    models$forward <- fit$action[1:ind]
-  }
-
-  # RIC
-  ind <- which.min(extractAIC(fit, k = log(p))[, 2])
-  models$RIC <- fit$action[1:ind]
-
-  # BIC
-  ind <- which.min(extractAIC(fit, k = log(n))[, 2])
-  models$BIC <- fit$action[1:ind]
-
-  return(models)
-}
-
-# -----------------------------------------------------------
-
-#' Plot \code{T\chi} and \code{\chi^2} p-values of a fit
-#'
-#' @param fit fitted model, the result of \link{groupfs}
-plot.groupfs <- function(fit, ...) {
-  xrange <- 1:attr(fit, "maxsteps")
-  plot.default(x = xrange,  y = fit$p.value, xlab = "Variable", ylab = "P-value", cex = .5, xaxt = "n", pch = 19, ylim = c(0,1))
-  points.default(x = xrange, y = fit$log$chisq, cex = .5)
-  varnames <- attr(fit, "varnames")[fit$action]
-  if (!is.null(varnames)) {
-    axis(1, at = xrange, labels=FALSE)
-    text(x = xrange, y=-.08, labels = varnames, srt = 45, pos = 1, xpd = TRUE, cex = .4)
-  }
 }
 
