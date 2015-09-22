@@ -393,7 +393,7 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
     vmat = matrix(0,k,n)
     ci = tailarea = matrix(0,k,2)
     pv.spacing = pv.modspac = pv.covtest = numeric(k)
-    vreg = obj$vreg[1:k,]
+    vreg = obj$vreg[1:k,,drop=FALSE]
     sign = obj$sign[1:k]
     vars = obj$action[1:k]
 
