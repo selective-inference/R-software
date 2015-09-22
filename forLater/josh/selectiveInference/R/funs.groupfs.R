@@ -16,7 +16,7 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, intercept = TRU
 
   p <- ncol(x)
   n <- nrow(x)
-  #checkargs.xy(x=x, y=y)
+  checkargs.xy(x=x, y=y)
   checkargs.groupfs(x, index, maxsteps)
 
   # Group labels
@@ -70,7 +70,6 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, intercept = TRU
 
     # Regress added group out of y and inactive x
     P.imax <- added$maxproj %*% t(added$maxproj)
-    print(c(added$df, rankMatrix(added$maxproj)[1]))
     if (is.null(sigma)) {
         P.imax <- P.imax / exp(k*added$df/n)
     } else {

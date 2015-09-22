@@ -99,4 +99,3 @@ fsnames <- cnames[which(!is.na(charmatch(cnames,names(fsfit$coefficients)[-1])))
 })))]
 fsnames
 cnames[fit$action]#[1:length(fsnames)]
-#source("../selectiveInference/R/funs.groupfs.R")
