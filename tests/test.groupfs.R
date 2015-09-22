@@ -45,6 +45,8 @@ paste0("x.", fit$action)
 n <- nrow(state.x77)
 ndiv <- length(levels(state.division))
 gsizes <- c(6,8,3,4,2,5,3,4, ndiv)
+cnames <- c(colnames(state.x77), "state.division")
+cnames <- gsub(" ", ".", cnames)
 index <- rep(1:(ncol(state.x77)+1), gsizes)
 labels <- unique(index)
 maxsteps <- max(labels)-1
@@ -88,6 +90,11 @@ df <- data.frame(y = y, states)
 fsfit <- step(lm(y ~ 1, df), direction="forward", scope = formula(lm(y~., df)), steps = 10, k = 2)
 fit <- groupfs(x, y, index, maxsteps, k = 4)
 
-names(fsfit$coefficients)[-1]
-c(colnames(state.x77), "state.division")[fit$action]
+# names(fsfit$coefficients)[-1]
+cnames[which(!is.na(charmatch(cnames,names(fsfit$coefficients)[-1])))][order(unlist(lapply(cnames, function(cn) {
+    matches = grep(cn, names(fsfit$coefficients)[-1])
+    if (length(matches) > 0) min(matches)
+    else NULL
+})))]
+cnames[fit$action]
 

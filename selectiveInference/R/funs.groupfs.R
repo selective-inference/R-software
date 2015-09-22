@@ -155,7 +155,7 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
     dfi <- ncol(Ui)
     Uy <- t(Ui) %*% y
     if (is.null(sigma)) {
-        val <- sum(Uy^2) - n2y * exp(k*dfi)
+        val <- (sum(Uy^2)  - n2y) * exp(k*dfi)
     } else {
         val <- sum(Uy^2) - k * dfi - n2y
     }
