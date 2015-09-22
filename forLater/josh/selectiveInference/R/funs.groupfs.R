@@ -16,7 +16,7 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, intercept = TRU
 
   p <- ncol(x)
   n <- nrow(x)
-  checkargs.xy(x=x, y=y)
+  #checkargs.xy(x=x, y=y)
   checkargs.groupfs(x, index, maxsteps)
 
   # Group labels
@@ -70,8 +70,9 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, intercept = TRU
 
     # Regress added group out of y and inactive x
     P.imax <- added$maxproj %*% t(added$maxproj)
+    print(c(added$df, rankMatrix(added$maxproj)[1]))
     if (is.null(sigma)) {
-        P.imax <- P.imax / exp(k*added$df)
+        P.imax <- P.imax / exp(k*added$df/n)
     } else {
         P.imax <- P.imax * sigma^2
     }
@@ -136,10 +137,12 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
   projections <- lapply(keys, function(i) {
     inds <- which(index == i)
     xi <- x[,inds]
-    ui <- svd(xi)$u
+    svdi <- svd(xi)
+    inds <- svdi$d > svdi$d[1] * sqrt(.Machine$double.eps)
+    ui <- svdi$u[, inds, drop = FALSE]
     dfi <- ncol(ui)
     if (is.null(sigma)) {
-        ui <- ui * exp(k*dfi/2)
+        ui <- ui * exp(k*dfi/(2*n))
     } else {
         ui <- ui / sigma
     }
@@ -155,9 +158,9 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
     dfi <- ncol(Ui)
     Uy <- t(Ui) %*% y
     if (is.null(sigma)) {
-        val <- (sum(Uy^2)  - n2y) * exp(k*dfi)
+        val <- sum(Uy^2)  - n2y * exp(k*dfi/n)
     } else {
-        val <- sum(Uy^2) - k * dfi - n2y
+        val <- sum(Uy^2) - k * dfi/n - n2y
     }
     return(val)
   })

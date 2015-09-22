@@ -66,14 +66,16 @@ for (j in 1:ncol(state.x77)) {
     }
     var <- as.factor(var)
     submat <- model.matrix(~ var - 1)
+    submat <- submat-mean(submat)
     inds <- ind:(ind+gsizes[j]-1)
     x[, inds] <- submat
-    colnames(x)[inds] <- paste(colnames(state.x77)[j], 1:ncol(submat), sep=":")        
+    colnames(x)[inds] <- paste(colnames(state.x77)[j], 1:ncol(submat), sep=":")
     ind <- ind+gsizes[j]
     states[,j] <- var
 }
 states <- cbind(states, state.division)
 submat <- model.matrix(~ state.division - 1)
+submat <- submat - mean(submat)
 inds <- ind:(ind+ndiv-1)
 x[, inds] <- submat
 colnames(x)[inds] <- paste("state.division", 1:ncol(submat), sep=":")
@@ -83,18 +85,18 @@ p <- ncol(x)
 y <- rnorm(n)
 beta <- rep(0, p)
 nzinds <- which(index %in% sample(labels,sparsity))
-beta[nzinds] <- snr 
+beta[nzinds] <- snr
 y <- y + x %*% beta
-#y <- y-mean(y)
+y <- y-mean(y)
 df <- data.frame(y = y, states)
-fsfit <- step(lm(y ~ 1, df), direction="forward", scope = formula(lm(y~., df)), steps = 10, k = 2)
-fit <- groupfs(x, y, index, maxsteps, k = 4)
-
+fsfit <- step(lm(y ~ 0, df), direction="forward", scope = formula(lm(y~., df)), steps = maxsteps, k = 1)
+fit <- groupfs(x, y, index, maxsteps, k = 1)
 # names(fsfit$coefficients)[-1]
-cnames[which(!is.na(charmatch(cnames,names(fsfit$coefficients)[-1])))][order(unlist(lapply(cnames, function(cn) {
+fsnames <- cnames[which(!is.na(charmatch(cnames,names(fsfit$coefficients)[-1])))][order(unlist(lapply(cnames, function(cn) {
     matches = grep(cn, names(fsfit$coefficients)[-1])
     if (length(matches) > 0) min(matches)
     else NULL
 })))]
-cnames[fit$action]
-
+fsnames
+cnames[fit$action]#[1:length(fsnames)]
+#source("../selectiveInference/R/funs.groupfs.R")
