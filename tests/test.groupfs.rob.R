@@ -9,14 +9,15 @@ library(selectiveInference)#,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
 
 
-myfs=function(x,y,nsteps=min(nrow(x),ncol(x))){
+myfs=function(x,y,nsteps=min(nrow(x),ncol(x)),mode=c("ip","cor")){
 p=ncol(x)
 # fs by minimizing scaled ip
 # first center x and y
 x=scale(x,T,F)
 y=y-mean(y)
 pred=s=scor=bhat=rep(NA,nsteps)
-   ip=t(x)%*%y/sqrt(diag(t(x)%*%x))
+  if(mode=="ip")   ip=t(x)%*%y/sqrt(diag(t(x)%*%x))
+if(mode=="cor") ip=abs(cor(x,y))
   pred[1]=which.max(abs(ip))
  s[1]=sign(sum(x[,pred[1]]*y))
 scor[1]=ip[pred[1]]
@@ -27,7 +28,8 @@ for(j in 2:nsteps){
   mod=pred[1:(j-1)]
   r= lsfit(x[,mod],r)$res
   xr= lsfit(x[,mod],x)$res
-  ip=t(xr)%*%r/sqrt(diag(t(xr)%*%xr))
+ if(mode=="ip")  ip=t(xr)%*%r/sqrt(diag(t(xr)%*%xr))
+  if(mode=="cor") ip=abs(cor(xr,r))
  ip[mod]=0
   pred[j]=which.max(abs(ip))
   scor[j]=ip[pred[j]]

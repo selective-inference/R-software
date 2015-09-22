@@ -32,11 +32,12 @@ the interface for the \code{lar} function)
 
 \details{
 This function implements forward stepwise regression, adding the predictor at each 
-step that maximizes the absolute correlation with the residual. This entry
+step that maximizes the absolute correlation between the predictors-- orthogonalized wrt the current model--  and the residual. This entry
 criterion is standard, and is equivalent to choosing the variable that achieves 
 the biggest drop in RSS at each step; it is used, e.g., by the \code{step} function
-in R. The \code{lars} package implements a stepwise option (with type="step"), but
-uses a different entry criterion, based on maximal absolute inner product.
+in R. Note that, for example,  the \code{lars} package implements a stepwise option (with type="step"), but
+uses a (mildly) different entry criterion, based on maximal absolute correlation between the original (non-orthogonalized)
+predictors and the residual. 
 }
 \value{
 \item{action}{Vector of predictors in order of entry}
