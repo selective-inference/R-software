@@ -1,5 +1,4 @@
-library(selectiveInference)
-
+#library(selectiveInference)
 library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
 library(lars)
@@ -147,101 +146,28 @@ x=as.matrix(x)
 x=scale(x,T,F)
 #x=scale(x,T,T)
 n=length(y)
-nams=scan("/Users/tibs/dropbox/PAPERS/FourOfUs/data64.names",what="")
+
+    nams=scan("/Users/tibs/dropbox/PAPERS/FourOfUs/data64.names",what="")
 y=scan("/Users/tibs/dropbox/PAPERS/FourOfUs/diab.y")
 y=y-mean(y)
 
 obj = fs(x,y,verb=T,intercept=T,norm=T)
 
 # Sequential inference
+
+ sigma= estimateSigma(x,y)$sigmahat
 out = fsInf(obj,sigma=sigma,k=20)
 out
-sum(out$ci[,1]>out$ci[,2])
-plot(out$pv,ylim=c(0,1))
+
 
 # AIC inference
-k = 20
-out2 = fsInf(obj,sigma=sigma,k=k,type="aic")
+
+out2 = fsInf(obj,sigma=sigma,type="aic")
 out2
 
 # Fixed step inference
 k = out2$khat
 out3 = fsInf(obj,sigma=sigma,k=k,type="all")
 out3
+    out4 = fsInf(obj,sigma=sigma,k=k,type="all",bits=200)
     
-###
-    
-myfs=function(x,y,nsteps=min(nrow(x),ncol(x)),mode=c("ip","ip2","cor","cor2","rss")){
-p=ncol(x)
-ip=rep(NA,p)
-# fs by minimizing scaled ip
-# first center x and y
-x=scale(x,T,F)
-y=y-mean(y)
-rss0=sum( (y-mean(y))^2)
-pred=s=scor=bhat=rep(NA,nsteps)
-  if(mode=="ip"| mode=="ip2")   ip=t(x)%*%y/sqrt(diag(t(x)%*%x))
-if(mode=="cor" | mode=="cor2") ip=abs(cor(x,y))
-
-if(mode=="rss") {for(j in 1:p){
-                a=lsfit(x[,j],y)
-                ip[j]=rss0-sum(a$res^2)
-            }}
-  pred[1]=which.max(abs(ip))
- s[1]=sign(sum(x[,pred[1]]*y))
-scor[1]=ip[pred[1]]
-bhat[1]=ip[pred[1]]/sqrt(sum(x[,pred[1]]^2))
-
-r=lsfit(x[,pred[1]],y)$res
-for(j in 2:nsteps){
-    cat(j)
-  mod=pred[1:(j-1)]
-  r= lsfit(x[,mod],r)$res
-  xr= lsfit(x[,mod],x)$res
- if(mode=="ip")  ip=t(xr)%*%r/sqrt(diag(t(xr)%*%xr))
-     if(mode=="ip2")  ip=t(x)%*%r/sqrt(diag(t(x)%*%x))
-  if(mode=="cor") ip=abs(cor(xr,r))
-      if(mode=="cor2") ip=abs(cor(x,r))
-  if(mode=="rss"){
-        for(k in (1:p)[-mod]){
-                a=lsfit(x[,c(mod,k)],r)
-                ip[k]=rss0-sum(a$res^2)
-            }}
-           
- ip[mod]=0
-  pred[j]=which.max(abs(ip))
-  scor[j]=ip[pred[j]]
-  s[j]=sign(sum(xr[,pred[j]]*r))
- bhat[j]=ip[pred[j]]/sqrt(sum(xr[,pred[j]]^2))
-}
-return(list(pred=pred,s=s,scor=scor,bhat=bhat))
-}
-
-
-    
-set.seed(144)
-n <- 40
-p <- 80
-maxsteps <- 10
-sparsity <- 5
-snr <- 3
-x=matrix(rnorm(n*p),n,p)
-#    x=scale(x,T,T)
-# Compare to step function in R
-index <- 1:ncol(x)
-y <- rnorm(n)
-beta <- rep(0, p)
-beta[which(index %in% 1:sparsity)] <- snr
-y <- y + x %*% beta
-df <- data.frame(y = y, x = x)
-fsfit <- step(lm(y ~ 1, df), direction="forward", scope = formula(lm(y~., df)), steps = 20)
-
-junk2=lars(x,y,type="step")
-    a=fs(x,y)
-    a2=myfs(x,y,mode="ip",nsteps=20)
-    a22=myfs(x,y,mode="ip2",nsteps=20)
-    a3=myfs(x,y,mode="cor",nsteps=20)
-    a33=myfs(x,y,mode="cor2",nsteps=20)
-    a4=myfs(x,y,mode="rss",nsteps=20)
-out=cbind(unlist(junk2$act)[1:20],names(fsfit$coefficients)[-1],a$act[1:20],a2$pred,a22$pred,a3$pred,a33$pred,a4$pred)
-colnames(out)=c("lars","step","myfs","myfs/ip","myfs/ip2","myfs/cor","myfs/cor2","myfs/rss")

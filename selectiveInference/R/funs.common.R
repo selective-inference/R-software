@@ -133,6 +133,7 @@ checkcols <- function(A) {
 }
 
 estimateSigma <- function(x, y, intercept=TRUE, standardize=TRUE) {
+  checkargs.xy(x,rep(0,nrow(x)))
   if(nrow(x)<10) stop("Number of observations must be at least 10 to run estimateSigma")
   cvfit=cv.glmnet(x,y,intercept=intercept,standardize=standardize)
   lamhat=cvfit$lambda.min
