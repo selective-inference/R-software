@@ -182,6 +182,7 @@ print.fixedLassoInf <- function(x, tailarea=TRUE, ...) {
 
 estimateLambda <- function(x, sigma, nsamp=1000){
   checkargs.xy(x,rep(0,nrow(x)))
+  if(nsamp < 10) stop("More Monte Carlo samples required for estimation")
   if (length(sigma)!=1) stop("sigma should be a number > 0")
   if (sigma<=0) stop("sigma should be a number > 0")
                                       

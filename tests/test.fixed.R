@@ -89,7 +89,7 @@ plot(bhat,bhat2)
 critf(bhat,lambda,x,y)
 critf(bhat2,lambda,x,y)
  junk= fixedLassoInf(x,y,bhat,lambda,sigma=sigma)
-
+junk= fixedLassoInf(x,y,bhat,lambda,sigma=sigma,bits=200)
 
  # check of KKT
 ch=function(bhat,tol.beta=1e-5,tol.kkt=0.1){
@@ -117,6 +117,8 @@ cvf=cv.glmnet(x,y)
 sigmahat=estimateSigma(x,y,stand=F)$si
 
 lambda=n*cvf$lambda.min
+
+lambda=estimateLambda(x,sigma=sigmahat)/2
 
 gfit=glmnet(x,y,standardize=F)
  

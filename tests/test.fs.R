@@ -1,4 +1,6 @@
-library(selectiveInference)
+#library(selectiveInference)
+library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+
 library(lars)
 
 set.seed(0)
@@ -144,25 +146,28 @@ x=as.matrix(x)
 x=scale(x,T,F)
 #x=scale(x,T,T)
 n=length(y)
-nams=scan("/Users/tibs/dropbox/PAPERS/FourOfUs/data64.names",what="")
+
+    nams=scan("/Users/tibs/dropbox/PAPERS/FourOfUs/data64.names",what="")
 y=scan("/Users/tibs/dropbox/PAPERS/FourOfUs/diab.y")
 y=y-mean(y)
 
 obj = fs(x,y,verb=T,intercept=T,norm=T)
 
 # Sequential inference
+
+ sigma= estimateSigma(x,y)$sigmahat
 out = fsInf(obj,sigma=sigma,k=20)
 out
-sum(out$ci[,1]>out$ci[,2])
-plot(out$pv,ylim=c(0,1))
+
 
 # AIC inference
-k = 20
-out2 = fsInf(obj,sigma=sigma,k=k,type="aic")
+
+out2 = fsInf(obj,sigma=sigma,type="aic")
 out2
 
 # Fixed step inference
 k = out2$khat
 out3 = fsInf(obj,sigma=sigma,k=k,type="all")
 out3
+    out4 = fsInf(obj,sigma=sigma,k=k,type="all",bits=200)
     
