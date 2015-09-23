@@ -1,39 +1,48 @@
 
 # TODO: fix a, b, c, below depending on if is.null(sigma)
-interval_groupfs <- function(action, projections, maxprojs, aicpens, maxpens, x, y, index, k, TC, R, Ugtilde, tol = 1e-15) {
+interval_groupfs <- function(action, projections, maxprojs, cumprojs, x, y, index, k, sigma, TC, R, Ugtilde, tol = 1e-15) {
 
   eta <- Ugtilde %*% R / TC
+  Z <- y - eta * TC
   n <- nrow(x)
 
   L <- lapply(1:length(action), function(step) {
 
     Ug <- maxprojs[[step]]
-    maxpen <- maxpens[[step]]
+    dfg <- ncol(Ug)
+
+    if (step > 1) {
+        etas <- cumprojs[[step-1]] %*% eta
+        Zs <- cumprojs[[step-1]] %*% Z
+    } else {
+        etas <- eta
+        Zs <- Z
+    }
 
     lapply(1:length(projections[[step]]), function(l) {
 
       Uh <- projections[[step]][[l]]
+      dfh <- ncol(Uh)
       # The quadratic form corresponding to
       # (t*U + Z)^T %*% Q %*% (t*U + Z) \geq 0
       # we find the roots in t, if there are any
       # and return the interval of potential t
-      aicpendiff <- maxpen - aicpens[[step]][[l]]
-      Uhy <- t(Uh) %*% y
-      Ugy <- t(Ug) %*% y
 
-      if (sum(Ugy^2) - sum(Uhy^2) - aicpendiff < -.Machine$double.eps) {
-        print(paste("Problematic projection:", l))
-        stop("Observation does not belong to selection region")
-      }
-
-      Z <- y - eta * TC
-      Uheta <- t(Uh) %*% eta
-      Ugeta <- t(Ug) %*% eta
-      UhZ <- t(Uh) %*% Z
-      UgZ <- t(Ug) %*% Z
+      Uheta <- t(Uh) %*% etas
+      Ugeta <- t(Ug) %*% etas
+      UhZ <- t(Uh) %*% Zs
+      UgZ <- t(Ug) %*% Zs
       A = sum(Ugeta^2) - sum(Uheta^2)
       B = 2 * (t(Ugeta) %*% UgZ - t(Uheta) %*% UhZ)
-      C = sum(UgZ^2) - sum(UhZ^2) - aicpendiff
+      C = sum(UgZ^2) - sum(UhZ^2)
+      if (is.null(sigma)) {
+          pendiff <- exp(k*dfg/n) - exp(k*dfh/n)
+          A <- A - sum(etas^2) * pendiff
+          B <- B - 2 * t(etas) %*% Zs * pendiff
+          C <- C - sum(Zs^2) * pendiff
+      } else {
+          C <- C - k * (dfg - dfh)/n
+      }
 
       disc <- B^2 - 4*A*C
       b2a <- -B/(2*A)

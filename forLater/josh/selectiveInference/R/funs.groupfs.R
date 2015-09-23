@@ -51,12 +51,13 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercep
   x.begin <- x.update
   y.begin <- y.update
   # Store all projections computed along the path
-  projections = maxprojs = aicpens = maxpens = vector("list", maxsteps)
+  projections = maxprojs = aicpens = maxpens = cumprojs = vector("list", maxsteps)
 
   # Store other information from each step
   path.info <- data.frame(imax=integer(maxsteps), L=numeric(maxsteps), df=integer(maxsteps), RSS=numeric(maxsteps), RSSdrop=numeric(maxsteps), chisq=numeric(maxsteps))
 
   modelrank <- 1
+  cumprojs[[1]] <- diag(rep(1, n))
 
   # Begin main loop
   for (step in 1:maxsteps) {
@@ -89,6 +90,8 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercep
     maxprojs[[step]] <- added$maxproj
     aicpens[[step]] <- added$aicpens
     maxpens[[step]] <- added$maxpen
+    if (step == 1) cumprojs[[step]] <- P.imax
+    if (step > 1) cumprojs[[step]] <- cumprojs[[step-1]] %*% P.imax
 
     # Compute RSS for unadjusted chisq p-values
     added$RSS <- sum(y.update^2)
@@ -106,7 +109,7 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercep
   }
 
   # Create output object
-  value <- list(action=path.info$imax, L=path.info$L, projections = projections, maxprojs = maxprojs, aicpens = aicpens, maxpens = maxpens, log = path.info, index = index, y = y.begin, x = x.begin, bx = xm, sx = xs, intercept = intercept)
+  value <- list(action=path.info$imax, L=path.info$L, projections = projections, maxprojs = maxprojs, aicpens = aicpens, maxpens = maxpens, cumprojs = cumprojs, log = path.info, index = index, y = y.begin, x = x.begin, bx = xm, sx = xs, intercept = intercept)
   class(value) <- "groupfs"
   attr(value, "labels") <- labels
   attr(value, "index") <- index
@@ -148,7 +151,8 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
     inds <- which(index == i)
     xi <- x[,inds]
     svdi <- svd(xi)
-    inds <- svdi$d > svdi$d[1] * sqrt(.Machine$double.eps)
+    #inds <- svdi$d > svdi$d[1] * sqrt(.Machine$double.eps)
+    inds <- 1:ncol(svdi$u)
     ui <- svdi$u[, inds, drop = FALSE]
     dfi <- ncol(ui)
     if (is.null(sigma)) {
@@ -172,7 +176,6 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
       if (is.null(sigma)) {
           aicpens[[key]] <- n2y * exp(k*dfi/n)
           terms[[key]] <- sum(Uy^2)  - aicpens[[key]]
-
       } else {
           aicpens[[key]] <- k * dfi/n #- n2y / sigma^2
           terms[[key]] <- sum(Uy^2) - aicpens[[key]]
@@ -182,6 +185,7 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
   # Maximizer = group to be added
   terms.maxind <- which.max(terms)
   imax <- inactive[terms.maxind]
+  print(imax)
   keyind <- which(keys == imax)
   maxproj <- projections[[keyind]]
   maxpen <- aicpens[[keyind]]
@@ -269,7 +273,7 @@ groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
     TCs[j] <- TC
 
     # For each step...
-    L <- interval_groupfs(obj$action, obj$projections, obj$maxprojs, obj$aicpens, obj$maxpens, x, y, index, k, TC, R, Ugtilde)
+    L <- interval_groupfs(obj$action, obj$projections, obj$maxprojs, obj$cumprojs, x, y, index, k, obj$sigma, TC, R, Ugtilde)
 
     # Any additional projections, e.g. from cross-validation?
     if (!is.null(projs)) L <- c(L, projs)

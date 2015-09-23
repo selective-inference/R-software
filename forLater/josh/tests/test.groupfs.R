@@ -66,7 +66,7 @@ for (j in 1:ncol(state.x77)) {
     }
     var <- as.factor(var)
     submat <- model.matrix(~ var - 1)
-    submat <- submat-mean(submat)
+ #   submat <- submat-mean(submat)
     inds <- ind:(ind+gsizes[j]-1)
     x[, inds] <- submat
     colnames(x)[inds] <- paste(colnames(state.x77)[j], 1:ncol(submat), sep=":")
@@ -75,7 +75,7 @@ for (j in 1:ncol(state.x77)) {
 }
 states <- cbind(states, state.division)
 submat <- model.matrix(~ state.division - 1)
-submat <- submat - mean(submat)
+#submat <- submat - mean(submat)
 inds <- ind:(ind+ndiv-1)
 x[, inds] <- submat
 colnames(x)[inds] <- paste("state.division", 1:ncol(submat), sep=":")
@@ -84,13 +84,14 @@ X <- scale_groups(x, index)$x
 p <- ncol(x)
 y <- rnorm(n)
 beta <- rep(0, p)
-nzinds <- which(index %in% sample(labels,sparsity))
+nz <- sample(labels,sparsity)
+nzinds <- which(index %in% nz)
 beta[nzinds] <- snr
 y <- y + x %*% beta
 y <- y-mean(y)
 df <- data.frame(y = y, states)
-fsfit <- step(lm(y ~ 0, df), direction="forward", scope = formula(lm(y~., df)), steps = maxsteps, k = 1)
-fit <- groupfs(x, y, index, maxsteps, k = 1)
+fsfit <- step(lm(y ~ 0, df), direction="forward", scope = formula(lm(y~., df)), steps = maxsteps, k = 2)
+fit <- groupfs(x, y, index, maxsteps, k = 2, normalize = T)
 # names(fsfit$coefficients)[-1]
 fsnames <- cnames[which(!is.na(charmatch(cnames,names(fsfit$coefficients)[-1])))][order(unlist(lapply(cnames, function(cn) {
     matches = grep(cn, names(fsfit$coefficients)[-1])
