@@ -51,13 +51,12 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercep
   x.begin <- x.update
   y.begin <- y.update
   # Store all projections computed along the path
-  projections = maxprojs = aicpens = maxpens = cumprojs = vector("list", maxsteps)
+  terms = projections = maxprojs = aicpens = maxpens = cumprojs = vector("list", maxsteps)
 
   # Store other information from each step
   path.info <- data.frame(imax=integer(maxsteps), L=numeric(maxsteps), df=integer(maxsteps), RSS=numeric(maxsteps), RSSdrop=numeric(maxsteps), chisq=numeric(maxsteps))
 
   modelrank <- 1
-  cumprojs[[1]] <- diag(rep(1, n))
 
   # Begin main loop
   for (step in 1:maxsteps) {
@@ -83,15 +82,17 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercep
     } else {
         P.imax <- P.imax * sigma^2
     }
-    y.update <- y.update - P.imax %*% y.update
-    x.update[, inactive.inds] <- x.update[, inactive.inds] - P.imax %*% x.update[, inactive.inds]
+    P.imax <- diag(rep(1, n)) - P.imax
+    y.update <- P.imax %*% y.update
+    x.update[, inactive.inds] <- P.imax %*% x.update[, inactive.inds]
 
     projections[[step]] <- added$projections
     maxprojs[[step]] <- added$maxproj
     aicpens[[step]] <- added$aicpens
     maxpens[[step]] <- added$maxpen
     if (step == 1) cumprojs[[step]] <- P.imax
-    if (step > 1) cumprojs[[step]] <- cumprojs[[step-1]] %*% P.imax
+    if (step > 1) cumprojs[[step]] <- P.imax %*% cumprojs[[step-1]]
+    terms[[step]] <- added$terms
 
     # Compute RSS for unadjusted chisq p-values
     added$RSS <- sum(y.update^2)
@@ -102,14 +103,14 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercep
     y.last <- y.update
 
     # Projections are stored separately
-    step.info <- data.frame(added[-c(4:7)])
+    step.info <- data.frame(added[-c(4:length(added))])
     path.info[step, ] <- step.info
 
     if (verbose) print(step.info)
   }
 
   # Create output object
-  value <- list(action=path.info$imax, L=path.info$L, projections = projections, maxprojs = maxprojs, aicpens = aicpens, maxpens = maxpens, cumprojs = cumprojs, log = path.info, index = index, y = y.begin, x = x.begin, bx = xm, sx = xs, intercept = intercept)
+  value <- list(action=path.info$imax, L=path.info$L, projections = projections, maxprojs = maxprojs, aicpens = aicpens, maxpens = maxpens, cumprojs = cumprojs, log = path.info, index = index, y = y.begin, x = x.begin, bx = xm, sx = xs, sigma = sigma, intercept = intercept, terms = terms)
   class(value) <- "groupfs"
   attr(value, "labels") <- labels
   attr(value, "index") <- index
@@ -151,8 +152,8 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
     inds <- which(index == i)
     xi <- x[,inds]
     svdi <- svd(xi)
-    #inds <- svdi$d > svdi$d[1] * sqrt(.Machine$double.eps)
-    inds <- 1:ncol(svdi$u)
+    inds <- svdi$d > svdi$d[1] * sqrt(.Machine$double.eps)
+    #inds <- 1:ncol(svdi$u)
     ui <- svdi$u[, inds, drop = FALSE]
     dfi <- ncol(ui)
     if (is.null(sigma)) {
@@ -174,8 +175,8 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
       dfi <- ncol(Ui)
       Uy <- t(Ui) %*% y
       if (is.null(sigma)) {
-          aicpens[[key]] <- n2y * exp(k*dfi/n)
-          terms[[key]] <- sum(Uy^2)  - aicpens[[key]]
+          aicpens[[key]] <- exp(k*dfi/n)
+          terms[[key]] <- sum(Uy^2)  - n2y * aicpens[[key]]
       } else {
           aicpens[[key]] <- k * dfi/n #- n2y / sigma^2
           terms[[key]] <- sum(Uy^2) - aicpens[[key]]
@@ -194,7 +195,7 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
 
   L <- terms[[terms.maxind]]
 
-  return(list(imax=imax, L=L, df = ncol(maxproj), projections = projections, maxproj = maxproj, aicpens = aicpens, maxpen = maxpen))
+  return(list(imax=imax, L=L, df = ncol(maxproj), projections = projections, maxproj = maxproj, aicpens = aicpens, maxpen = maxpen, terms = terms))
 }
 
 # -----------------------------------------------------------
@@ -214,14 +215,12 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
 #'   \item{df}{Rank of group of variables when it was added to the model.}
 #'   \item{support}{List of intervals defining the truncation region of the truncated chi.}
 #' }
-groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
+groupfsInf <- function(obj, projs = NULL) {
 
-  cat(paste("\nUsing sigma value:", attr(obj, "sigma"), "\n"))
+  cat(paste("\nUsing sigma value:", obj$sigma, "\n"))
 
-  x <- obj$x
-  n <- nrow(x)
-  p <- ncol(x)
-  y <- obj$y
+  n <- nrow(obj$x)
+  p <- ncol(obj$x)
   active <- obj$action
   maxsteps <- attr(obj, "maxsteps")
   k <- attr(obj, "k")
@@ -235,45 +234,41 @@ groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
   TCs <- numeric(maxsteps)
   supports <- list()
 
-  if (is.null(sigma)) {
+  if (is.null(obj$sigma)) {
     if (n >= 2*p) {
-      sigma <- sqrt(sum(lsfit(x, y, intercept = obj$intercept)$res^2)/(n-p-obj$intercept))
+      errscale <- sqrt(sum(lsfit(obj$x, obj$y, intercept = obj$intercept)$res^2)/(n-p-obj$intercept))
     } else {
-      #sigma = sd(y)
-      sigma = sqrt(obj$log$RSS[length(obj$log$RSS)]/(n-Ep-obj$intercept))
-      warning(paste(sprintf("p > n/2, and sigmahat = %0.3f used as an estimate of sigma;",sigma), "you may want to use the estimateSigma function"))
+      errscale = sqrt(obj$log$RSS[length(obj$log$RSS)]/(n-Ep-obj$intercept))
+      warning(paste(sprintf("p > n/2, and sigmahat = %0.3f used as an estimate of sigma;",errscale), "you may want to use the estimateSigma function"))
     }
+  } else {
+      errscale <- obj$sigma
   }
 
   # Compute p-value for each active group
   for (j in 1:maxsteps) {
     i <- active[j]
+    cat(paste("At step", j, "adding group", i, "\n"))
     # Form projection onto active set minus i
     # and project x_i orthogonally
-    x_i <- x[,which(index == i), drop = FALSE]
+    x_i <- obj$x[,which(obj$index == i), drop = FALSE]
     if (length(active) > 1) {
         minus_i <- setdiff(active, i)
-        x_minus_i <- svd(x[,which(index %in% minus_i), drop = FALSE])$u
+        x_minus_i <- svd(x[,which(obj$index %in% minus_i), drop = FALSE])$u
         x_i <- x_i - x_minus_i %*% t(x_minus_i) %*% x_i
     }
 
     # Project y onto what remains of x_i
     Ugtilde <- svd(x_i)$u
-    R <- t(Ugtilde) %*% y
-    # R ~ N(0, \sigma^2 P) under H_0 : P\mu = 0
-    # Z is independent of R, we effectively condition on Z
-    # Unit vector used for finding the truncation interval
-          # Fix scale
-          # What is conditional variance?
-    scale <- sigma
+    R <- t(Ugtilde) %*% obj$y
+    TC <- sqrt(sum(R^2))
+    eta <- Ugtilde %*% R / TC
     df <- ncol(Ugtilde)
     dfs[j] <- df
-    # The truncated chi
-    TC <- sqrt(sum(R^2))
     TCs[j] <- TC
 
     # For each step...
-    L <- interval_groupfs(obj$action, obj$projections, obj$maxprojs, obj$cumprojs, x, y, index, k, obj$sigma, TC, R, Ugtilde)
+    L <- interval_groupfs(obj, TC, R, eta, Ugtilde)
 
     # Any additional projections, e.g. from cross-validation?
     if (!is.null(projs)) L <- c(L, projs)
@@ -287,7 +282,7 @@ groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
 
     # Sum truncated cdf over each part of E
     denom <- do.call(sum, lapply(1:nrow(E), function(v) {
-      tchi_interval(E[v,1], E[v,2], scale, df)
+      tchi_interval(E[v,1], E[v,2], errscale, df)
     }))
 
     # Sum truncated cdf from observed value to max of
@@ -299,10 +294,10 @@ groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
         # Observed value is left of this interval's right endpoint
         if (lower < TC) {
           # Observed value is in this interval
-          return(tchi_interval(TC, upper, scale, df))
+          return(tchi_interval(TC, upper, errscale, df))
         } else {
           # Observed value is not in this interval
-          return(tchi_interval(lower, upper, scale, df))
+          return(tchi_interval(lower, upper, errscale, df))
         }
       } else {
         # Observed value is right of this entire interval
@@ -323,16 +318,16 @@ groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
   }
   if (nanconv) warning("P-value NaNs of the form 0/0 converted to 0. This typically occurs for numerical reasons in the presence of a large signal-to-noise ratio.")
   names(pvals) <- obj$action
-  out <- list(vars = active, pv=pvals, sigma=sigma, TC=TCs, df = dfs, support=supports)
+  out <- list(vars = active, pv=pvals, sigma=errscale, TC=TCs, df = dfs, support=supports)
   class(out) <- "groupfsInf"
   invisible(out)
 }
 
 # -----------------------------------------------------------
 
-tchi_interval <- function(lower, upper, scale, df) {
-  a <- (lower/scale)^2
-  b <- (upper/scale)^2
+tchi_interval <- function(lower, upper, errscale, df) {
+  a <- (lower/errscale)^2
+  b <- (upper/errscale)^2
   if (b == Inf) {
       integral <- pchisq(a, df, lower.tail = FALSE)
   } else {

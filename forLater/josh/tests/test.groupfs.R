@@ -24,7 +24,7 @@ y <- y + x %*% beta
 
 system.time({
     fit <- groupfs(x, y, index, maxsteps = maxsteps)
-    pvals <- groupfsInf(fit, sigma = 1)
+    pvals <- groupfsInf(fit)
 })
 
 # Compare to step function in R

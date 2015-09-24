@@ -1,27 +1,25 @@
 
-# TODO: fix a, b, c, below depending on if is.null(sigma)
-interval_groupfs <- function(action, projections, maxprojs, cumprojs, x, y, index, k, sigma, TC, R, Ugtilde, tol = 1e-15) {
+interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
 
-  eta <- Ugtilde %*% R / TC
-  Z <- y - eta * TC
-  n <- nrow(x)
+  Z <- obj$y - eta * TC
+  n <- nrow(obj$x)
 
-  L <- lapply(1:length(action), function(step) {
+  L <- lapply(1:length(obj$action), function(s) {
 
-    Ug <- maxprojs[[step]]
+    Ug <- obj$maxprojs[[s]]
     dfg <- ncol(Ug)
 
-    if (step > 1) {
-        etas <- cumprojs[[step-1]] %*% eta
-        Zs <- cumprojs[[step-1]] %*% Z
+    if (s > 1) {
+        etas <- obj$cumprojs[[s-1]] %*% eta
+        Zs <- obj$cumprojs[[s-1]] %*% Z
     } else {
         etas <- eta
         Zs <- Z
     }
 
-    lapply(1:length(projections[[step]]), function(l) {
+    lapply(1:length(obj$projections[[s]]), function(l) {
 
-      Uh <- projections[[step]][[l]]
+      Uh <- obj$projections[[s]][[l]]
       dfh <- ncol(Uh)
       # The quadratic form corresponding to
       # (t*U + Z)^T %*% Q %*% (t*U + Z) \geq 0
@@ -35,13 +33,13 @@ interval_groupfs <- function(action, projections, maxprojs, cumprojs, x, y, inde
       A = sum(Ugeta^2) - sum(Uheta^2)
       B = 2 * (t(Ugeta) %*% UgZ - t(Uheta) %*% UhZ)
       C = sum(UgZ^2) - sum(UhZ^2)
-      if (is.null(sigma)) {
-          pendiff <- exp(k*dfg/n) - exp(k*dfh/n)
+      pendiff <- obj$maxpens[[s]] - obj$aicpens[[s]][[l]]
+      if (is.null(obj$sigma)) {
           A <- A - sum(etas^2) * pendiff
-          B <- B - 2 * t(etas) %*% Zs * pendiff
+          B <- B - 2 * sum(etas^2) * pendiff
           C <- C - sum(Zs^2) * pendiff
       } else {
-          C <- C - k * (dfg - dfh)/n
+          C <- C - pendiff
       }
 
       disc <- B^2 - 4*A*C
@@ -55,13 +53,13 @@ interval_groupfs <- function(action, projections, maxprojs, cumprojs, x, y, inde
       } else {
 
         # No real roots
-        #if (a > 0) {
+        if (A > -tol) {
           # Quadratic form always positive
           return(Intervals(c(-Inf,0)))
-        #} else { #### Assume this never happens ####
+        } else { #### Assume this never happens ####
           # Quadratic form always negative
-        #  stop("Infeasible!")
-        #}
+          stop("Negative quadratic form: infeasible")
+        }
       }
 
       if (A > tol) {
