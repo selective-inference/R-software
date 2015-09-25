@@ -13,27 +13,29 @@
 #' @param verbose Print out progress along the way? Default is FALSE.
 #' @return An object of class "groupfs" containing information about the sequence of models in the forward stepwise algorithm. Call the function \code{\link{groupfsInf}} on this object to compute selective p-values.
 #' @examples
-#' x = matrix(rnorm(10*40, nrow=10))
+#' x = matrix(rnorm(20*40), nrow=20)
 #' index = sort(rep(1:20, 2))
-#' y = rnorm(10) + x[,1] - x[,2]
-#' fit = groupfs(x, y, index)
+#' y = rnorm(20) + 2 * (x[,1] - x[,2]) - (x[,3] - x[,4])
+#' fit = groupfs(x, y, index, maxsteps = 5)
 #' pvals = groupfsInf(fit)
 #' @seealso \code{\link{groupfsInf}}
 groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE, normalize = TRUE, verbose = FALSE) UseMethod("groupfs")
 
 groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE, normalize = TRUE, verbose=FALSE) {
 
+  if (missing(index)) stop("Missing argument: index.")
   p <- ncol(x)
   n <- nrow(x)
-  checkargs.xy(x=x, y=y)
-  checkargs.groupfs(x, index, maxsteps)
-
+  
   # Group labels
   labels <- unique(index)
   G <- length(labels)
   inactive <- labels
   active <- c()
-  if (missing(maxsteps) || maxsteps >= min(n, G)) maxsteps <- min(n-1, G)
+
+  if (missing(maxsteps) || maxsteps >= min(n, G)) maxsteps <- min(n-1, G)    
+  checkargs.xy(x=x, y=y)
+  checkargs.groupfs(x, index, maxsteps)
 
   # Initialize copies of data for loop
   by <- mean(y)
@@ -73,7 +75,9 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercep
     modelrank <- modelrank + added$df
 
     # Stop without adding if model has become saturated
-    if (modelrank >= n) break
+    if (modelrank >= n) {
+        stop("Saturated model. Abandon ship!")
+    }
 
     # Regress added group out of y and inactive x
     P.imax <- added$maxproj %*% t(added$maxproj)
@@ -145,6 +149,7 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
   ### Question for later: does this slow down lapply?
   keys = as.character(inactive)
   n2y <- sum(y^2)
+  n <- ncol(x)
 
   # Compute singular vectors of projections
   # X_i %*% X_i^\dagger
@@ -260,7 +265,9 @@ groupfsInf <- function(obj, projs = NULL) {
     }
 
     # Project y onto what remains of x_i
-    Ugtilde <- svd(x_i)$u
+    Ugtsvd <- svd(x_i)
+    inds <- Ugtsvd$d > Ugtsvd$d[1] * sqrt(.Machine$double.eps)
+    Ugtilde <- xmsvd$u[, inds, drop = FALSE]
     R <- t(Ugtilde) %*% obj$y
     TC <- sqrt(sum(R^2))
     eta <- Ugtilde %*% R / TC
@@ -377,7 +384,15 @@ scale_groups <- function(x, index, center = TRUE, scale = TRUE) {
   return(list(x=x, xm=xm, xs=xs))
 }
 
-factor_expand <- function(df) {
+#' Expand a data frame with factors to form a design matrix with the full binary encoding of each factor.
+#'
+#' @param df Data frame containing some columns which are \code{factors}.
+#' @return List containing
+#' \describe{
+#'   \item{x}{Design matrix, the first columns contain any numeric variables from the original date frame.}
+#'   \item{index}{Group membership indicator for expanded matrix.}
+#' }
+factor_design <- function(df) {
     factor.inds <- sapply(df[1,], is.factor)
     factor.labels <- which(factor.inds)
     nfacs <- sum(factor.inds)
@@ -436,11 +451,10 @@ print.groupfsInf <- function(x, ...) {
 }
 
 checkargs.groupfs <- function(x, index, maxsteps) {
-    if (missing(index)) stop("Missing argument: index.")
     if (length(index) != ncol(x)) stop("Length of index does not match number of columns of x")
     G <- length(unique(index))
     if (maxsteps > G) stop("maxsteps is larger than number of groups")
     gsizes <- sort(rle(sort(index))$lengths, decreasing = TRUE)
-    if (sum(gsizes[1:maxsteps]) > nrow(x)) stop("maxsteps is too large. If the largest groups are included the model is overdetermined")
+    if (sum(gsizes[1:maxsteps]) >= nrow(x)) stop("maxsteps is too large. If the largest groups are included the model will be saturated/overdetermined")
 }
 

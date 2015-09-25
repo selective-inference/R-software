@@ -18,7 +18,7 @@ groupfs(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE,
 
 \item{sigma}{Estimate of error standard deviation for use in AIC criterion. This determines the relative scale between RSS and the degrees of freedom penalty. Default is NULL corresponding to unknown sigma. See \code{\link{extractAIC}} for details.}
 
-\item{k}{Multiplier of model size penalty, use \code{k = 2} for AIC, \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.}
+\item{k}{Multiplier of model size penalty, the default is \code{k = 2} for AIC. Use \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.}
 
 \item{intercept}{Should an intercept be included in the model? Default is TRUE.}
 
@@ -33,10 +33,10 @@ An object of class "groupfs" containing information about the sequence of models
 \code{groupfs} implements forward selection of linear models almost identically to \code{\link{stepAIC}} with \code{direction = "forward"}. The reason this is a separate function from \code{\link{fs}} is that groups of variables (e.g. dummies encoding levels of a categorical variable) must be handled differently in the selective inference framework.
 }
 \examples{
-x = matrix(rnorm(10*40, nrow=10))
+x = matrix(rnorm(20*40), nrow=20)
 index = sort(rep(1:20, 2))
-y = rnorm(10) + x[,1] - x[,2]
-fit = groupfs(x, y, index)
+y = rnorm(20) + 2 * (x[,1] - x[,2]) - (x[,3] - x[,4])
+fit = groupfs(x, y, index, maxsteps = 5)
 pvals = groupfsInf(fit)
 }
 \seealso{

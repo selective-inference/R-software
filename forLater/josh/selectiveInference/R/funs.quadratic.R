@@ -34,6 +34,7 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
       B = 2 * (t(Ugeta) %*% UgZ - t(Uheta) %*% UhZ)
       C = sum(UgZ^2) - sum(UhZ^2)
       pendiff <- obj$maxpens[[s]] - obj$aicpens[[s]][[l]]
+
       if (is.null(obj$sigma)) {
           A <- A - sum(etas^2) * pendiff
           B <- B - 2 * sum(etas^2) * pendiff
@@ -41,6 +42,7 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
       } else {
           C <- C - pendiff
       }
+
 
       disc <- B^2 - 4*A*C
       b2a <- -B/(2*A)
