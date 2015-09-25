@@ -392,11 +392,18 @@ scale_groups <- function(x, index, center = TRUE, scale = TRUE) {
 #'   \item{x}{Design matrix, the first columns contain any numeric variables from the original date frame.}
 #'   \item{index}{Group membership indicator for expanded matrix.}
 #' }
+#' @examples
+#' \donotrun{
+#' fd = factor_design(warpbreaks)
+#' y = rnorm(nrow(fd$x))
+#' fit = groupfs(fd$x, y, fd$index, maxsteps=2, intercept=F)
+#' pvals = groupfsInf(fit)
+#' }
 factor_design <- function(df) {
     factor.inds <- sapply(df[1,], is.factor)
     factor.labels <- which(factor.inds)
     nfacs <- sum(factor.inds)
-    nlevs <- sapply(df[1,factor.inds], function(fac) length(levels(fac)))
+    nlevs <- sapply(df[1,factor.inds], function(fac) nlevels(fac))
     totnlevs <- sum(nlevs)
     num.num = indcounter = ncol(df) - nfacs
     x <- matrix(nrow=nrow(df), ncol = totnlevs + num.num)
@@ -406,13 +413,14 @@ factor_design <- function(df) {
         x[,1:num.num] <- df[, !factor.inds]
         colnames(x)[1:num.num] <- colnames(df)[1:num.num]
         index[1:num.num] <- 1:num.num
+        indcounter <- indcounter + num.num - 1
     }
     for (j in 1:nfacs) {
         submat <- model.matrix(~ df[, factor.labels[j]] - 1)
         indcounter <- indcounter+1
         submatinds <- indcounter:(indcounter+nlevs[j]-1)
         indcounter <- indcounter + nlevs[j] - 1
-        colnames(x)[submatinds] <- paste0(names(df)[j], ":", 1:nlevs[j])
+        colnames(x)[submatinds] <- paste0(colnames(df)[num.num + j], ":", 1:nlevs[j])
         x[,submatinds] <- submat
         index[submatinds] <- num.num + j
     }
