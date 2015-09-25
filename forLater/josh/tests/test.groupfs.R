@@ -101,3 +101,4 @@ x = matrix(rnorm(n*p), nrow=n)
 y = rnorm(n)
 fit = groupfs(x, y, index)
 pvals = groupfsInf(fit, sigma = 1)
+

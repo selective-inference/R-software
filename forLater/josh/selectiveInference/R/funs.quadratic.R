@@ -68,7 +68,7 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
         # Parabola opens upward
         if (min(endpoints) > 0) {
           # Both roots positive, union of intervals
-          return(Intervals(rbind(c(-Inf,min(endpoints)), c(max(endpoints), Inf))))
+          return(Intervals(rbind(c(-Inf,0), c(min(endpoints), max(endpoints)))))
         } else {
           # At least one negative root
           return(Intervals(c(-Inf, max(0, max(endpoints)))))
@@ -82,7 +82,7 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
             stop("Error: infeasible")
           } else {
             # Part which is positive
-            return(Intervals(rbind(c(-Inf, min(endpoints)), c(max(endpoints), Inf))))
+            return(Intervals(rbind(c(-Inf, max(0, min(endpoints))), c(max(endpoints), Inf))))
           }
         } else {
           # a is too close to 0, quadratic is actually linear
