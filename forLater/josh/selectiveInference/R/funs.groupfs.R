@@ -33,10 +33,17 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercep
   inactive <- labels
   active <- c()
 
-  if (missing(maxsteps) || maxsteps >= min(n, G)) maxsteps <- min(n-1, G)    
+  if (missing(maxsteps) || maxsteps >= min(n, G)) maxsteps <- min(n-1, G)
   checkargs.xy(x=x, y=y)
   checkargs.groupfs(x, index, maxsteps)
-
+  if (maxsteps > G) stop("maxsteps is larger than number of groups")
+  gsizes <- sort(rle(sort(index))$lengths, decreasing = TRUE)
+  if (sum(gsizes[1:maxsteps]) >= nrow(x)) {
+      maxsteps <- max(which(cumsum(gsizes) < nrow(x)))
+      warning(paste("If the largest groups are included the model will be saturated/overdetermined. To prevent this maxsteps has been changed to", maxsteps))
+  }
+  
+  
   # Initialize copies of data for loop
   by <- mean(y)
   y.update <- y
@@ -107,7 +114,7 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercep
     y.last <- y.update
 
     # Projections are stored separately
-    step.info <- data.frame(added[-c(4:length(added))])
+    step.info <- data.frame(added[-c(4:(length(added)-3))])
     path.info[step, ] <- step.info
 
     if (verbose) print(step.info)
@@ -219,9 +226,8 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
 #'   \item{df}{Rank of group of variables when it was added to the model.}
 #'   \item{support}{List of intervals defining the truncation region of the truncated chi.}
 #' }
-groupfsInf <- function(obj, projs = NULL) {
+groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
 
-  cat(paste("\nUsing sigma value:", obj$sigma, "\n"))
 
   n <- nrow(obj$x)
   p <- ncol(obj$x)
@@ -238,15 +244,21 @@ groupfsInf <- function(obj, projs = NULL) {
   TCs <- numeric(maxsteps)
   supports <- list()
 
-  if (is.null(obj$sigma)) {
-    if (n >= 2*p) {
-      errscale <- sqrt(sum(lsfit(obj$x, obj$y, intercept = obj$intercept)$res^2)/(n-p-obj$intercept))
-    } else {
-      errscale = sqrt(obj$log$RSS[length(obj$log$RSS)]/(n-Ep-obj$intercept))
-      warning(paste(sprintf("p > n/2, and sigmahat = %0.3f used as an estimate of sigma;",errscale), "you may want to use the estimateSigma function"))
-    }
+  if (!is.null(sigma)) {
+      if (!is.null(obj$sigma)) {
+          cat(paste("Using specified value", sigma, "for sigma in place of the value", obj$sigma, "used by groupfs()"))
+      }
   } else {
-      errscale <- obj$sigma
+      if (is.null(obj$sigma)) {
+          if (n >= 2*p) {
+              sigma <- sqrt(sum(lsfit(obj$x, obj$y, intercept = obj$intercept)$res^2)/(n-p-obj$intercept))
+          } else {
+              sigma = sqrt(obj$log$RSS[length(obj$log$RSS)]/(n-Ep-obj$intercept))
+              warning(paste(sprintf("p > n/2, and sigmahat = %0.3f used as an estimate of sigma;",sigma), "you may want to use the estimateSigma function"))
+          }
+      } else {
+          sigma <- obj$sigma
+      }      
   }
 
   # Compute p-value for each active group
@@ -267,7 +279,7 @@ groupfsInf <- function(obj, projs = NULL) {
     # Project y onto what remains of x_i
     Ugtsvd <- svd(x_i)
     inds <- Ugtsvd$d > Ugtsvd$d[1] * sqrt(.Machine$double.eps)
-    Ugtilde <- xmsvd$u[, inds, drop = FALSE]
+    Ugtilde <- Ugtsvd$u[, inds, drop = FALSE]
     R <- t(Ugtilde) %*% obj$y
     TC <- sqrt(sum(R^2))
     eta <- Ugtilde %*% R / TC
@@ -282,7 +294,9 @@ groupfsInf <- function(obj, projs = NULL) {
     if (!is.null(projs)) L <- c(L, projs)
 
     # Compute intersection:
-    E <- interval_complement(do.call(interval_union, L), check_valid = FALSE)
+    Lunion <- do.call(interval_union, L)
+    Lunion <- interval_union(Lunion, Intervals(c(-Inf,0)))
+    E <- interval_complement(Lunion, check_valid = FALSE)
     supports[[j]] <- E
 
     # E is now potentially a union of intervals
@@ -290,7 +304,7 @@ groupfsInf <- function(obj, projs = NULL) {
 
     # Sum truncated cdf over each part of E
     denom <- do.call(sum, lapply(1:nrow(E), function(v) {
-      tchi_interval(E[v,1], E[v,2], errscale, df)
+      tchi_interval(E[v,1], E[v,2], sigma, df)
     }))
 
     # Sum truncated cdf from observed value to max of
@@ -302,10 +316,10 @@ groupfsInf <- function(obj, projs = NULL) {
         # Observed value is left of this interval's right endpoint
         if (lower < TC) {
           # Observed value is in this interval
-          return(tchi_interval(TC, upper, errscale, df))
+          return(tchi_interval(TC, upper, sigma, df))
         } else {
           # Observed value is not in this interval
-          return(tchi_interval(lower, upper, errscale, df))
+          return(tchi_interval(lower, upper, sigma, df))
         }
       } else {
         # Observed value is right of this entire interval
@@ -326,16 +340,16 @@ groupfsInf <- function(obj, projs = NULL) {
   }
   if (nanconv) warning("P-value NaNs of the form 0/0 converted to 0. This typically occurs for numerical reasons in the presence of a large signal-to-noise ratio.")
   names(pvals) <- obj$action
-  out <- list(vars = active, pv=pvals, sigma=errscale, TC=TCs, df = dfs, support=supports)
+  out <- list(vars = active, pv=pvals, sigma=sigma, TC=TCs, df = dfs, support=supports)
   class(out) <- "groupfsInf"
   invisible(out)
 }
 
 # -----------------------------------------------------------
 
-tchi_interval <- function(lower, upper, errscale, df) {
-  a <- (lower/errscale)^2
-  b <- (upper/errscale)^2
+tchi_interval <- function(lower, upper, sigma, df) {
+  a <- (lower/sigma)^2
+  b <- (upper/sigma)^2
   if (b == Inf) {
       integral <- pchisq(a, df, lower.tail = FALSE)
   } else {
@@ -460,9 +474,5 @@ print.groupfsInf <- function(x, ...) {
 
 checkargs.groupfs <- function(x, index, maxsteps) {
     if (length(index) != ncol(x)) stop("Length of index does not match number of columns of x")
-    G <- length(unique(index))
-    if (maxsteps > G) stop("maxsteps is larger than number of groups")
-    gsizes <- sort(rle(sort(index))$lengths, decreasing = TRUE)
-    if (sum(gsizes[1:maxsteps]) >= nrow(x)) stop("maxsteps is too large. If the largest groups are included the model will be saturated/overdetermined")
 }
 

@@ -34,15 +34,15 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
       B = 2 * (t(Ugeta) %*% UgZ - t(Uheta) %*% UhZ)
       C = sum(UgZ^2) - sum(UhZ^2)
       pendiff <- obj$maxpens[[s]] - obj$aicpens[[s]][[l]]
-
-      if (is.null(obj$sigma)) {
-          A <- A - sum(etas^2) * pendiff
-          B <- B - 2 * sum(etas^2) * pendiff
-          C <- C - sum(Zs^2) * pendiff
-      } else {
-          C <- C - pendiff
+      if (pendiff != 0) {
+          if (is.null(obj$sigma)) {
+              A <- A - sum(etas^2) * pendiff
+              B <- B - 2 * sum(etas^2) * pendiff
+              C <- C - sum(Zs^2) * pendiff
+          } else {
+              C <- C - pendiff
+          }
       }
-
 
       disc <- B^2 - 4*A*C
       b2a <- -B/(2*A)
@@ -58,7 +58,7 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
         if (A > -tol) {
           # Quadratic form always positive
           return(Intervals(c(-Inf,0)))
-        } else { #### Assume this never happens ####
+        } else { 
           # Quadratic form always negative
           stop("Negative quadratic form: infeasible")
         }
@@ -68,7 +68,7 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
         # Parabola opens upward
         if (min(endpoints) > 0) {
           # Both roots positive, union of intervals
-          return(Intervals(rbind(c(-Inf,0), c(min(endpoints), max(endpoints)))))
+          return(Intervals(rbind(c(-Inf,min(endpoints)), c(max(endpoints), Inf))))
         } else {
           # At least one negative root
           return(Intervals(c(-Inf, max(0, max(endpoints)))))
@@ -82,7 +82,7 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
             stop("Error: infeasible")
           } else {
             # Part which is positive
-            return(Intervals(rbind(c(-Inf, max(0, min(endpoints))), c(max(endpoints), Inf))))
+            return(Intervals(rbind(c(-Inf, min(endpoints)), c(max(endpoints), Inf))))
           }
         } else {
           # a is too close to 0, quadratic is actually linear

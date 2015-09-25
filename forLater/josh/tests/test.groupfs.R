@@ -91,3 +91,13 @@ cnames[fit$action]#[1:length(fsnames)]
 } else {
     print("empty")
 }
+
+
+n = 100
+p = 120
+# 10 groups of size 10, 10 groups of size 2
+index = sort(c(c(1, 1), rep(2:11, 10), rep(12:20, 2)))
+x = matrix(rnorm(n*p), nrow=n)
+y = rnorm(n)
+fit = groupfs(x, y, index)
+pvals = groupfsInf(fit, sigma = 1)
