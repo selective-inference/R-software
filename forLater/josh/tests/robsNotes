@@ -1,0 +1,37 @@
+notes
+
+see bottom of test.groupfs.R
+
+1. with n=100,  p=120,14 groups, groupfs(x, y,index)  returned
+ 
+
+  Error in checkargs.groupfs(x, index, maxsteps) : 
+  maxsteps is too large. If the largest groups are included the model will be saturated/overdetermined
+
+should have a sensible default so this doesn;t happen
+
+
+2. a=groupfs(x,y,index,maxsteps=4)
+groupfsInf(a)   gives
+
+
+Using sigma value:  
+Step 1 - computing p-value for group 14 
+Step 2 - computing p-value for group 12 
+Step 3 - computing p-value for group 1 
+Step 4 - computing p-value for group 13 
+Warning messages:
+1: In groupfsInf(a) :
+  p > n/2, and sigmahat = 0.434 used as an estimate of sigma; you may want to use the estimateSigma function
+2: In groupfsInf(a) :
+  P-value NaNs of the form 0/0 converted to 0. This typically occurs for numerical reasons in the presence of a large signal-to-noise ratio.
+> aa
+
+Standard deviation of noise (specified or estimated) sigma = 0.434
+Error in lapply(pvals$support, size) : object 'pvals' not found
+
+
+
+3.  groupfs  has a sigma arg listed in the Rd file, but it's  not in the function??
+
+you need to do a R CMD check to  pick up this stuff
