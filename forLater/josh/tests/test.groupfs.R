@@ -54,9 +54,6 @@ sparsity <- 3
 snr <- 5
 states <- data.frame(matrix(NA, nrow=n, ncol=ncol(state.x77)))
 colnames(states) <- colnames(state.x77)
-x <- matrix(NA, nrow = n, ncol = sum(gsizes))
-colnames(x) <- 1:ncol(x)
-ind <- 1
 for (j in 1:ncol(state.x77)) {
     var <- state.x77[,j]
     qs <- quantile(var, probs = seq(0, 1, length.out = gsizes[j]+1))
@@ -65,20 +62,10 @@ for (j in 1:ncol(state.x77)) {
         var[i] <- sum(var[i] >= qs)
     }
     var <- as.factor(var)
-    submat <- model.matrix(~ var - 1)
- #   submat <- submat-mean(submat)
-    inds <- ind:(ind+gsizes[j]-1)
-    x[, inds] <- submat
-    colnames(x)[inds] <- paste(colnames(state.x77)[j], 1:ncol(submat), sep=":")
-    ind <- ind+gsizes[j]
     states[,j] <- var
 }
 states <- cbind(states, state.division)
-submat <- model.matrix(~ state.division - 1)
-#submat <- submat - mean(submat)
-inds <- ind:(ind+ndiv-1)
-x[, inds] <- submat
-colnames(x)[inds] <- paste("state.division", 1:ncol(submat), sep=":")
+x <- factor_expand(states)$x
 X <- scale_groups(x, index)$x
 
 p <- ncol(x)
@@ -93,10 +80,14 @@ df <- data.frame(y = y, states)
 fsfit <- step(lm(y ~ 0, df), direction="forward", scope = formula(lm(y~., df)), steps = maxsteps, k = 2)
 fit <- groupfs(x, y, index, maxsteps, k = 2, normalize = T)
 # names(fsfit$coefficients)[-1]
-fsnames <- cnames[which(!is.na(charmatch(cnames,names(fsfit$coefficients)[-1])))][order(unlist(lapply(cnames, function(cn) {
+if (length(fsfit$coefficients) > 0) {
+    fsnames <- cnames[which(!is.na(charmatch(cnames,names(fsfit$coefficients)[-1])))][order(unlist(lapply(cnames, function(cn) {
     matches = grep(cn, names(fsfit$coefficients)[-1])
     if (length(matches) > 0) min(matches)
     else NULL
 })))]
 fsnames
 cnames[fit$action]#[1:length(fsnames)]
+} else {
+    print("empty")
+}

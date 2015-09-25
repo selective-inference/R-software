@@ -7,7 +7,7 @@
 #' @param index Group membership indicator of length p.
 #' @param maxsteps Maximum number of steps for forward stepwise.
 #' @param sigma Estimate of error standard deviation for use in AIC criterion. This determines the relative scale between RSS and the degrees of freedom penalty. Default is NULL corresponding to unknown sigma. See \code{\link{extractAIC}} for details.
-#' @param k Multiplier of model size penalty, use \code{k = 2} for AIC, \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.
+#' @param k Multiplier of model size penalty, the default is \code{k = 2} for AIC. Use \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.
 #' @param intercept Should an intercept be included in the model? Default is TRUE.
 #' @param normalize Should the design matrix be normalized? Default is TRUE.
 #' @param verbose Print out progress along the way? Default is FALSE.
@@ -186,7 +186,6 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
   # Maximizer = group to be added
   terms.maxind <- which.max(terms)
   imax <- inactive[terms.maxind]
-  print(imax)
   keyind <- which(keys == imax)
   maxproj <- projections[[keyind]]
   maxpen <- aicpens[[keyind]]
@@ -248,13 +247,15 @@ groupfsInf <- function(obj, projs = NULL) {
   # Compute p-value for each active group
   for (j in 1:maxsteps) {
     i <- active[j]
-    cat(paste("At step", j, "adding group", i, "\n"))
+    cat(paste("Step", j, "- computing p-value for group", i, "\n"))
     # Form projection onto active set minus i
     # and project x_i orthogonally
     x_i <- obj$x[,which(obj$index == i), drop = FALSE]
     if (length(active) > 1) {
         minus_i <- setdiff(active, i)
-        x_minus_i <- svd(x[,which(obj$index %in% minus_i), drop = FALSE])$u
+        xmsvd <- svd(x[,which(obj$index %in% minus_i), drop = FALSE])
+        inds <- xmsvd$d > xmsvd$d[1] * sqrt(.Machine$double.eps)
+        x_minus_i <- xmsvd$u[, inds, drop = FALSE]
         x_i <- x_i - x_minus_i %*% t(x_minus_i) %*% x_i
     }
 
@@ -374,6 +375,33 @@ scale_groups <- function(x, index, center = TRUE, scale = TRUE) {
 
   }
   return(list(x=x, xm=xm, xs=xs))
+}
+
+factor_expand <- function(df) {
+    factor.inds <- sapply(df[1,], is.factor)
+    factor.labels <- which(factor.inds)
+    nfacs <- sum(factor.inds)
+    nlevs <- sapply(df[1,factor.inds], function(fac) length(levels(fac)))
+    totnlevs <- sum(nlevs)
+    num.num = indcounter = ncol(df) - nfacs
+    x <- matrix(nrow=nrow(df), ncol = totnlevs + num.num)
+    colnames(x) <- 1:ncol(x)
+    index <- integer(ncol(x))
+    if (num.num > 0) {
+        x[,1:num.num] <- df[, !factor.inds]
+        colnames(x)[1:num.num] <- colnames(df)[1:num.num]
+        index[1:num.num] <- 1:num.num
+    }
+    for (j in 1:nfacs) {
+        submat <- model.matrix(~ df[, factor.labels[j]] - 1)
+        indcounter <- indcounter+1
+        submatinds <- indcounter:(indcounter+nlevs[j]-1)
+        indcounter <- indcounter + nlevs[j] - 1
+        colnames(x)[submatinds] <- paste0(names(df)[j], ":", 1:nlevs[j])
+        x[,submatinds] <- submat
+        index[submatinds] <- num.num + j
+    }
+    return(list(x = x, index = index))
 }
 
 flatten <- function(L) {
