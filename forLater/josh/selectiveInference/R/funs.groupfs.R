@@ -228,13 +228,14 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
 #' }
 groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
 
-
   n <- nrow(obj$x)
   p <- ncol(obj$x)
   active <- obj$action
   maxsteps <- attr(obj, "maxsteps")
   k <- attr(obj, "k")
   index <- obj$index
+  x <- obj$x
+  y <- obj$y
   Eindex <- which(index %in% active)
   Ep <- length(Eindex)
 
@@ -267,10 +268,10 @@ groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
     cat(paste("Step", j, "- computing p-value for group", i, "\n"))
     # Form projection onto active set minus i
     # and project x_i orthogonally
-    x_i <- obj$x[,which(obj$index == i), drop = FALSE]
+    x_i <- x[,which(index == i), drop = FALSE]
     if (length(active) > 1) {
         minus_i <- setdiff(active, i)
-        xmsvd <- svd(x[,which(obj$index %in% minus_i), drop = FALSE])
+        xmsvd <- svd(x[,which(index %in% minus_i), drop = FALSE])
         inds <- xmsvd$d > xmsvd$d[1] * sqrt(.Machine$double.eps)
         x_minus_i <- xmsvd$u[, inds, drop = FALSE]
         x_i <- x_i - x_minus_i %*% t(x_minus_i) %*% x_i
@@ -280,7 +281,7 @@ groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
     Ugtsvd <- svd(x_i)
     inds <- Ugtsvd$d > Ugtsvd$d[1] * sqrt(.Machine$double.eps)
     Ugtilde <- Ugtsvd$u[, inds, drop = FALSE]
-    R <- t(Ugtilde) %*% obj$y
+    R <- t(Ugtilde) %*% y
     TC <- sqrt(sum(R^2))
     eta <- Ugtilde %*% R / TC
     df <- ncol(Ugtilde)
@@ -449,11 +450,11 @@ flatten <- function(L) {
 print.groupfs <- function(x, ...) {
     cat("\nSequence of added groups:\n")
     nsteps = length(x$action)
-    tab = cbind(1:nsteps, x$action, x$log$df)
-    colnames(tab) = c("Step", "Group", "Rank")
+    tab = cbind(1:nsteps, x$action, x$log$df, round(x$log$RSS, 3))
+    colnames(tab) = c("Step", "Group", "Rank", "RSS")
     rownames(tab) = rep("", nrow(tab))
     print(tab)
-    cat("\nUse groupfsInf() function to compute P-values\n")
+    cat("\nUse groupfsInf() to compute P-values\n")
     invisible()
 }
 
@@ -461,14 +462,13 @@ print.groupfsInf <- function(x, ...) {
     cat(sprintf("\nStandard deviation of noise (specified or estimated) sigma = %0.3f\n",
                               x$sigma))
     tab = cbind(x$vars, round(x$pv, 3), round(x$TC, 3), x$df,
-        round(unlist(lapply(lapply(pvals$support, size), sum)), 3),
-        unlist(lapply(pvals$support, nrow)), round(unlist(lapply(pvals$support, min)), 3),
-        round(unlist(lapply(pvals$support, max)), 3))
-    colnames(tab) = c("Var", "P-value", "Tchi", "df", "Int. size", "Components",
-                "Int. inf", "Int. sup")
+        round(unlist(lapply(lapply(x$support, size), sum)), 3),
+        unlist(lapply(x$support, nrow)), round(unlist(lapply(x$support, min)), 3),
+        round(unlist(lapply(x$support, max)), 3))
+    colnames(tab) = c("Var", "P-value", "Tchi", "df", "Size", "Ints.", "Min", "Max")
     rownames(tab) = rep("", nrow(tab))
     print(tab)
-    cat("\nInt. inf and Int. sup are the lowest and highest endpoints of the truncation interval. No confidence intervals are reported by groupfsInf.\n")
+    cat("\nMin and Max are the lowest and highest endpoints of the truncation region. No confidence intervals are reported by groupfsInf.\n")
     invisible()
 }
 

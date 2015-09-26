@@ -3,8 +3,8 @@ library(intervals)
 source("../../../selectiveInference/R/funs.common.R")
 source("../selectiveInference/R/funs.groupfs.R")
 source("../selectiveInference/R/funs.quadratic.R")
-source("../selectiveInference/R/funs.fs.R")
-source("../selectiveInference/R/funs.lar.R")
+#source("../selectiveInference/R/funs.fs.R")
+#source("../selectiveInference/R/funs.lar.R")
 #library(selectiveInference)
 #library(lars)
 
@@ -65,7 +65,7 @@ for (j in 1:ncol(state.x77)) {
     states[,j] <- var
 }
 states <- cbind(states, state.division)
-x <- factor_expand(states)$x
+x <- factor_design(states)$x
 X <- scale_groups(x, index)$x
 
 p <- ncol(x)
@@ -100,5 +100,5 @@ index = sort(c(c(1, 1), rep(2:11, 10), rep(12:20, 2)))
 x = matrix(rnorm(n*p), nrow=n)
 y = rnorm(n)
 fit = groupfs(x, y, index)
-pvals = groupfsInf(fit, sigma = 1)
+pvals = groupfsInf(fit)
 

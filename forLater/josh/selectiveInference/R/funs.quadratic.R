@@ -1,4 +1,7 @@
 
+# n2y * exp(k*dfi/n) ??
+# any logic wrong?
+# A < tol <-> max(A, B, C) < tol???
 interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
 
   Z <- obj$y - eta * TC
@@ -19,6 +22,7 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
 
     lapply(1:length(obj$projections[[s]]), function(l) {
 
+        print(c(s, l))
       Uh <- obj$projections[[s]][[l]]
       dfh <- ncol(Uh)
       # The quadratic form corresponding to
@@ -36,6 +40,7 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
       pendiff <- obj$maxpens[[s]] - obj$aicpens[[s]][[l]]
       if (pendiff != 0) {
           if (is.null(obj$sigma)) {
+#              pendiff <- pendiff * sum((TC * etas + Zs)^2)
               A <- A - sum(etas^2) * pendiff
               B <- B - 2 * sum(etas^2) * pendiff
               C <- C - sum(Zs^2) * pendiff
@@ -50,7 +55,7 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
       if (disc > tol) {
         # Real roots
         pm <- sqrt(disc)/(2*A)
-        endpoints <- c(b2a - pm, b2a + pm)
+        endpoints <- sort(c(b2a - pm, b2a + pm))
 
       } else {
 
@@ -60,7 +65,7 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
           return(Intervals(c(-Inf,0)))
         } else { 
           # Quadratic form always negative
-          stop("Negative quadratic form: infeasible")
+          stop(paste("Empty TC support is infeasible", s, "-", l))
         }
       }
 
@@ -68,21 +73,25 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
         # Parabola opens upward
         if (min(endpoints) > 0) {
           # Both roots positive, union of intervals
-          return(Intervals(rbind(c(-Inf,0), c(min(endpoints), max(endpoints)))))
+          return(Intervals(rbind(c(-Inf,0), endpoints)))
         } else {
           # At least one negative root
-          return(Intervals(c(-Inf, max(0, max(endpoints)))))
+          return(Intervals(c(-Inf, max(0, endpoints[2]))))
         }
       } else {
         if (A < -tol) {
           # Parabola opens downward
-          if (max(endpoints) < 0) {
+          if (endpoints[2] < 0) {
 
             # Positive quadratic form only when t negative
-            stop("Error: infeasible")
+            stop(paste("Negative TC support is infeasible", s, "-", l))
           } else {
             # Part which is positive
-            return(Intervals(rbind(c(-Inf, max(0, min(endpoints))), c(max(endpoints), Inf))))
+            if (endpoints[1] > 0) {
+                return(Intervals(rbind(c(-Inf, endpoints[1]), c(endpoints[2], Inf))))
+            } else {
+                return(Intervals(c(endpoints[2], Inf)))
+            }
           }
         } else {
           # a is too close to 0, quadratic is actually linear
