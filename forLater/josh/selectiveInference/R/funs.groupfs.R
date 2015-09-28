@@ -323,6 +323,9 @@ groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
   names(pvals) <- obj$action
   out <- list(vars = active, pv=pvals, sigma=sigma, TC=TCs, df = dfs, support=supports)
   class(out) <- "groupfsInf"
+  if (!is.null(attr(obj, "varnames"))) {
+      attr(out, "varnames") <- attr(obj, "varnames")
+  }
   invisible(out)
 }
 
@@ -388,12 +391,10 @@ scale_groups <- function(x, index, center = TRUE, scale = TRUE) {
 #'   \item{index}{Group membership indicator for expanded matrix.}
 #' }
 #' @examples
-#' \donotrun{
 #' fd = factor_design(warpbreaks)
 #' y = rnorm(nrow(fd$x))
 #' fit = groupfs(fd$x, y, fd$index, maxsteps=2, intercept=F)
 #' pvals = groupfsInf(fit)
-#' }
 factor_design <- function(df) {
     factor.inds <- sapply(df[1,], is.factor)
     factor.labels <- which(factor.inds)
@@ -404,9 +405,10 @@ factor_design <- function(df) {
     x <- matrix(nrow=nrow(df), ncol = totnlevs + num.num)
     colnames(x) <- 1:ncol(x)
     index <- integer(ncol(x))
+    varnames <- character(ncol(df))
     if (num.num > 0) {
         x[,1:num.num] <- df[, !factor.inds]
-        colnames(x)[1:num.num] <- colnames(df)[1:num.num]
+        varnames[1:num.num] = colnames(x)[1:num.num] <- colnames(df)[1:num.num]
         index[1:num.num] <- 1:num.num
         indcounter <- indcounter + num.num - 1
     }
@@ -416,9 +418,11 @@ factor_design <- function(df) {
         submatinds <- indcounter:(indcounter+nlevs[j]-1)
         indcounter <- indcounter + nlevs[j] - 1
         colnames(x)[submatinds] <- paste0(colnames(df)[num.num + j], ":", 1:nlevs[j])
+        varnames[num.num + j] <- colnames(df)[num.num + j]
         x[,submatinds] <- submat
         index[submatinds] <- num.num + j
     }
+    attr(x, "varnames") <- varnames
     return(list(x = x, index = index))
 }
 
@@ -436,23 +440,26 @@ flatten <- function(L) {
 print.groupfs <- function(x, ...) {
     cat("\nSequence of added groups:\n")
     nsteps = length(x$action)
-    tab = cbind(1:nsteps, x$action, x$log$df, round(x$log$RSS, 3))
-    colnames(tab) = c("Step", "Group", "Rank", "RSS")
-    rownames(tab) = rep("", nrow(tab))
+    action <- x$action
+    vnames <- attr(x, "varnames")
+    if (length(vnames) > 0) action <- vnames[action]
+    tab = data.frame(Group = action, Rank = x$log$df, RSS = round(x$log$RSS, 3))
+    rownames(tab) = 1:nsteps
     print(tab)
     cat("\nUse groupfsInf() to compute P-values\n")
     invisible()
 }
 
 print.groupfsInf <- function(x, ...) {
-    cat(sprintf("\nStandard deviation of noise (specified or estimated) sigma = %0.3f\n",
-                              x$sigma))
-    tab = cbind(x$vars, round(x$pv, 3), round(x$TC, 3), x$df,
-        round(unlist(lapply(lapply(x$support, size), sum)), 3),
-        unlist(lapply(x$support, nrow)), round(unlist(lapply(x$support, min)), 3),
-        round(unlist(lapply(x$support, max)), 3))
-    colnames(tab) = c("Var", "P-value", "Tchi", "df", "Size", "Ints.", "Min", "Max")
-    rownames(tab) = rep("", nrow(tab))
+    cat(sprintf("\nStandard deviation of noise (specified or estimated) sigma = %0.3f\n", x$sigma))
+    action <- x$vars
+    vnames <- attr(x, "varnames")
+    if (length(vnames) > 0) action <- vnames[action]
+    tab = data.frame(Var = action, Pvalue = round(x$pv, 3), Tchi = round(x$TC, 3),
+        df = x$df, Size = round(unlist(lapply(lapply(x$support, size), sum)), 3),
+        Ints = unlist(lapply(x$support, nrow)), Min =round(unlist(lapply(x$support, min)), 3),
+        Max = round(unlist(lapply(x$support, max)), 3))
+    rownames(tab) = 1:length(x$vars)
     print(tab)
     cat("\nMin and Max are the lowest and highest endpoints of the truncation region. No confidence intervals are reported by groupfsInf.\n")
     invisible()

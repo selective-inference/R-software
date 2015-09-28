@@ -1,8 +1,4 @@
 
-# I - Ug %*% t(Ug) is NOT a projection! Fix this first
-# n2y * exp(k*dfi/n) ??
-# any logic wrong?
-# A < tol <-> max(A, B, C) < tol???
 interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
 
   Z <- obj$y - eta * TC
@@ -188,37 +184,3 @@ TF_roots <- function(Q, a, b, Vdelta, V2, z, C, r, tol = 1e-14) {
 
     return(list(intervals = Intervals(c(0,Inf)), I=I))
 }
-
-
-## # test
-## for(i in 1:10) {
-## n <- 100
-## p <- 90
-## y <- rnorm(n)
-## x <- rnorm(n)
-## X2 <- matrix(rnorm((p-1)*n),ncol=p-1)
-## X <- cbind(x,X2)
-## Psub <- x %*% ginv(x)
-## Pfull <- X %*% ginv(X)
-## Pz <- diag(rep(1,n)) - Psub
-## PM <- diag(rep(1,n)) - Pfull
-## R1 <- Pz %*% y
-## R2 <- PM %*% y
-## z <- y - R1
-## C <- sum(diag(Pfull-Psub))/sum(diag(Psub))
-## norm2R1 <- sum(R1^2)
-## norm2R2 <- sum(R2^2)
-## TF <- (norm2R1-norm2R2)/(C*norm2R2)
-## r = sqrt(norm2R2)
-## Vdelta <- (R1-R2)/sqrt(norm2R1-norm2R2)
-## V2 <- R2/r
-## Q <- diag(runif(n))
-## a <- rnorm(n)
-## b <- rnorm(1)
-## froots <- F_roots(Q,a,b,Vdelta,V2,z,C,r)
-## print(froots$intervals)
-## }
-## #        t <- seq(from = 0, to = 50, length.out = 10000)
-## #        plot(t,froots$I(t), type = "l")
-## #        points(roots,I(roots),col="red")
-## #        abline(h=0)
