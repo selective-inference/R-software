@@ -26,7 +26,7 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercep
   if (missing(index)) stop("Missing argument: index.")
   p <- ncol(x)
   n <- nrow(x)
-  
+
   # Group labels
   labels <- unique(index)
   G <- length(labels)
@@ -42,8 +42,8 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercep
       maxsteps <- max(which(cumsum(gsizes) < nrow(x)))
       warning(paste("If the largest groups are included the model will be saturated/overdetermined. To prevent this maxsteps has been changed to", maxsteps))
   }
-  
-  
+
+
   # Initialize copies of data for loop
   by <- mean(y)
   y.update <- y
@@ -167,7 +167,7 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
       inds <- which(index == key)
       xi <- x[,inds]
       ui <- svdu_thresh(xi)
-      dfi <- ncol(ui)      
+      dfi <- ncol(ui)
       projections[[key]] <- ui
       dfi <- ncol(ui)
       uy <- t(ui) %*% y
@@ -175,7 +175,7 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
           aicpens[[key]] <- exp(k*dfi/n)
           terms[[key]] <- (sum(uy^2)  - sum(y^2)) * aicpens[[key]]
       } else {
-          aicpens[[key]] <- sigma^2 * k * dfi/n 
+          aicpens[[key]] <- sigma^2 * k * dfi/n
           terms[[key]] <- (sum(uy^2) - sum(y^2)) - aicpens[[key]]
       }
   }
@@ -244,13 +244,12 @@ groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
           }
       } else {
           sigma <- obj$sigma
-      }      
+      }
   }
 
   # Compute p-value for each active group
   for (j in 1:maxsteps) {
     i <- active[j]
-    cat(paste("Step", j, "- computing p-value for group", i, "\n"))
     # Form projection onto active set minus i
     # and project x_i orthogonally
     x_i <- x[,which(index == i), drop = FALSE]

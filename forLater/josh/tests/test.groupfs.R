@@ -95,10 +95,17 @@ cnames[fit$action]#[1:length(fsnames)]
 
 n = 100
 p = 120
+maxsteps = 9
+niter = 100
 # 10 groups of size 10, 10 groups of size 2
 index = sort(c(c(1, 1), rep(2:11, 10), rep(12:20, 2)))
-x = matrix(rnorm(n*p), nrow=n)
-y = rnorm(n)
-fit = groupfs(x, y, index)
-pvals = groupfsInf(fit)
+pvalm = matrix(NA, nrow=niter, ncol=maxsteps)
+for (iter in 1:niter) {
+    x = matrix(rnorm(n*p), nrow=n)
+    y = rnorm(n)
+    fit = groupfs(x, y, index, maxsteps)
+    pvals = groupfsInf(fit)
+    pvalm[iter, ] = pvals$pv
+    cat(paste("Iteration", iter, "\n"))
+}
 

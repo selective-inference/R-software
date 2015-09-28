@@ -34,16 +34,18 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
       Ugeta <- t(Ug) %*% etas
       UhZ <- t(Uh) %*% Zs
       UgZ <- t(Ug) %*% Zs
+      etasZs <- t(etas) %*% Zs
       peng <- obj$maxpens[[s]]
       penh <- obj$aicpens[[s]][[l]]
       pendiff <- peng-penh
       if (is.null(obj$sigma)) {
           A <- sum(Ugeta^2) * peng - sum(Uheta^2) * penh - sum(etas^2) * pendiff
-          B <- as.numeric(2 * (t(Ugeta) %*% UgZ * peng - t(Uheta) %*% UhZ * penh)) - 2 * sum(etas^2) * pendiff
+          B <- 2 * as.numeric(t(Ugeta) %*% UgZ * peng - t(Uheta) %*% UhZ * penh - etasZs * pendiff)
           C <- sum(UgZ^2) * peng - sum(UhZ^2) * penh - sum(Zs^2) * pendiff
       } else {
+          # Check this
           A <- sum(Ugeta^2) - sum(Uheta^2)
-          B <- as.numeric(2 * (t(Ugeta) %*% UgZ - t(Uheta) %*% UhZ))
+          B <- 2 * as.numeric(t(Ugeta) %*% UgZ - t(Uheta) %*% UhZ)
           C <- sum(UgZ^2) - sum(UhZ^2) - pendiff
       }
 
@@ -61,7 +63,7 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
         if (A > -tol) {
           # Quadratic form always positive
           return(Intervals(c(-Inf,0)))
-        } else { 
+        } else {
           # Quadratic form always negative
           stop(paste("Empty TC support is infeasible", s, "-", l))
         }
