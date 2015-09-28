@@ -19,4 +19,10 @@ List containing
 \description{
 Expand a data frame with factors to form a design matrix with the full binary encoding of each factor.
 }
+\examples{
+fd = factor_design(warpbreaks)
+y = rnorm(nrow(fd$x))
+fit = groupfs(fd$x, y, fd$index, maxsteps=2, intercept=F)
+pvals = groupfsInf(fit)
+}
 

@@ -4,14 +4,14 @@
 \alias{groupfsInf}
 \title{Form univariate selection interval for a given contrast}
 \usage{
-groupfsInf(obj, projs = NULL)
+groupfsInf(obj, sigma = NULL, projs = NULL)
 }
 \arguments{
 \item{obj}{Object returned by \code{\link{groupfs}} function}
 
-\item{projs}{Additional projections to define model selection event. For use with cross-validation. Default is NULL and it is not recommended to change this.}
-
 \item{sigma}{Estimate of error standard deviation. If NULL (default), this is estimated using the mean squared residual of the full least squares fit when n >= 2p, and the mean squared residual of the selected model when n < 2p. In the latter case, the user should use \code{\link{estimateSigma}} function for a more accurate estimate.}
+
+\item{projs}{Additional projections to define model selection event. For use with cross-validation. Default is NULL and it is not recommended to change this.}
 }
 \value{
 An object of class "groupfsInf" containing selective p-values for the fitted model \code{obj}. The default printing behavior should supply adequate information.
