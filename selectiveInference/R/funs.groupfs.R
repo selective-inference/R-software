@@ -1,6 +1,6 @@
 #' Select a model with forward stepwise.
 #'
-#' \code{groupfs} implements forward selection of linear models almost identically to \code{\link{stepAIC}} with \code{direction = "forward"}. The reason this is a separate function from \code{\link{fs}} is that groups of variables (e.g. dummies encoding levels of a categorical variable) must be handled differently in the selective inference framework.
+#' This function implements forward selection of linear models almost identically to \code{\link{stepAIC}} with \code{direction = "forward"}. The reason this is a separate function from \code{\link{fs}} is that groups of variables (e.g. dummies encoding levels of a categorical variable) must be handled differently in the selective inference framework.
 #'
 #' @param x Matrix of predictors (n by p).
 #' @param y Vector of outcomes (length n).
@@ -137,13 +137,14 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercep
   invisible(value)
 }
 
-# -----------------------------------------------------------
-
-#' Add one group to the model. For internal use by \code{\link{groupfs}}.
+#' Add one group to the model in \code{groupfs}.
+#'
+#' For internal use by \code{\link{groupfs}}.
 #'
 #' @param x Design matrix.
 #' @param y Response vector.
 #' @param index Group membership indicator of length p.
+#' @param labels The unique elements of \code{index}.
 #' @param inactive Labels of inactive groups.
 #' @param k Multiplier of model size penalty, use \code{k = 2} for AIC, \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.
 #' @param sigma Estimate of error standard deviation for use in AIC criterion. This determines the relative scale between RSS and the degrees of freedom penalty. See \code{\link{extractAIC}} for details.
@@ -157,7 +158,6 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
   keys = as.character(inactive)
   n2y <- sum(y^2)
   n <- ncol(x)
-
 
   # Compute sums of squares to determine which group is added
   # penalized by rank of group if k > 0
@@ -196,7 +196,9 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
 
 # -----------------------------------------------------------
 
-#' Form univariate selection interval for a given contrast
+#' Compute selective p-values for a model fitted by \code{groupfs}.
+#'
+#' Computes p-values for each group of variables in a model fitted by \code{\link{groupfs}}. These p-values adjust for selection by truncating the usual \code{\chi^2} statistics to the regions implied by the model selection event. Details are provided in a forthcoming work.
 #'
 #' @param obj Object returned by \code{\link{groupfs}} function
 #' @param sigma Estimate of error standard deviation. If NULL (default), this is estimated using the mean squared residual of the full least squares fit when n >= 2p, and the mean squared residual of the selected model when n < 2p. In the latter case, the user should use \code{\link{estimateSigma}} function for a more accurate estimate.

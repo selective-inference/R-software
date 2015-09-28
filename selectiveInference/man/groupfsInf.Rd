@@ -2,7 +2,7 @@
 % Please edit documentation in R/funs.groupfs.R
 \name{groupfsInf}
 \alias{groupfsInf}
-\title{Form univariate selection interval for a given contrast}
+\title{Compute selective p-values for a model fitted by \code{groupfs}.}
 \usage{
 groupfsInf(obj, sigma = NULL, projs = NULL)
 }
@@ -26,6 +26,6 @@ An object of class "groupfsInf" containing selective p-values for the fitted mod
 }
 }
 \description{
-Form univariate selection interval for a given contrast
+Computes p-values for each group of variables in a model fitted by \code{\link{groupfs}}. These p-values adjust for selection by truncating the usual \code{\chi^2} statistics to the regions implied by the model selection event. Details are provided in a forthcoming work.
 }
 
