@@ -158,40 +158,25 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
   n2y <- sum(y^2)
   n <- ncol(x)
 
-  # Compute singular vectors of projections
-  # X_i %*% X_i^\dagger
-  projections <- lapply(keys, function(i) {
-    inds <- which(index == i)
-    xi <- x[,inds]
-    svdi <- svd(xi)
-    inds <- svdi$d > svdi$d[1] * sqrt(.Machine$double.eps)
-    #inds <- 1:ncol(svdi$u)
-    ui <- svdi$u[, inds, drop = FALSE]
-    dfi <- ncol(ui)
-    if (is.null(sigma)) {
-        ui <- ui * exp(k*dfi/(2*n))
-    } else {
-        ui <- ui / sigma
-    }
-    return(ui)
-  })
-
-  names(projections) <- keys
 
   # Compute sums of squares to determine which group is added
   # penalized by rank of group if k > 0
-  aicpens = terms = vector("list", length(keys))
-  names(terms) = names(aicpens) = keys
+  projections = aicpens = terms = vector("list", length(keys))
+  names(projections) = names(terms) = names(aicpens) = keys
   for (key in keys) {
-      Ui <- projections[[key]]
-      dfi <- ncol(Ui)
-      Uy <- t(Ui) %*% y
+      inds <- which(index == key)
+      xi <- x[,inds]
+      ui <- svdu_thresh(xi)
+      dfi <- ncol(ui)      
+      projections[[key]] <- ui
+      dfi <- ncol(ui)
+      uy <- t(ui) %*% y
       if (is.null(sigma)) {
           aicpens[[key]] <- exp(k*dfi/n)
-          terms[[key]] <- sum(Uy^2)  - n2y * aicpens[[key]]
+          terms[[key]] <- (sum(uy^2)  - sum(y^2)) * aicpens[[key]]
       } else {
-          aicpens[[key]] <- k * dfi/n #- n2y / sigma^2
-          terms[[key]] <- sum(Uy^2) - aicpens[[key]]
+          aicpens[[key]] <- sigma^2 * k * dfi/n 
+          terms[[key]] <- (sum(uy^2) - sum(y^2)) - aicpens[[key]]
       }
   }
 
@@ -271,16 +256,12 @@ groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
     x_i <- x[,which(index == i), drop = FALSE]
     if (length(active) > 1) {
         minus_i <- setdiff(active, i)
-        xmsvd <- svd(x[,which(index %in% minus_i), drop = FALSE])
-        inds <- xmsvd$d > xmsvd$d[1] * sqrt(.Machine$double.eps)
-        x_minus_i <- xmsvd$u[, inds, drop = FALSE]
+        x_minus_i <- svdu_thresh(x[,which(index %in% minus_i), drop = FALSE])
         x_i <- x_i - x_minus_i %*% t(x_minus_i) %*% x_i
     }
 
     # Project y onto what remains of x_i
-    Ugtsvd <- svd(x_i)
-    inds <- Ugtsvd$d > Ugtsvd$d[1] * sqrt(.Machine$double.eps)
-    Ugtilde <- Ugtsvd$u[, inds, drop = FALSE]
+    Ugtilde <- svdu_thresh(x_i)
     R <- t(Ugtilde) %*% y
     TC <- sqrt(sum(R^2))
     eta <- Ugtilde %*% R / TC
@@ -440,6 +421,12 @@ factor_design <- function(df) {
         index[submatinds] <- num.num + j
     }
     return(list(x = x, index = index))
+}
+
+svdu_thresh <- function(x) {
+    svdx <- svd(x)
+    inds <- svdx$d > svdx$d[1] * sqrt(.Machine$double.eps)
+    return(svdx$u[, inds, drop = FALSE])
 }
 
 flatten <- function(L) {

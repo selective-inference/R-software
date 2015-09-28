@@ -1,4 +1,5 @@
 
+# I - Ug %*% t(Ug) is NOT a projection! Fix this first
 # n2y * exp(k*dfi/n) ??
 # any logic wrong?
 # A < tol <-> max(A, B, C) < tol???
@@ -22,7 +23,6 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
 
     lapply(1:length(obj$projections[[s]]), function(l) {
 
-        print(c(s, l))
       Uh <- obj$projections[[s]][[l]]
       dfh <- ncol(Uh)
       # The quadratic form corresponding to
@@ -34,19 +34,17 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
       Ugeta <- t(Ug) %*% etas
       UhZ <- t(Uh) %*% Zs
       UgZ <- t(Ug) %*% Zs
-      A = sum(Ugeta^2) - sum(Uheta^2)
-      B = 2 * (t(Ugeta) %*% UgZ - t(Uheta) %*% UhZ)
-      C = sum(UgZ^2) - sum(UhZ^2)
-      pendiff <- obj$maxpens[[s]] - obj$aicpens[[s]][[l]]
-      if (pendiff != 0) {
-          if (is.null(obj$sigma)) {
-#              pendiff <- pendiff * sum((TC * etas + Zs)^2)
-              A <- A - sum(etas^2) * pendiff
-              B <- B - 2 * sum(etas^2) * pendiff
-              C <- C - sum(Zs^2) * pendiff
-          } else {
-              C <- C - pendiff
-          }
+      peng <- obj$maxpens[[s]]
+      penh <- obj$aicpens[[s]][[l]]
+      pendiff <- peng-penh
+      if (is.null(obj$sigma)) {
+          A <- sum(Ugeta^2) * peng - sum(Uheta^2) * penh - sum(etas^2) * pendiff
+          B <- as.numeric(2 * (t(Ugeta) %*% UgZ * peng - t(Uheta) %*% UhZ * penh)) - 2 * sum(etas^2) * pendiff
+          C <- sum(UgZ^2) * peng - sum(UhZ^2) * penh - sum(Zs^2) * pendiff
+      } else {
+          A <- sum(Ugeta^2) - sum(Uheta^2)
+          B <- as.numeric(2 * (t(Ugeta) %*% UgZ - t(Uheta) %*% UhZ))
+          C <- sum(UgZ^2) - sum(UhZ^2) - pendiff
       }
 
       disc <- B^2 - 4*A*C
@@ -82,7 +80,6 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
         if (A < -tol) {
           # Parabola opens downward
           if (endpoints[2] < 0) {
-
             # Positive quadratic form only when t negative
             stop(paste("Negative TC support is infeasible", s, "-", l))
           } else {
