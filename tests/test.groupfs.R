@@ -129,3 +129,6 @@ ggsave(filename = "test_known.pdf", plot = p)
 
 print(colMeans(pvalm))
 print(colMeans(pvalmk))
+
+print(mean(pvalm))
+print(mean(pvalmk))
