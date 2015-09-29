@@ -92,7 +92,7 @@ cnames[fit$action]#[1:length(fsnames)]
     print("empty")
 }
 
-<<<<<<< HEAD:forLater/josh/tests/test.groupfs.R
+
 =======
 set.seed(1)
 n = 100
@@ -133,29 +133,3 @@ print(colMeans(pvalmk))
 
 print(mean(pvalm))
 print(mean(pvalmk))
-<<<<<<< HEAD
->>>>>>> 5c372de287b5ff9455ddce7dd513fb868d09e7e6:tests/test.groupfs.R
-=======
-
-
-
- set.seed(1)
- n <- 40
- p <- 20
- index <- sort(rep(1:(p/2), 2))
- steps <- 10
- sparsity <- 5
- snr <- 3
- sigma=3
- 
-     y <- rnorm(n)*sigma
-     x <- matrix(rnorm(n*p), nrow=n)
- 
-   
-       beta <- rep(0, p)
-       beta[which(index %in% 1:sparsity)] <- snr
-       y <- y + x %*% beta
-   
- fit <- groupfs(x, y, index=index, maxsteps = steps)
- foo=groupfsInf(fit)
->>>>>>> bc141572a79c89a69ca48574049b3006fa4b38ca
