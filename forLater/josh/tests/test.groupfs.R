@@ -1,4 +1,3 @@
-
 library(intervals)
 source("../../../selectiveInference/R/funs.common.R")
 source("../selectiveInference/R/funs.groupfs.R")
@@ -91,3 +90,4 @@ cnames[fit$action]#[1:length(fsnames)]
 } else {
     print("empty")
 }
+
