@@ -26,6 +26,6 @@ An object of class "groupfsInf" containing selective p-values for the fitted mod
 }
 }
 \description{
-Computes p-values for each group of variables in a model fitted by \code{\link{groupfs}}. These p-values adjust for selection by truncating the usual \code{\chi^2} statistics to the regions implied by the model selection event. Details are provided in a forthcoming work.
+Computes p-values for each group of variables in a model fitted by \code{\link{groupfs}}. These p-values adjust for selection by truncating the usual \code{chi^2} statistics to the regions implied by the model selection event. Details are provided in a forthcoming work.
 }
 

@@ -11,7 +11,6 @@ export(lar,fs,
        estimateLambda,
        manyMeans,print.manyMeans,
        groupfs,groupfsInf,
-       print.groupfs,print.groupfsInf,
        scale_groups,factor_design
     )
 
@@ -27,6 +26,8 @@ S3method("plot", "fs")
 S3method("print", "fsInf")
 S3method("print", "fixedLassoInf")
 S3method("print", "manyMeans")
+S3method("print", "groupfs")
+S3method("print", "groupfsInf")
 
 useDynLib("selectiveInference")
 import(glmnet)

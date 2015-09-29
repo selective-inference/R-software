@@ -19,9 +19,7 @@
 #' fit = groupfs(x, y, index, maxsteps = 5)
 #' pvals = groupfsInf(fit)
 #' @seealso \code{\link{groupfsInf}}
-groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE, normalize = TRUE, verbose = FALSE) UseMethod("groupfs")
-
-groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE, normalize = TRUE, verbose=FALSE) {
+groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE, normalize = TRUE, verbose = FALSE) {
 
   if (missing(index)) stop("Missing argument: index.")
   p <- ncol(x)
@@ -198,7 +196,7 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
 
 #' Compute selective p-values for a model fitted by \code{groupfs}.
 #'
-#' Computes p-values for each group of variables in a model fitted by \code{\link{groupfs}}. These p-values adjust for selection by truncating the usual \code{\chi^2} statistics to the regions implied by the model selection event. Details are provided in a forthcoming work.
+#' Computes p-values for each group of variables in a model fitted by \code{\link{groupfs}}. These p-values adjust for selection by truncating the usual \code{chi^2} statistics to the regions implied by the model selection event. Details are provided in a forthcoming work.
 #'
 #' @param obj Object returned by \code{\link{groupfs}} function
 #' @param sigma Estimate of error standard deviation. If NULL (default), this is estimated using the mean squared residual of the full least squares fit when n >= 2p, and the mean squared residual of the selected model when n < 2p. In the latter case, the user should use \code{\link{estimateSigma}} function for a more accurate estimate.
@@ -234,7 +232,7 @@ groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
 
   if (!is.null(sigma)) {
       if (!is.null(obj$sigma)) {
-          cat(paste("Using specified value", sigma, "for sigma in place of the value", obj$sigma, "used by groupfs()"))
+          cat(paste("Using specified value", sigma, "for sigma in place of the value", obj$sigma, "used by groupfs()\n"))
       }
   } else {
       if (is.null(obj$sigma)) {
@@ -393,10 +391,12 @@ scale_groups <- function(x, index, center = TRUE, scale = TRUE) {
 #'   \item{index}{Group membership indicator for expanded matrix.}
 #' }
 #' @examples
+#' \dontrun{
 #' fd = factor_design(warpbreaks)
 #' y = rnorm(nrow(fd$x))
 #' fit = groupfs(fd$x, y, fd$index, maxsteps=2, intercept=F)
 #' pvals = groupfsInf(fit)
+#' }
 factor_design <- function(df) {
     factor.inds <- sapply(df[1,], is.factor)
     factor.labels <- which(factor.inds)
