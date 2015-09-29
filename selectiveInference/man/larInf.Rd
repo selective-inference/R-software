@@ -106,7 +106,7 @@ Ryan Tibshirani, Jonathan Taylor, Richard Lockhart, Rob Tibshirani (2014).
 Exact post-selection inference for sequential regression procedures. arXiv:1401.3889.
 }
 
-\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid}
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
 \seealso{
  \code{\link{lar}}

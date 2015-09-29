@@ -39,7 +39,7 @@ Stephen Reid, Jerome Friedman and Rob Tibshirani (2014).
 A study of error variance estimation in lasso regression. arXiv:1311.5274.
 }
 
-\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid}
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
 \examples{
 #NOT RUN

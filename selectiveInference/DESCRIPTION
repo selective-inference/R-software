@@ -1,10 +1,10 @@
 Package: selectiveInference
 Type: Package
 Title: Tools for Selective Inference
-Version: 1.0.3
+Version: 1.1.1
 Date: 2015-09-01
 Author: Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, 
-  Stephen Reid
+  Joshua Loftus, Stephen Reid
 Maintainer: Rob Tibshirani <tibs@stanford.edu>
 Depends: glmnet, intervals
 Suggests: Rmpfr

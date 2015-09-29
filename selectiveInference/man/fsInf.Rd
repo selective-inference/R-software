@@ -104,7 +104,7 @@ Joshua Loftus and Jonathan Taylor (2014). A significance test for forward stepwi
 model selection. arXiv:1405.3920.
 }
 
-\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid}
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
 \seealso{\code{\link{fs}}}
 

@@ -111,7 +111,7 @@ to alpha/2, and can be used for error-checking purposes.
 Jason Lee, Dennis Sun, Yuekai Sun, Jonathan Taylor (2013). 
 Exact post-selection inference, with application to the lasso. arXiv:1311.6238.
 }
-\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid}
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
 \examples{
 

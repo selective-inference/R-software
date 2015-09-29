@@ -61,7 +61,7 @@ to enter along the path}
 \item{call}{The call to fs}
 }
 
-\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid}
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
 \seealso{
  \code{\link{fsInf}}, \code{\link{predict.fs}},\code{\link{coef.fs}}, \code{\link{plot.fs}}

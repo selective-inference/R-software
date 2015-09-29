@@ -25,7 +25,7 @@ Default is TRUE}
 \item{...}{Additional arguments for plotting}
 }
 
-\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid}
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
 \examples{
 #NOT RUN

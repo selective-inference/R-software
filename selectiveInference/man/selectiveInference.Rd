@@ -35,7 +35,7 @@ Leonard Blier,
 Will Fithian, 
 Jason Lee, 
 Joshua Loftus,
-Stephen Reid,
+Joshua Loftus, Stephen Reid,
 Dennis Sun,
 Yuekai Sun,
 Jonathan Taylor,
@@ -52,7 +52,7 @@ The main functions included in the package are:
 \code{\link{manyMeans}}
 }
 
-\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid
 
 Maintainer: Rob Tibshirani <tibs@stanford.edu>
 }

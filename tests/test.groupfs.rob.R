@@ -1,11 +1,12 @@
-library(lars)
-library(intervals)
-source("../selectiveInference/R/funs.common.R")
-source("../selectiveInference/R/funs.groupfs.R")
+#library(lars)
+#library(intervals)
+#source("../selectiveInference/R/funs.common.R")
+#source("../selectiveInference/R/funs.groupfs.R")
 source("../selectiveInference/R/funs.quadratic.R")
-#source("../selectiveInference/R/funs.fs.R")
+##source("../selectiveInference/R/funs.fs.R")
 #source("../selectiveInference/R/funs.lar.R")
-library(selectiveInference)#,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+
+library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
 
 
@@ -67,22 +68,32 @@ snr <- 3
 
 set.seed(1)
 n <- 40
-p <- 80
+p <- 20
 index <- sort(rep(1:(p/2), 2))
 steps <- 10
 sparsity <- 5
 snr <- 3
 
 
-    y <- rnorm(n)
+ 
     x <- matrix(rnorm(n*p), nrow=n)
 
   
       beta <- rep(0, p)
       beta[which(index %in% 1:sparsity)] <- snr
-      y <- y + x %*% beta
-  
+      y <- x %*% beta+sgma*rnorm(n)
+
+
+
 fit <- groupfs(x, y, index=1:p, maxsteps = steps)
+
+groupfsInf(fit)
+
+xx=x
+xx[,1:2]=0
+xxx=scale_groups(xx,index)
+
+
 fit2=myfs(x,y) #my old fs
 fit3=fs(x,y,norm=FALSE)   #current
 fit4=lars(x,y,type="step",norm=TRUE)
@@ -106,6 +117,8 @@ fsInf(fit3,sigma=1,bits=200)
 #step(minmodel,direction="forward")   #R step
 #fm = step(minmodel, direction='forward', scope=(~x[,1]+x[,2]+x[,3]+x[,4]+x[,5]+x[,6]+x[,7]+x[,8]+x[,9]+x[,10]))
 # fm$terms
+
+
 
       
 

@@ -35,7 +35,7 @@ are desired
 Either a vector/matrix of predictions, or a vector/matrix of coefficients.
 }
 
-\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid}
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
 \examples{
 #NOT RUN

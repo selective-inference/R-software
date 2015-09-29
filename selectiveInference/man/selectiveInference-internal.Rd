@@ -19,6 +19,6 @@
 \method{print}{manyMeans}(x,...)
 
 }
-\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid}
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 \keyword{internal}
 

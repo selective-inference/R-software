@@ -31,7 +31,7 @@ Max Grazier G'Sell, Stefan Wager, Alexandra Chouldechova, Rob Tibshirani (2014).
 Sequential selection procedures and Fflse Discovery Rate Control. arXiv:1309.5352.
 To appear in Journal of the Royal Statistical Society: Series B.
 }
-\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid}
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
 \examples{
 #NOT RUN

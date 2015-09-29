@@ -48,7 +48,7 @@ Post-selection point and interval estimation of signal sizes in Gaussian samples
 arXiv:1405.3340.
 }
 
-\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Stephen Reid}
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
 \examples{
 

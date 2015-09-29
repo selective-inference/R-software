@@ -69,7 +69,7 @@ See also the descriptions in Trevor Hastie, Rob Tibshirani and
 Jerome Friedman (2002, 2009). Elements of Statistical Learning.
 }
 
-\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Max G'Sell, Stephen Reid}
+\author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Max G'Sell, Joshua Loftus, Stephen Reid}
 
 \seealso{
  \code{\link{larInf}}, \code{\link{predict.lar}}, \code{\link{coef.lar}}, \code{\link{plot.lar}}

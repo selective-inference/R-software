@@ -30,4 +30,22 @@ An object of class "groupfsInf" containing selective p-values for the fitted mod
 \description{
 Computes p-values for each group of variables in a model fitted by \code{\link{groupfs}}. These p-values adjust for selection by truncating the usual \code{chi^2} statistics to the regions implied by the model selection event. Details are provided in a forthcoming work.
 }
+\examples{
+#NOT RUN
+#set.seed(1)
+#n <- 40
+#p <- 20
+#index <- sort(rep(1:(p/2), 2))
+#steps <- 10
+#sparsity <- 5
+#snr <- 3
+#   x <- matrix(rnorm(n*p), nrow=n)
+#      beta <- rep(0, p)
+#      beta[which(index %in% 1:sparsity)] <- snr
+#      y <-  x %*% beta+rnorm(n)
+
+#fit <- groupfs(x, y, index=1:p, maxsteps = steps)
+
+#out<- groupfsInf(fit)
+}
 
