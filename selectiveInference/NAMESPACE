@@ -11,7 +11,7 @@ export(lar,fs,
        estimateLambda,
        manyMeans,print.manyMeans,
        groupfs,groupfsInf,
-       scale_groups,factor_design
+       scaleGroups,factorDesign
     )
 
 S3method("coef", "lar")

@@ -17,7 +17,11 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
         Zs <- Z
     }
 
-    lapply(1:length(obj$projections[[s]]), function(l) {
+    num.projs <- length(obj$projections[[s]])
+    if (num.projs == 0) {
+        return(list(Intervals(c(-Inf,0))))
+    } else {
+      lapply(1:num.projs, function(l) {
 
       Uh <- obj$projections[[s]][[l]]
       dfh <- ncol(Uh)
@@ -104,6 +108,7 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
         }
       }
     })
+    }
     # LL is a list of intervals
   })
   # L is now a list of lists of intervals

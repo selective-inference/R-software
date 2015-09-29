@@ -50,7 +50,7 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
   x.update <- x
 
   # Center and scale design matrix
-  xscaled <- scale_groups(x.update, index, scale = normalize)
+  xscaled <- scaleGroups(x.update, index, scale = normalize)
   xm <- xscaled$xm
   xs <- xscaled$xs
   x.update <- xscaled$x
@@ -201,6 +201,7 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
 #' @param obj Object returned by \code{\link{groupfs}} function
 #' @param sigma Estimate of error standard deviation. If NULL (default), this is estimated using the mean squared residual of the full least squares fit when n >= 2p, and the mean squared residual of the selected model when n < 2p. In the latter case, the user should use \code{\link{estimateSigma}} function for a more accurate estimate.
 #' @param projs Additional projections to define model selection event. For use with cross-validation. Default is NULL and it is not recommended to change this.
+#' @param verbose Print out progress along the way? Default is FALSE.
 #' @return An object of class "groupfsInf" containing selective p-values for the fitted model \code{obj}. The default printing behavior should supply adequate information.
 #'
 #' \describe{
@@ -211,7 +212,7 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
 #'   \item{df}{Rank of group of variables when it was added to the model.}
 #'   \item{support}{List of intervals defining the truncation region of the truncated chi.}
 #' }
-groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
+groupfsInf <- function(obj, sigma = NULL, projs = NULL, verbose = FALSE) {
 
   n <- nrow(obj$x)
   p <- ncol(obj$x)
@@ -250,6 +251,7 @@ groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
   # Compute p-value for each active group
   for (j in 1:maxsteps) {
     i <- active[j]
+    if (verbose) cat(paste0("Step ", j, "/", maxsteps, ": computing P-value for group ", i, "\n"))    
     # Form projection onto active set minus i
     # and project x_i orthogonally
     x_i <- x[,which(index == i), drop = FALSE]
@@ -359,7 +361,7 @@ num_int_chi <- function(a, b, df, nsamp = 10000) {
 #' @param center Center groups, default is TRUE.
 #' @param scale Scale groups by Frobenius norm, default is TRUE.
 #' @return Scaled design matrix
-scale_groups <- function(x, index, center = TRUE, scale = TRUE) {
+scaleGroups <- function(x, index, center = TRUE, scale = TRUE) {
   keys <- unique(index)
   xm <- rep(0, ncol(x))
   xs <- rep(1, ncol(x))
@@ -371,18 +373,21 @@ scale_groups <- function(x, index, center = TRUE, scale = TRUE) {
         xm[inds] <- xmj
         x[, inds] <- x[, inds] - xmj
     }
-    if (scale) {
-      normsq <- sum(x[, inds]^2)
-      xsj <- sqrt(normsq)
-      xs[inds] <- xsj
-      if (xsj > 0) x[, inds] <- x[, inds] / xsj
+    normsq <- sum(x[, inds]^2)
+    xsj <- sqrt(normsq)
+    xs[inds] <- xsj
+    if (xsj > 0) {
+        if (scale) x[, inds] <- x[, inds] / xsj
+    } else {
+        stop(paste("Design matrix contains identically zero group of variables:", j))
     }
-
   }
   return(list(x=x, xm=xm, xs=xs))
 }
 
 #' Expand a data frame with factors to form a design matrix with the full binary encoding of each factor.
+#' 
+#' When using \code{\link{groupfs}} with factor variables call this function first to create a design matrix. 
 #'
 #' @param df Data frame containing some columns which are \code{factors}.
 #' @return List containing
@@ -392,12 +397,12 @@ scale_groups <- function(x, index, center = TRUE, scale = TRUE) {
 #' }
 #' @examples
 #' \dontrun{
-#' fd = factor_design(warpbreaks)
+#' fd = factorDesign(warpbreaks)
 #' y = rnorm(nrow(fd$x))
 #' fit = groupfs(fd$x, y, fd$index, maxsteps=2, intercept=F)
 #' pvals = groupfsInf(fit)
 #' }
-factor_design <- function(df) {
+factorDesign <- function(df) {
     factor.inds <- sapply(df[1,], is.factor)
     factor.labels <- which(factor.inds)
     nfacs <- sum(factor.inds)
@@ -457,17 +462,17 @@ print.groupfsInf <- function(x, ...) {
     action <- x$vars
     vnames <- attr(x, "varnames")
     if (length(vnames) > 0) action <- vnames[action]
-    tab = data.frame(Var = action, Pvalue = round(x$pv, 3), Tchi = round(x$TC, 3),
+    tab = data.frame(Group = action, Pvalue = round(x$pv, 3), Tchi = round(x$TC, 3),
         df = x$df, Size = round(unlist(lapply(lapply(x$support, size), sum)), 3),
         Ints = unlist(lapply(x$support, nrow)), Min =round(unlist(lapply(x$support, min)), 3),
         Max = round(unlist(lapply(x$support, max)), 3))
     rownames(tab) = 1:length(x$vars)
     print(tab)
-    cat("\nMin and Max are the lowest and highest endpoints of the truncation region. No confidence intervals are reported by groupfsInf.\n")
+    cat("\nInts is the number of intervals in the truncated chi selection region and Size is the sum of their lengths. Min and Max are the lowest and highest endpoints of the truncation region. No confidence intervals are reported by groupfsInf.\n")
     invisible()
 }
 
 checkargs.groupfs <- function(x, index, maxsteps) {
     if (length(index) != ncol(x)) stop("Length of index does not match number of columns of x")
+    if ((round(maxsteps) != maxsteps) || (maxsteps <= 0)) stop("maxsteps must be an integer > 0")
 }
-
