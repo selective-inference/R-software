@@ -1,7 +1,7 @@
 # R-software
-R software for selective inference
-Authors: Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid
-Maintainer: Rob Tibshirani <tibs@stanford.edu>
+R software for selective inference  
+Authors: Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid  
+Maintainer: Rob Tibshirani <tibs@stanford.edu>  
 
 New tools for inference after selection, for use with forward stepwise regression, least angle regression, the lasso, and the many means problem.
 
