@@ -1,10 +1,4 @@
-library(intervals)
-source("../selectiveInference/R/funs.common.R")
-source("../selectiveInference/R/funs.groupfs.R")
-source("../selectiveInference/R/funs.quadratic.R")
-source("../selectiveInference/R/funs.fs.R")
-source("../selectiveInference/R/funs.lar.R")
-#library(selectiveInference)
+library(selectiveInference)
 #library(lars)
 
 set.seed(1)
@@ -65,8 +59,8 @@ for (j in 1:ncol(state.x77)) {
     states[,j] <- var
 }
 states <- cbind(states, state.division)
-x <- factor_design(states)$x
-X <- scale_groups(x, index)$x
+x <- factorDesign(states)$x
+X <- scaleGroups(x, index)$x
 
 p <- ncol(x)
 y <- rnorm(n)
@@ -92,13 +86,10 @@ cnames[fit$action]#[1:length(fsnames)]
     print("empty")
 }
 
-
-=======
-set.seed(1)
 n = 100
 p = 120
 maxsteps = 9
-niter = 50
+niter = 500
 # 10 groups of size 10, 10 groups of size 2
 index = sort(c(c(1, 1), rep(2:11, 10), rep(12:20, 2)))
 pvalm = pvalmk = matrix(NA, nrow=niter, ncol=maxsteps)
