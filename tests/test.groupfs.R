@@ -1,5 +1,5 @@
 library(intervals)
-source("../../../selectiveInference/R/funs.common.R")
+source("../selectiveInference/R/funs.common.R")
 source("../selectiveInference/R/funs.groupfs.R")
 source("../selectiveInference/R/funs.quadratic.R")
 source("../selectiveInference/R/funs.fs.R")
@@ -15,15 +15,16 @@ maxsteps <- 10
 sparsity <- 5
 snr <- 3
 
-y <- rnorm(n)
-x <- matrix(rnorm(n*p), nrow=n)
-beta <- rep(0, p)
-beta[which(index %in% 1:sparsity)] <- snr
-y <- y + x %*% beta
-
 system.time({
+for (iter in 1:10) {
+    y <- rnorm(n)
+    x <- matrix(rnorm(n*p), nrow=n)
+    beta <- rep(0, p)
+    beta[which(index %in% 1:sparsity)] <- snr
+    y <- y + x %*% beta
     fit <- groupfs(x, y, index, maxsteps = maxsteps)
     pvals <- groupfsInf(fit)
+}
 })
 
 # Compare to step function in R
@@ -64,7 +65,7 @@ for (j in 1:ncol(state.x77)) {
     states[,j] <- var
 }
 states <- cbind(states, state.division)
-x <- factor_expand(states)$x
+x <- factor_design(states)$x
 X <- scale_groups(x, index)$x
 
 p <- ncol(x)
@@ -91,3 +92,45 @@ cnames[fit$action]#[1:length(fsnames)]
     print("empty")
 }
 
+<<<<<<< HEAD:forLater/josh/tests/test.groupfs.R
+=======
+set.seed(1)
+n = 100
+p = 120
+maxsteps = 9
+niter = 50
+# 10 groups of size 10, 10 groups of size 2
+index = sort(c(c(1, 1), rep(2:11, 10), rep(12:20, 2)))
+pvalm = pvalmk = matrix(NA, nrow=niter, ncol=maxsteps)
+
+for (iter in 1:niter) {
+    x = matrix(rnorm(n*p), nrow=n)
+    y = rnorm(n)
+    fit = groupfs(x, y, index, maxsteps)
+    pvals = groupfsInf(fit)
+    pvalm[iter, ] = pvals$pv    
+    fitk = groupfs(x, y, index, maxsteps, sigma = 1)
+    pvalsk = groupfsInf(fitk)
+    pvalmk[iter, ] = pvalsk$pv
+    cat(paste("Iteration", iter, "\n"))
+}
+
+library(ggplot2)
+library(reshape2)
+df <- melt(pvalm)[,2:3]
+colnames(df) <- c("step", "Pvalue")
+df$step <- as.factor(df$step)
+p <- ggplot(df, aes(Pvalue, colour = step, linetype = step)) + stat_ecdf()
+ggsave(filename = "test_unknown.pdf", plot = p)
+df <- melt(pvalmk)[,2:3]
+colnames(df) <- c("step", "Pvalue")
+df$step <- as.factor(df$step)
+p <- ggplot(df, aes(Pvalue, colour = step, linetype = step)) + stat_ecdf()
+ggsave(filename = "test_known.pdf", plot = p)
+
+print(colMeans(pvalm))
+print(colMeans(pvalmk))
+
+print(mean(pvalm))
+print(mean(pvalmk))
+>>>>>>> 5c372de287b5ff9455ddce7dd513fb868d09e7e6:tests/test.groupfs.R

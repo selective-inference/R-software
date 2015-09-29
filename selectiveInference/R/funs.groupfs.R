@@ -1,6 +1,6 @@
 #' Select a model with forward stepwise.
 #'
-#' \code{groupfs} implements forward selection of linear models almost identically to \code{\link{stepAIC}} with \code{direction = "forward"}. The reason this is a separate function from \code{\link{fs}} is that groups of variables (e.g. dummies encoding levels of a categorical variable) must be handled differently in the selective inference framework.
+#' This function implements forward selection of linear models almost identically to \code{\link{stepAIC}} with \code{direction = "forward"}. The reason this is a separate function from \code{\link{fs}} is that groups of variables (e.g. dummies encoding levels of a categorical variable) must be handled differently in the selective inference framework.
 #'
 #' @param x Matrix of predictors (n by p).
 #' @param y Vector of outcomes (length n).
@@ -19,23 +19,28 @@
 #' fit = groupfs(x, y, index, maxsteps = 5)
 #' pvals = groupfsInf(fit)
 #' @seealso \code{\link{groupfsInf}}
-groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE, normalize = TRUE, verbose = FALSE) UseMethod("groupfs")
-
-groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE, normalize = TRUE, verbose=FALSE) {
+groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE, normalize = TRUE, verbose = FALSE) {
 
   if (missing(index)) stop("Missing argument: index.")
   p <- ncol(x)
   n <- nrow(x)
-  
+
   # Group labels
   labels <- unique(index)
   G <- length(labels)
   inactive <- labels
   active <- c()
 
-  if (missing(maxsteps) || maxsteps >= min(n, G)) maxsteps <- min(n-1, G)    
+  if (missing(maxsteps) || maxsteps >= min(n, G)) maxsteps <- min(n-1, G)
   checkargs.xy(x=x, y=y)
   checkargs.groupfs(x, index, maxsteps)
+  if (maxsteps > G) stop("maxsteps is larger than number of groups")
+  gsizes <- sort(rle(sort(index))$lengths, decreasing = TRUE)
+  if (sum(gsizes[1:maxsteps]) >= nrow(x)) {
+      maxsteps <- max(which(cumsum(gsizes) < nrow(x)))
+      warning(paste("If the largest groups are included the model will be saturated/overdetermined. To prevent this maxsteps has been changed to", maxsteps))
+  }
+
 
   # Initialize copies of data for loop
   by <- mean(y)
@@ -107,7 +112,7 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercep
     y.last <- y.update
 
     # Projections are stored separately
-    step.info <- data.frame(added[-c(4:length(added))])
+    step.info <- data.frame(added[-c(4:(length(added)-3))])
     path.info[step, ] <- step.info
 
     if (verbose) print(step.info)
@@ -130,13 +135,14 @@ groupfs.default <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercep
   invisible(value)
 }
 
-# -----------------------------------------------------------
-
-#' Add one group to the model. For internal use by \code{\link{groupfs}}.
+#' Add one group to the model in \code{groupfs}.
+#'
+#' For internal use by \code{\link{groupfs}}.
 #'
 #' @param x Design matrix.
 #' @param y Response vector.
 #' @param index Group membership indicator of length p.
+#' @param labels The unique elements of \code{index}.
 #' @param inactive Labels of inactive groups.
 #' @param k Multiplier of model size penalty, use \code{k = 2} for AIC, \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.
 #' @param sigma Estimate of error standard deviation for use in AIC criterion. This determines the relative scale between RSS and the degrees of freedom penalty. See \code{\link{extractAIC}} for details.
@@ -151,40 +157,24 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
   n2y <- sum(y^2)
   n <- ncol(x)
 
-  # Compute singular vectors of projections
-  # X_i %*% X_i^\dagger
-  projections <- lapply(keys, function(i) {
-    inds <- which(index == i)
-    xi <- x[,inds]
-    svdi <- svd(xi)
-    inds <- svdi$d > svdi$d[1] * sqrt(.Machine$double.eps)
-    #inds <- 1:ncol(svdi$u)
-    ui <- svdi$u[, inds, drop = FALSE]
-    dfi <- ncol(ui)
-    if (is.null(sigma)) {
-        ui <- ui * exp(k*dfi/(2*n))
-    } else {
-        ui <- ui / sigma
-    }
-    return(ui)
-  })
-
-  names(projections) <- keys
-
   # Compute sums of squares to determine which group is added
   # penalized by rank of group if k > 0
-  aicpens = terms = vector("list", length(keys))
-  names(terms) = names(aicpens) = keys
+  projections = aicpens = terms = vector("list", length(keys))
+  names(projections) = names(terms) = names(aicpens) = keys
   for (key in keys) {
-      Ui <- projections[[key]]
-      dfi <- ncol(Ui)
-      Uy <- t(Ui) %*% y
+      inds <- which(index == key)
+      xi <- x[,inds]
+      ui <- svdu_thresh(xi)
+      dfi <- ncol(ui)
+      projections[[key]] <- ui
+      dfi <- ncol(ui)
+      uy <- t(ui) %*% y
       if (is.null(sigma)) {
           aicpens[[key]] <- exp(k*dfi/n)
-          terms[[key]] <- sum(Uy^2)  - n2y * aicpens[[key]]
+          terms[[key]] <- (sum(uy^2)  - sum(y^2)) * aicpens[[key]]
       } else {
-          aicpens[[key]] <- k * dfi/n #- n2y / sigma^2
-          terms[[key]] <- sum(Uy^2) - aicpens[[key]]
+          aicpens[[key]] <- sigma^2 * k * dfi/n
+          terms[[key]] <- (sum(uy^2) - sum(y^2)) - aicpens[[key]]
       }
   }
 
@@ -204,7 +194,9 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
 
 # -----------------------------------------------------------
 
-#' Form univariate selection interval for a given contrast
+#' Compute selective p-values for a model fitted by \code{groupfs}.
+#'
+#' Computes p-values for each group of variables in a model fitted by \code{\link{groupfs}}. These p-values adjust for selection by truncating the usual \code{chi^2} statistics to the regions implied by the model selection event. Details are provided in a forthcoming work.
 #'
 #' @param obj Object returned by \code{\link{groupfs}} function
 #' @param sigma Estimate of error standard deviation. If NULL (default), this is estimated using the mean squared residual of the full least squares fit when n >= 2p, and the mean squared residual of the selected model when n < 2p. In the latter case, the user should use \code{\link{estimateSigma}} function for a more accurate estimate.
@@ -219,9 +211,7 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
 #'   \item{df}{Rank of group of variables when it was added to the model.}
 #'   \item{support}{List of intervals defining the truncation region of the truncated chi.}
 #' }
-groupfsInf <- function(obj, projs = NULL) {
-
-  cat(paste("\nUsing sigma value:", obj$sigma, "\n"))
+groupfsInf <- function(obj, sigma = NULL, projs = NULL) {
 
   n <- nrow(obj$x)
   p <- ncol(obj$x)
@@ -229,6 +219,8 @@ groupfsInf <- function(obj, projs = NULL) {
   maxsteps <- attr(obj, "maxsteps")
   k <- attr(obj, "k")
   index <- obj$index
+  x <- obj$x
+  y <- obj$y
   Eindex <- which(index %in% active)
   Ep <- length(Eindex)
 
@@ -238,37 +230,38 @@ groupfsInf <- function(obj, projs = NULL) {
   TCs <- numeric(maxsteps)
   supports <- list()
 
-  if (is.null(obj$sigma)) {
-    if (n >= 2*p) {
-      errscale <- sqrt(sum(lsfit(obj$x, obj$y, intercept = obj$intercept)$res^2)/(n-p-obj$intercept))
-    } else {
-      errscale = sqrt(obj$log$RSS[length(obj$log$RSS)]/(n-Ep-obj$intercept))
-      warning(paste(sprintf("p > n/2, and sigmahat = %0.3f used as an estimate of sigma;",errscale), "you may want to use the estimateSigma function"))
-    }
+  if (!is.null(sigma)) {
+      if (!is.null(obj$sigma)) {
+          cat(paste("Using specified value", sigma, "for sigma in place of the value", obj$sigma, "used by groupfs()\n"))
+      }
   } else {
-      errscale <- obj$sigma
+      if (is.null(obj$sigma)) {
+          if (n >= 2*p) {
+              sigma <- sqrt(sum(lsfit(obj$x, obj$y, intercept = obj$intercept)$res^2)/(n-p-obj$intercept))
+          } else {
+              sigma = sqrt(obj$log$RSS[length(obj$log$RSS)]/(n-Ep-obj$intercept))
+              warning(paste(sprintf("p > n/2, and sigmahat = %0.3f used as an estimate of sigma;",sigma), "you may want to use the estimateSigma function"))
+          }
+      } else {
+          sigma <- obj$sigma
+      }
   }
 
   # Compute p-value for each active group
   for (j in 1:maxsteps) {
     i <- active[j]
-    cat(paste("Step", j, "- computing p-value for group", i, "\n"))
     # Form projection onto active set minus i
     # and project x_i orthogonally
-    x_i <- obj$x[,which(obj$index == i), drop = FALSE]
+    x_i <- x[,which(index == i), drop = FALSE]
     if (length(active) > 1) {
         minus_i <- setdiff(active, i)
-        xmsvd <- svd(x[,which(obj$index %in% minus_i), drop = FALSE])
-        inds <- xmsvd$d > xmsvd$d[1] * sqrt(.Machine$double.eps)
-        x_minus_i <- xmsvd$u[, inds, drop = FALSE]
+        x_minus_i <- svdu_thresh(x[,which(index %in% minus_i), drop = FALSE])
         x_i <- x_i - x_minus_i %*% t(x_minus_i) %*% x_i
     }
 
     # Project y onto what remains of x_i
-    Ugtsvd <- svd(x_i)
-    inds <- Ugtsvd$d > Ugtsvd$d[1] * sqrt(.Machine$double.eps)
-    Ugtilde <- xmsvd$u[, inds, drop = FALSE]
-    R <- t(Ugtilde) %*% obj$y
+    Ugtilde <- svdu_thresh(x_i)
+    R <- t(Ugtilde) %*% y
     TC <- sqrt(sum(R^2))
     eta <- Ugtilde %*% R / TC
     df <- ncol(Ugtilde)
@@ -282,7 +275,9 @@ groupfsInf <- function(obj, projs = NULL) {
     if (!is.null(projs)) L <- c(L, projs)
 
     # Compute intersection:
-    E <- interval_complement(do.call(interval_union, L), check_valid = FALSE)
+    Lunion <- do.call(interval_union, L)
+    Lunion <- interval_union(Lunion, Intervals(c(-Inf,0)))
+    E <- interval_complement(Lunion, check_valid = FALSE)
     supports[[j]] <- E
 
     # E is now potentially a union of intervals
@@ -290,7 +285,7 @@ groupfsInf <- function(obj, projs = NULL) {
 
     # Sum truncated cdf over each part of E
     denom <- do.call(sum, lapply(1:nrow(E), function(v) {
-      tchi_interval(E[v,1], E[v,2], errscale, df)
+      tchi_interval(E[v,1], E[v,2], sigma, df)
     }))
 
     # Sum truncated cdf from observed value to max of
@@ -302,10 +297,10 @@ groupfsInf <- function(obj, projs = NULL) {
         # Observed value is left of this interval's right endpoint
         if (lower < TC) {
           # Observed value is in this interval
-          return(tchi_interval(TC, upper, errscale, df))
+          return(tchi_interval(TC, upper, sigma, df))
         } else {
           # Observed value is not in this interval
-          return(tchi_interval(lower, upper, errscale, df))
+          return(tchi_interval(lower, upper, sigma, df))
         }
       } else {
         # Observed value is right of this entire interval
@@ -326,16 +321,19 @@ groupfsInf <- function(obj, projs = NULL) {
   }
   if (nanconv) warning("P-value NaNs of the form 0/0 converted to 0. This typically occurs for numerical reasons in the presence of a large signal-to-noise ratio.")
   names(pvals) <- obj$action
-  out <- list(vars = active, pv=pvals, sigma=errscale, TC=TCs, df = dfs, support=supports)
+  out <- list(vars = active, pv=pvals, sigma=sigma, TC=TCs, df = dfs, support=supports)
   class(out) <- "groupfsInf"
+  if (!is.null(attr(obj, "varnames"))) {
+      attr(out, "varnames") <- attr(obj, "varnames")
+  }
   invisible(out)
 }
 
 # -----------------------------------------------------------
 
-tchi_interval <- function(lower, upper, errscale, df) {
-  a <- (lower/errscale)^2
-  b <- (upper/errscale)^2
+tchi_interval <- function(lower, upper, sigma, df) {
+  a <- (lower/sigma)^2
+  b <- (upper/sigma)^2
   if (b == Inf) {
       integral <- pchisq(a, df, lower.tail = FALSE)
   } else {
@@ -393,7 +391,7 @@ scale_groups <- function(x, index, center = TRUE, scale = TRUE) {
 #'   \item{index}{Group membership indicator for expanded matrix.}
 #' }
 #' @examples
-#' \donotrun{
+#' \dontrun{
 #' fd = factor_design(warpbreaks)
 #' y = rnorm(nrow(fd$x))
 #' fit = groupfs(fd$x, y, fd$index, maxsteps=2, intercept=F)
@@ -409,9 +407,10 @@ factor_design <- function(df) {
     x <- matrix(nrow=nrow(df), ncol = totnlevs + num.num)
     colnames(x) <- 1:ncol(x)
     index <- integer(ncol(x))
+    varnames <- character(ncol(df))
     if (num.num > 0) {
         x[,1:num.num] <- df[, !factor.inds]
-        colnames(x)[1:num.num] <- colnames(df)[1:num.num]
+        varnames[1:num.num] = colnames(x)[1:num.num] <- colnames(df)[1:num.num]
         index[1:num.num] <- 1:num.num
         indcounter <- indcounter + num.num - 1
     }
@@ -421,10 +420,18 @@ factor_design <- function(df) {
         submatinds <- indcounter:(indcounter+nlevs[j]-1)
         indcounter <- indcounter + nlevs[j] - 1
         colnames(x)[submatinds] <- paste0(colnames(df)[num.num + j], ":", 1:nlevs[j])
+        varnames[num.num + j] <- colnames(df)[num.num + j]
         x[,submatinds] <- submat
         index[submatinds] <- num.num + j
     }
+    attr(x, "varnames") <- varnames
     return(list(x = x, index = index))
+}
+
+svdu_thresh <- function(x) {
+    svdx <- svd(x)
+    inds <- svdx$d > svdx$d[1] * sqrt(.Machine$double.eps)
+    return(svdx$u[, inds, drop = FALSE])
 }
 
 flatten <- function(L) {
@@ -435,34 +442,32 @@ flatten <- function(L) {
 print.groupfs <- function(x, ...) {
     cat("\nSequence of added groups:\n")
     nsteps = length(x$action)
-    tab = cbind(1:nsteps, x$action, x$log$df)
-    colnames(tab) = c("Step", "Group", "Rank")
-    rownames(tab) = rep("", nrow(tab))
+    action <- x$action
+    vnames <- attr(x, "varnames")
+    if (length(vnames) > 0) action <- vnames[action]
+    tab = data.frame(Group = action, Rank = x$log$df, RSS = round(x$log$RSS, 3))
+    rownames(tab) = 1:nsteps
     print(tab)
-    cat("\nUse groupfsInf() function to compute P-values\n")
+    cat("\nUse groupfsInf() to compute P-values\n")
     invisible()
 }
 
 print.groupfsInf <- function(x, ...) {
-    cat(sprintf("\nStandard deviation of noise (specified or estimated) sigma = %0.3f\n",
-                              x$sigma))
-    tab = cbind(x$vars, round(x$pv, 3), round(x$TC, 3), x$df,
-        round(unlist(lapply(lapply(pvals$support, size), sum)), 3),
-        unlist(lapply(pvals$support, nrow)), round(unlist(lapply(pvals$support, min)), 3),
-        round(unlist(lapply(pvals$support, max)), 3))
-    colnames(tab) = c("Var", "P-value", "Tchi", "df", "Int. size", "Components",
-                "Int. inf", "Int. sup")
-    rownames(tab) = rep("", nrow(tab))
+    cat(sprintf("\nStandard deviation of noise (specified or estimated) sigma = %0.3f\n", x$sigma))
+    action <- x$vars
+    vnames <- attr(x, "varnames")
+    if (length(vnames) > 0) action <- vnames[action]
+    tab = data.frame(Var = action, Pvalue = round(x$pv, 3), Tchi = round(x$TC, 3),
+        df = x$df, Size = round(unlist(lapply(lapply(x$support, size), sum)), 3),
+        Ints = unlist(lapply(x$support, nrow)), Min =round(unlist(lapply(x$support, min)), 3),
+        Max = round(unlist(lapply(x$support, max)), 3))
+    rownames(tab) = 1:length(x$vars)
     print(tab)
-    cat("\nInt. inf and Int. sup are the lowest and highest endpoints of the truncation interval. No confidence intervals are reported by groupfsInf.\n")
+    cat("\nMin and Max are the lowest and highest endpoints of the truncation region. No confidence intervals are reported by groupfsInf.\n")
     invisible()
 }
 
 checkargs.groupfs <- function(x, index, maxsteps) {
     if (length(index) != ncol(x)) stop("Length of index does not match number of columns of x")
-    G <- length(unique(index))
-    if (maxsteps > G) stop("maxsteps is larger than number of groups")
-    gsizes <- sort(rle(sort(index))$lengths, decreasing = TRUE)
-    if (sum(gsizes[1:maxsteps]) >= nrow(x)) stop("maxsteps is too large. If the largest groups are included the model will be saturated/overdetermined")
 }
 

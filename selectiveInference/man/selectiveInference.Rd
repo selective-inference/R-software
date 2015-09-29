@@ -58,7 +58,7 @@ Maintainer: Rob Tibshirani <tibs@stanford.edu>
 }
 
 \references{
-Ryan Tibshirani,Jonathan Taylor, Richard Lockhart, Rob Tibshirani (2014).
+Ryan Tibshirani, Jonathan Taylor, Richard Lockhart, Rob Tibshirani (2014).
 Exact post-selection inference for sequential regression procedures. arXiv:1401.3889.
 
 Jason Lee, Dennis Sun, Yuekai Sun, Jonathan Taylor (2013). 

@@ -9,7 +9,9 @@ export(lar,fs,
        forwardStop,
        estimateSigma,
        estimateLambda,
-       manyMeans,print.manyMeans
+       manyMeans,print.manyMeans,
+       groupfs,groupfsInf,
+       scale_groups,factor_design
     )
 
 S3method("coef", "lar")
@@ -24,9 +26,12 @@ S3method("plot", "fs")
 S3method("print", "fsInf")
 S3method("print", "fixedLassoInf")
 S3method("print", "manyMeans")
+S3method("print", "groupfs")
+S3method("print", "groupfsInf")
 
 useDynLib("selectiveInference")
 import(glmnet)
+import(intervals)
 importFrom("graphics", "abline", "axis", "matplot", "plot")
 importFrom("stats", "dnorm", "lsfit", "pexp", "pnorm", "predict",
            "qnorm", "rnorm", "sd", "uniroot")
