@@ -132,3 +132,25 @@ print(colMeans(pvalmk))
 
 print(mean(pvalm))
 print(mean(pvalmk))
+
+
+
+ set.seed(1)
+ n <- 40
+ p <- 20
+ index <- sort(rep(1:(p/2), 2))
+ steps <- 10
+ sparsity <- 5
+ snr <- 3
+ sigma=3
+ 
+     y <- rnorm(n)*sigma
+     x <- matrix(rnorm(n*p), nrow=n)
+ 
+   
+       beta <- rep(0, p)
+       beta[which(index %in% 1:sparsity)] <- snr
+       y <- y + x %*% beta
+   
+ fit <- groupfs(x, y, index=index, maxsteps = steps)
+ foo=groupfsInf(fit)
