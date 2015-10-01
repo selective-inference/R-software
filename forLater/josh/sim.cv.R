@@ -25,21 +25,14 @@ instance <- function(n, p, sparsity, snr, maxsteps, nfolds) {
     }
 
     fit <- cvfs(x, y, maxsteps=maxsteps, nfolds=nfolds)
-    pvals <- groupfsInf(fit, verbose=T)
-    ## pvals_naive <- interval.groupfs(fit, x, y, index = 1:ncol(x))
-    ## fit$projections <- c(fit$projections, fit$rssprojections)
-    ## pvals_reduced <- interval.groupfs(fit, x, y, index = 1:ncol(x))
-    ## fit$projections <- c(fit$projections, fit$foldprojections)
+    pvals <- groupfsInf(fit, sigma = 1, verbose=T)
     return(list(variable = fit$action, pvals = pvals$pv))
-                #pvals_naive = pvals_naive, pvals_reduced = pvals_reduced))
 }
 
 time <- system.time({
           output <- replicate(niters, instance(n, p, sparsity, snr, maxsteps, nfolds))
 })
 
-#pvals_reduced <- do.call(c, list(output[4,]))
-#pvals_naive <- do.call(c, list(output[3,]))
 pvals <- do.call(c, list(output[2,]))
 vars <- do.call(c, list(output[1,]))
 
