@@ -248,7 +248,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
   # Compute p-value for each active group
   for (j in 1:maxsteps) {
     i <- obj$action[j]
-    if (verbose) cat(paste0("Step ", j, "/", attr(obj, "maxsteps"), ": computing P-value for group ", i, "\n"))    
+    if (verbose) cat(paste0("Step ", j, "/", attr(obj, "maxsteps"), ": computing P-value for group ", i, "\n"))
     # Form projection onto active set minus i
     # and project x_i orthogonally
     x_i <- obj$x[,which(obj$index == i), drop = FALSE]
@@ -263,9 +263,11 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
     R <- t(Ugtilde) %*% obj$y
     TC <- sqrt(sum(R^2))
     eta <- Ugtilde %*% R / TC
-    Z <- obj$y - eta * TC    
+    Z <- obj$y - eta * TC
     df <- ncol(Ugtilde)
-      
+    TCs[j] <- TC
+    dfs[j] <- df
+
     intervallist <- truncationRegion(obj, TC, R, eta, Z)
     if (!is.null(fit$cvobj)) {
         intervallist <- c(intervallist, do.call(c,
@@ -273,7 +275,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
             truncationRegion(cvf, TC, R[-cvf$fold], eta[-cvf$fold], Z[-cvf$fold])
         })))
     }
-    
+
     # Compute intersection:
     region <- do.call(interval_union, intervallist)
     region <- interval_union(region, Intervals(c(-Inf,0)))
@@ -357,7 +359,7 @@ num_int_chi <- function(a, b, df, nsamp = 10000) {
 #' Center and scale design matrix by groups
 #'
 #' For internal use by \code{\link{groupfs}}.
-#' 
+#'
 #' @param x Design matrix.
 #' @param index Group membership indicator of length p.
 #' @param center Center groups, default is TRUE.
@@ -393,8 +395,8 @@ scaleGroups <- function(x, index, center = TRUE, scale = TRUE) {
 }
 
 #' Expand a data frame with factors to form a design matrix with the full binary encoding of each factor.
-#' 
-#' When using \code{\link{groupfs}} with factor variables call this function first to create a design matrix. 
+#'
+#' When using \code{\link{groupfs}} with factor variables call this function first to create a design matrix.
 #'
 #' @param df Data frame containing some columns which are \code{factors}.
 #' @return List containing
