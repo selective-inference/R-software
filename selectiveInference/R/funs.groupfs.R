@@ -269,9 +269,9 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
     dfs[j] <- df
 
     intervallist <- truncationRegion(obj, TC, R, eta, Z)
-    if (!is.null(fit$cvobj)) {
+    if (!is.null(obj$cvobj)) {
         intervallist <- c(intervallist, do.call(c,
-        lapply(fit$cvobj, function(cvf) {
+        lapply(obj$cvobj, function(cvf) {
             truncationRegion(cvf, TC, R[-cvf$fold], eta[-cvf$fold], Z[-cvf$fold])
         })))
     }
