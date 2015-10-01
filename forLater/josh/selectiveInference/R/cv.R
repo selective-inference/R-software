@@ -105,7 +105,7 @@ cvfs <- function(x, y, index = 1:ncol(x), maxsteps, nfolds = 10) {
 
     fit <- groupfs(X, Y, index, maxsteps=sstar)
     fit$cvobj <- cvobj
-    fit$rssprojections <- RSSquads
+    fit$cvquad <- RSSquads
 
     fit$cvperm <- cv_perm
 

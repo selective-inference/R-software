@@ -47,65 +47,8 @@ truncationRegion <- function(obj, TC, R, eta, Z, tol = 1e-15) {
           B <- 2 * as.numeric(t(Ugeta) %*% UgZ - t(Uheta) %*% UhZ)
           C <- sum(UgZ^2) - sum(UhZ^2) - pendiff
       }
-
-      disc <- B^2 - 4*A*C
-      b2a <- -B/(2*A)
-
-      if (disc > tol) {
-        # Real roots
-        pm <- sqrt(disc)/(2*A)
-        endpoints <- sort(c(b2a - pm, b2a + pm))
-
-      } else {
-
-        # No real roots
-        if (A > -tol) {
-          # Quadratic form always positive
-          return(Intervals(c(-Inf,0)))
-        } else {
-          # Quadratic form always negative
-          stop(paste("Empty TC support is infeasible", s, "-", l))
-        }
-      }
-
-      if (A > tol) {
-        # Parabola opens upward
-        if (min(endpoints) > 0) {
-          # Both roots positive, union of intervals
-          return(Intervals(rbind(c(-Inf,0), endpoints)))
-        } else {
-          # At least one negative root
-          return(Intervals(c(-Inf, max(0, endpoints[2]))))
-        }
-      } else {
-        if (A < -tol) {
-          # Parabola opens downward
-          if (endpoints[2] < 0) {
-            # Positive quadratic form only when t negative
-            stop(paste("Negative TC support is infeasible", s, "-", l))
-          } else {
-            # Part which is positive
-            if (endpoints[1] > 0) {
-                return(Intervals(rbind(c(-Inf, endpoints[1]), c(endpoints[2], Inf))))
-            } else {
-                return(Intervals(c(endpoints[2], Inf)))
-            }
-          }
-        } else {
-          # a is too close to 0, quadratic is actually linear
-          if (abs(B) > tol) {
-            if (B > 0) {
-              return(Intervals(c(-Inf, max(0, -C/B))))
-            } else {
-              if (-C/B < 0) stop("Error: infeasible linear equation")
-              return(Intervals(rbind(c(-Inf, 0), c(-C/B, Inf))))
-            }
-          } else {
-            warning("Ill-conditioned quadratic")
-            return(Intervals(c(-Inf,0)))
-          }
-        }
-      }
+      
+      quadratic_roots(A, B, C, tol)
     })
     }
     # LL is a list of intervals
@@ -114,6 +57,65 @@ truncationRegion <- function(obj, TC, R, eta, Z, tol = 1e-15) {
   return(unlist(L, recursive = FALSE, use.names = FALSE))
 }
 
+quadratic_roots <- function(A, B, C, tol) {
+    disc <- B^2 - 4*A*C
+    b2a <- -B/(2*A)
+
+    if (disc > tol) {
+        # Real roots        
+        pm <- sqrt(disc)/(2*A)
+        endpoints <- sort(c(b2a - pm, b2a + pm))
+
+    } else {
+        # No real roots
+        if (A > -tol) {
+          # Quadratic form always positive
+            return(Intervals(c(-Inf,0)))
+        } else {
+          # Quadratic form always negative
+            stop(paste("Empty TC support is infeasible", s, "-", l))
+        }
+    }
+
+    if (A > tol) {
+        # Parabola opens upward
+        if (min(endpoints) > 0) {
+          # Both roots positive, union of intervals
+            return(Intervals(rbind(c(-Inf,0), endpoints)))
+        } else {
+          # At least one negative root
+            return(Intervals(c(-Inf, max(0, endpoints[2]))))
+        }
+    } else {
+        if (A < -tol) {
+          # Parabola opens downward
+            if (endpoints[2] < 0) {
+            # Positive quadratic form only when t negative
+                stop(paste("Negative TC support is infeasible", s, "-", l))
+            } else {
+            # Part which is positive
+                if (endpoints[1] > 0) {
+                    return(Intervals(rbind(c(-Inf, endpoints[1]), c(endpoints[2], Inf))))
+                } else {
+                    return(Intervals(c(endpoints[2], Inf)))
+                }
+            }
+        } else {
+          # a is too close to 0, quadratic is actually linear
+            if (abs(B) > tol) {
+                if (B > 0) {
+                    return(Intervals(c(-Inf, max(0, -C/B))))
+                } else {
+                    if (-C/B < 0) stop("Error: infeasible linear equation")
+                    return(Intervals(rbind(c(-Inf, 0), c(-C/B, Inf))))
+                }
+            } else {
+                warning("Ill-conditioned quadratic")
+                return(Intervals(c(-Inf,0)))
+            }
+        }
+    }
+}
 
 roots_to_checkpoints <- function(roots) {
     checkpoints <- unique(sort(c(0, roots)))
