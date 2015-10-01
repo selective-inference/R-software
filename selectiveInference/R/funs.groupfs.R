@@ -223,9 +223,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
   Ep <- sum(index %in% obj$action)
 
   nanconv <- FALSE
-  pvals <- numeric(maxsteps)
-  dfs <- numeric(maxsteps)
-  TCs <- numeric(maxsteps)
+  pvals = dfs = TCs = numeric(maxsteps)
   supports <- list()
 
   if (!is.null(sigma)) {
@@ -274,6 +272,14 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
         lapply(obj$cvobj, function(cvf) {
             truncationRegion(cvf, TC, R[-cvf$fold], eta[-cvf$fold], Z[-cvf$fold])
         })))
+        intervallist <- c(intervallist, 
+        lapply(obj$cvquad, function(cvquad) {
+            etacvquad <- t(eta) %*% cvquad
+            A <- etacvquad %*% eta
+            B <- 2 * etacvquad %*% Z
+            C <- t(Z) %*% cvquad %*% Z
+            quadratic_roots(A, B, C, tol = 1e-15)
+        }))
     }
 
     # Compute intersection:
@@ -283,6 +289,21 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
     supports[[j]] <- E
 
     # E is now potentially a union of intervals
+    pvals[j] <- TC_surv(TC, sigma, df, E)
+  }
+  if (nanconv) warning("P-value NaNs of the form 0/0 converted to 0. This typically occurs for numerical reasons in the presence of a large signal-to-noise ratio.")
+  names(pvals) <- obj$action
+  out <- list(vars = obj$action, pv=pvals, sigma=sigma, TC=TCs, df = dfs, support=supports)
+  class(out) <- "groupfsInf"
+  if (!is.null(attr(obj, "varnames"))) {
+      attr(out, "varnames") <- attr(obj, "varnames")
+  }
+  invisible(out)
+}
+
+# -----------------------------------------------------------
+
+TC_surv <- function(TC, sigma, df, E) {
     if (length(E) == 0) {
         stop(paste("Empty TC support at step", j))
     }
@@ -321,19 +342,8 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
     # Force p-value to lie in the [0,1] interval
     # in case of numerical issues
     value <- max(0, min(1, value))
-    pvals[j] <- value
-  }
-  if (nanconv) warning("P-value NaNs of the form 0/0 converted to 0. This typically occurs for numerical reasons in the presence of a large signal-to-noise ratio.")
-  names(pvals) <- obj$action
-  out <- list(vars = obj$action, pv=pvals, sigma=sigma, TC=TCs, df = dfs, support=supports)
-  class(out) <- "groupfsInf"
-  if (!is.null(attr(obj, "varnames"))) {
-      attr(out, "varnames") <- attr(obj, "varnames")
-  }
-  invisible(out)
+    value
 }
-
-# -----------------------------------------------------------
 
 tchi_interval <- function(lower, upper, sigma, df) {
   a <- (lower/sigma)^2
