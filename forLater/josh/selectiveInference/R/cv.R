@@ -8,6 +8,9 @@ cvMakeFolds <- function(x, nfolds = 10) {
     lapply(1:nfolds, function(f) return(inds[1:foldsize+(f-1)*foldsize]))
 }
 
+############################################
+# Can this be optimized using svdu_thresh? #
+############################################
 cvHatMatrix <- function(x, folds, active.sets) {
     nfolds <- length(folds)
     lapply(1:nfolds, function(f) {
@@ -16,7 +19,10 @@ cvHatMatrix <- function(x, folds, active.sets) {
         x_tr <- x[ -fold, active]
         x_te <- x[fold, active]
         hatm <- matrix(0, nrow=length(fold), ncol=nrow(x))
-        hatm[, -fold] <- x_te %*% ginv(x_tr)
+        svdtr <- svd(x_tr)
+        inds <- svdtr$d > .Machine$double.eps * svdtr$d[1]
+        xtrinv <- svdtr$v[, inds, drop = FALSE] %*% ((1/svdtr$d[inds]) * t(svdtr$u[, inds, drop = FALSE]))
+        hatm[, -fold] <- x_te %*% xtrinv
         return(hatm)
     })
 }
@@ -59,7 +65,9 @@ cvfs <- function(x, y, index = 1:ncol(x), maxsteps, nfolds = 10) {
     folds <- cvMakeFolds(x, nfolds)
     nfolds <- length(folds)
     projections <- list(1:nfolds)
+    maxprojs <- list(1:nfolds)
     active.sets <- list(1:nfolds)
+    cvobj <- list(1:nfolds)
     cv_perm <- sample(1:n)
     Y <- y[cv_perm] - mean(y)
     X <- x[cv_perm, ]
@@ -68,17 +76,19 @@ cvfs <- function(x, y, index = 1:ncol(x), maxsteps, nfolds = 10) {
     for (f in 1:nfolds) {
         fold <- folds[[f]]
         fit <- groupfs(X[-fold,], Y[-fold], index, maxsteps=maxsteps)
-        projections[[f]] <- lapply(fit$projections, function(step.projs) {
-            lapply(step.projs, function(proj) {
-                # Reduce from n by n matrix to svdu_thresh
-                expanded.proj <- matrix(0, n, ncol(proj))
-                expanded.proj[-fold, ] <- proj
-                return(expanded.proj)
-            })
-        })
+        fit$fold <- fold
+        ## projections[[f]] <- lapply(fit$projections, function(step.projs) {
+        ##     lapply(step.projs, function(proj) {
+        ##         # Reduce from n by n matrix to svdu_thresh
+        ##         expanded.proj <- matrix(0, n, ncol(proj))
+        ##         expanded.proj[-fold, ] <- proj
+        ##         return(expanded.proj)
+        ##     })
+        ## })
         active.sets[[f]] <- fit$action
+        cvobj[[f]] <- fit
     }
-    projections <- do.call(c, projections)
+    #projections <- do.call(c, projections)
 
     RSSquads <- list()
     for (s in 1:maxsteps) {
@@ -94,9 +104,8 @@ cvfs <- function(x, y, index = 1:ncol(x), maxsteps, nfolds = 10) {
     RSSquads[[sstar]] <- NULL # remove the all zeroes case
 
     fit <- groupfs(X, Y, index, maxsteps=sstar)
-    fit$projections <- flatten(fit$projections)
-    fit$foldprojections <- flatten(projections)
-    fit$rssprojections <- flatten(RSSquads)
+    fit$cvobj <- cvobj
+    fit$rssprojections <- RSSquads
 
     fit$cvperm <- cv_perm
 

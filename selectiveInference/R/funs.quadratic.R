@@ -1,7 +1,6 @@
 
-interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
+truncationRegion <- function(obj, TC, R, eta, Z, tol = 1e-15) {
 
-  Z <- obj$y - eta * TC
   n <- nrow(obj$x)
 
   L <- lapply(1:length(obj$action), function(s) {

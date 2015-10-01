@@ -3,12 +3,15 @@ Type: Package
 Title: Tools for Selective Inference
 Version: 1.1.1
 Date: 2015-09-01
-Author: Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, 
-  Joshua Loftus, Stephen Reid
+Author: Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor,
+    Joshua Loftus, Stephen Reid
 Maintainer: Rob Tibshirani <tibs@stanford.edu>
-Depends: glmnet, intervals
-Suggests: Rmpfr
+Depends:
+    glmnet,
+    intervals
+Suggests:
+    Rmpfr
 Description: New tools for inference after selection, for use
-  with forward stepwise regression, least angle regression, the 
-  lasso, and the many means problem.
+    with forward stepwise regression, least angle regression, the
+    lasso, and the many means problem.
 License: GPL-2

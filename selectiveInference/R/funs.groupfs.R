@@ -1,12 +1,12 @@
 #' Select a model with forward stepwise.
 #'
-#' This function implements forward selection of linear models almost identically to \code{\link{stepAIC}} with \code{direction = "forward"}. The reason this is a separate function from \code{\link{fs}} is that groups of variables (e.g. dummies encoding levels of a categorical variable) must be handled differently in the selective inference framework.
+#' This function implements forward selection of linear models almost identically to \code{\link[stats]{step}} with \code{direction = "forward"}. The reason this is a separate function from \code{\link{fs}} is that groups of variables (e.g. dummies encoding levels of a categorical variable) must be handled differently in the selective inference framework.
 #'
 #' @param x Matrix of predictors (n by p).
 #' @param y Vector of outcomes (length n).
 #' @param index Group membership indicator of length p.
 #' @param maxsteps Maximum number of steps for forward stepwise.
-#' @param sigma Estimate of error standard deviation for use in AIC criterion. This determines the relative scale between RSS and the degrees of freedom penalty. Default is NULL corresponding to unknown sigma. See \code{\link{extractAIC}} for details.
+#' @param sigma Estimate of error standard deviation for use in AIC criterion. This determines the relative scale between RSS and the degrees of freedom penalty. Default is NULL corresponding to unknown sigma. See \code{\link[stats]{extractAIC}} for details.
 #' @param k Multiplier of model size penalty, the default is \code{k = 2} for AIC. Use \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.
 #' @param intercept Should an intercept be included in the model? Default is TRUE.
 #' @param normalize Should the design matrix be normalized? Default is TRUE.
@@ -196,11 +196,10 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
 
 #' Compute selective p-values for a model fitted by \code{groupfs}.
 #'
-#' Computes p-values for each group of variables in a model fitted by \code{\link{groupfs}}. These p-values adjust for selection by truncating the usual \code{chi^2} statistics to the regions implied by the model selection event. Details are provided in a forthcoming work.
+#' Computes p-values for each group of variables in a model fitted by \code{\link{groupfs}}. These p-values adjust for selection by truncating the usual \eqn{\chi^2} statistics to the regions implied by the model selection event. Details are provided in a forthcoming work.
 #'
 #' @param obj Object returned by \code{\link{groupfs}} function
 #' @param sigma Estimate of error standard deviation. If NULL (default), this is estimated using the mean squared residual of the full least squares fit when n >= 2p, and the mean squared residual of the selected model when n < 2p. In the latter case, the user should use \code{\link{estimateSigma}} function for a more accurate estimate.
-#' @param projs Additional projections to define model selection event. For use with cross-validation. Default is NULL and it is not recommended to change this.
 #' @param verbose Print out progress along the way? Default is FALSE.
 #' @return An object of class "groupfsInf" containing selective p-values for the fitted model \code{obj}. The default printing behavior should supply adequate information.
 #'
@@ -212,18 +211,16 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
 #'   \item{df}{Rank of group of variables when it was added to the model.}
 #'   \item{support}{List of intervals defining the truncation region of the truncated chi.}
 #' }
-groupfsInf <- function(obj, sigma = NULL, projs = NULL, verbose = FALSE) {
+groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
 
   n <- nrow(obj$x)
   p <- ncol(obj$x)
-  active <- obj$action
   maxsteps <- attr(obj, "maxsteps")
   k <- attr(obj, "k")
   index <- obj$index
   x <- obj$x
   y <- obj$y
-  Eindex <- which(index %in% active)
-  Ep <- length(Eindex)
+  Ep <- sum(index %in% obj$action)
 
   nanconv <- FALSE
   pvals <- numeric(maxsteps)
@@ -250,40 +247,43 @@ groupfsInf <- function(obj, sigma = NULL, projs = NULL, verbose = FALSE) {
 
   # Compute p-value for each active group
   for (j in 1:maxsteps) {
-    i <- active[j]
-    if (verbose) cat(paste0("Step ", j, "/", maxsteps, ": computing P-value for group ", i, "\n"))    
+    i <- obj$action[j]
+    if (verbose) cat(paste0("Step ", j, "/", attr(obj, "maxsteps"), ": computing P-value for group ", i, "\n"))    
     # Form projection onto active set minus i
     # and project x_i orthogonally
-    x_i <- x[,which(index == i), drop = FALSE]
-    if (length(active) > 1) {
-        minus_i <- setdiff(active, i)
-        x_minus_i <- svdu_thresh(x[,which(index %in% minus_i), drop = FALSE])
+    x_i <- obj$x[,which(obj$index == i), drop = FALSE]
+    if (length(obj$action) > 1) {
+        minus_i <- setdiff(obj$action, i)
+        x_minus_i <- svdu_thresh(obj$x[,which(obj$index %in% minus_i), drop = FALSE])
         x_i <- x_i - x_minus_i %*% t(x_minus_i) %*% x_i
     }
 
     # Project y onto what remains of x_i
     Ugtilde <- svdu_thresh(x_i)
-    R <- t(Ugtilde) %*% y
+    R <- t(Ugtilde) %*% obj$y
     TC <- sqrt(sum(R^2))
     eta <- Ugtilde %*% R / TC
+    Z <- obj$y - eta * TC    
     df <- ncol(Ugtilde)
-    dfs[j] <- df
-    TCs[j] <- TC
-
-    # For each step...
-    L <- interval_groupfs(obj, TC, R, eta, Ugtilde)
-
-    # Any additional projections, e.g. from cross-validation?
-    if (!is.null(projs)) L <- c(L, projs)
-
+      
+    intervallist <- truncationRegion(obj, TC, R, eta, Z)
+    if (!is.null(fit$cvobj)) {
+        intervallist <- c(intervallist, do.call(c,
+        lapply(fit$cvobj, function(cvf) {
+            truncationRegion(cvf, TC, R[-cvf$fold], eta[-cvf$fold], Z[-cvf$fold])
+        })))
+    }
+    
     # Compute intersection:
-    Lunion <- do.call(interval_union, L)
-    Lunion <- interval_union(Lunion, Intervals(c(-Inf,0)))
-    E <- interval_complement(Lunion, check_valid = FALSE)
+    region <- do.call(interval_union, intervallist)
+    region <- interval_union(region, Intervals(c(-Inf,0)))
+    E <- interval_complement(region, check_valid = FALSE)
     supports[[j]] <- E
 
     # E is now potentially a union of intervals
-    if (length(E) == 0) stop("Trivial intersection")
+    if (length(E) == 0) {
+        stop(paste("Empty TC support at step", j))
+    }
 
     # Sum truncated cdf over each part of E
     denom <- do.call(sum, lapply(1:nrow(E), function(v) {
@@ -323,7 +323,7 @@ groupfsInf <- function(obj, sigma = NULL, projs = NULL, verbose = FALSE) {
   }
   if (nanconv) warning("P-value NaNs of the form 0/0 converted to 0. This typically occurs for numerical reasons in the presence of a large signal-to-noise ratio.")
   names(pvals) <- obj$action
-  out <- list(vars = active, pv=pvals, sigma=sigma, TC=TCs, df = dfs, support=supports)
+  out <- list(vars = obj$action, pv=pvals, sigma=sigma, TC=TCs, df = dfs, support=supports)
   class(out) <- "groupfsInf"
   if (!is.null(attr(obj, "varnames"))) {
       attr(out, "varnames") <- attr(obj, "varnames")
@@ -356,11 +356,18 @@ num_int_chi <- function(a, b, df, nsamp = 10000) {
 
 #' Center and scale design matrix by groups
 #'
+#' For internal use by \code{\link{groupfs}}.
+#' 
 #' @param x Design matrix.
 #' @param index Group membership indicator of length p.
 #' @param center Center groups, default is TRUE.
 #' @param scale Scale groups by Frobenius norm, default is TRUE.
-#' @return Scaled design matrix
+#' @return
+#' \describe{
+#'   \item{x}{Optionally centered/scaled design matrix.}
+#'   \item{xm}{Means of groups in original design matrix.}
+#'   \item{xs}{Frobenius norms of groups in original design matrix.}
+#' }
 scaleGroups <- function(x, index, center = TRUE, scale = TRUE) {
   keys <- unique(index)
   xm <- rep(0, ncol(x))
