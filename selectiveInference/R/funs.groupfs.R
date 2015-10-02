@@ -138,8 +138,8 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
 #'
 #' For internal use by \code{\link{groupfs}}.
 #'
-#' @param x Design matrix.
-#' @param y Response vector.
+#' @param xr Design matrix at current step.
+#' @param yr Response vector residual at current step.
 #' @param index Group membership indicator of length p.
 #' @param labels The unique elements of \code{index}.
 #' @param inactive Labels of inactive groups.
@@ -282,6 +282,9 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
     region <- do.call(interval_union, intervallist)
     region <- interval_union(region, Intervals(c(-Inf,0)))
     E <- interval_complement(region, check_valid = FALSE)
+    if (length(E) == 0) {
+        stop(paste("Empty TC support at step", j))
+    }
     supports[[j]] <- E
 
     # E is now potentially a union of intervals
@@ -301,7 +304,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
 
 TC_surv <- function(TC, sigma, df, E) {
     if (length(E) == 0) {
-        stop(paste("Empty TC support at step", j))
+        stop("Empty TC support")
     }
 
     # Sum truncated cdf over each part of E
