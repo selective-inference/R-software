@@ -1,5 +1,9 @@
-library(selectiveInference)
+#library(selectiveInference)
 #library(lars)
+library(intervals)
+source("../selectiveInference/R/funs.groupfs.R")
+source("../selectiveInference/R/funs.quadratic.R")
+source("../selectiveInference/R/funs.common.R")
 
 set.seed(1)
 n <- 40
@@ -72,7 +76,7 @@ y <- y + x %*% beta
 y <- y-mean(y)
 df <- data.frame(y = y, states)
 fsfit <- step(lm(y ~ 0, df), direction="forward", scope = formula(lm(y~., df)), steps = maxsteps, k = 2)
-fit <- groupfs(x, y, index, maxsteps, k = 2, normalize = T)
+fit <- groupfs(x, y, index, maxsteps, k = 2, intercept = F, center = F, normalize = T)
 # names(fsfit$coefficients)[-1]
 if (length(fsfit$coefficients) > 0) {
     fsnames <- cnames[which(!is.na(charmatch(cnames,names(fsfit$coefficients)[-1])))][order(unlist(lapply(cnames, function(cn) {
@@ -99,7 +103,7 @@ for (iter in 1:niter) {
     y = rnorm(n)
     fit = groupfs(x, y, index, maxsteps)
     pvals = groupfsInf(fit)
-    pvalm[iter, ] = pvals$pv    
+    pvalm[iter, ] = pvals$pv
     fitk = groupfs(x, y, index, maxsteps, sigma = 1)
     pvalsk = groupfsInf(fitk)
     pvalmk[iter, ] = pvalsk$pv

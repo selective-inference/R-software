@@ -9,6 +9,7 @@
 #' @param sigma Estimate of error standard deviation for use in AIC criterion. This determines the relative scale between RSS and the degrees of freedom penalty. Default is NULL corresponding to unknown sigma. See \code{\link[stats]{extractAIC}} for details.
 #' @param k Multiplier of model size penalty, the default is \code{k = 2} for AIC. Use \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.
 #' @param intercept Should an intercept be included in the model? Default is TRUE.
+#' @param center Should the columns of the design matrix be centered? Default is TRUE.
 #' @param normalize Should the design matrix be normalized? Default is TRUE.
 #' @param verbose Print out progress along the way? Default is FALSE.
 #' @return An object of class "groupfs" containing information about the sequence of models in the forward stepwise algorithm. Call the function \code{\link{groupfsInf}} on this object to compute selective p-values.
@@ -19,7 +20,7 @@
 #' fit = groupfs(x, y, index, maxsteps = 5)
 #' pvals = groupfsInf(fit)
 #' @seealso \code{\link{groupfsInf}}
-groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE, normalize = TRUE, verbose = FALSE) {
+groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE, center = TRUE, normalize = TRUE, verbose = FALSE) {
 
   if (missing(index)) stop("Missing argument: index.")
   p <- ncol(x)
@@ -50,7 +51,7 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
   x.update <- x
 
   # Center and scale design matrix
-  xscaled <- scaleGroups(x.update, index, scale = normalize)
+  xscaled <- scaleGroups(x.update, index, center, normalize)
   xm <- xscaled$xm
   xs <- xscaled$xs
   x.update <- xscaled$x
@@ -61,9 +62,9 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
   terms = projections = maxprojs = aicpens = maxpens = cumprojs = vector("list", maxsteps)
 
   # Store other information from each step
-  path.info <- data.frame(imax=integer(maxsteps), L=numeric(maxsteps), df=integer(maxsteps), RSS=numeric(maxsteps), RSSdrop=numeric(maxsteps), chisq=numeric(maxsteps))
+  path.info <- data.frame(imax=integer(maxsteps), df=integer(maxsteps), AIC=numeric(maxsteps), RSS=numeric(maxsteps), RSSdrop=numeric(maxsteps), chisq=numeric(maxsteps))
 
-  modelrank <- 1
+  modelrank <- as.numeric(intercept)
 
   # Begin main loop
   for (step in 1:maxsteps) {
@@ -76,6 +77,8 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
     active <- union(active, imax)
     inactive.inds <- which(!index %in% active)
 
+    # Compute AIC
+    added$AIC <- n*log(exp(k*modelrank/n) * added$maxterm/n) + n*(log(2*pi) + 1)
     # Rank of group
     modelrank <- modelrank + added$df
 
@@ -86,11 +89,6 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
 
     # Regress added group out of y and inactive x
     P.imax <- added$maxproj %*% t(added$maxproj)
-    if (is.null(sigma)) {
-        P.imax <- P.imax / exp(k*added$df/n)
-    } else {
-        P.imax <- P.imax * sigma^2
-    }
     P.imax <- diag(rep(1, n)) - P.imax
     y.update <- P.imax %*% y.update
     x.update[, inactive.inds] <- P.imax %*% x.update[, inactive.inds]
@@ -103,6 +101,7 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
     if (step > 1) cumprojs[[step]] <- P.imax %*% cumprojs[[step-1]]
     terms[[step]] <- added$terms
 
+
     # Compute RSS for unadjusted chisq p-values
     added$RSS <- sum(y.update^2)
     scale.chisq <- 1
@@ -112,14 +111,14 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
     y.last <- y.update
 
     # Projections are stored separately
-    step.info <- data.frame(added[-c(4:(length(added)-3))])
+    step.info <- data.frame(added[-c(3:(length(added)-4))])
     path.info[step, ] <- step.info
 
     if (verbose) print(step.info)
   }
 
   # Create output object
-  value <- list(action=path.info$imax, L=path.info$L, projections = projections, maxprojs = maxprojs, aicpens = aicpens, maxpens = maxpens, cumprojs = cumprojs, log = path.info, index = index, y = y.begin, x = x.begin, bx = xm, sx = xs, sigma = sigma, intercept = intercept, terms = terms)
+  value <- list(action=path.info$imax, L=path.info$L, projections = projections, maxprojs = maxprojs, aicpens = aicpens, maxpens = maxpens, cumprojs = cumprojs, log = path.info, index = index, y = y.begin, x = x.begin, bx = xm, sx = xs, sigma = sigma, intercept = intercept, call = match.call(), terms = terms)
   class(value) <- "groupfs"
   attr(value, "labels") <- labels
   attr(value, "index") <- index
@@ -147,15 +146,14 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
 #' @param k Multiplier of model size penalty, use \code{k = 2} for AIC, \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.
 #' @param sigma Estimate of error standard deviation for use in AIC criterion. This determines the relative scale between RSS and the degrees of freedom penalty. See \code{\link{extractAIC}} for details.
 #' @return Index \code{imax} of added group, value \code{L} of maximized negative AIC, lists of projection matrices defining quadratic model selection event.
-add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
+add1.groupfs <- function(xr, yr, index, labels, inactive, k, sigma = NULL) {
 
   # Use characters to avoid issues where
   # list() populates NULL lists in the positions
   # of the active variables
   ### Question for later: does this slow down lapply?
   keys = as.character(inactive)
-  n2y <- sum(y^2)
-  n <- ncol(x)
+  n <- nrow(xr)
 
   # Compute sums of squares to determine which group is added
   # penalized by rank of group if k > 0
@@ -163,33 +161,31 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
   names(projections) = names(terms) = names(aicpens) = keys
   for (key in keys) {
       inds <- which(index == key)
-      xi <- x[,inds]
+      xi <- xr[,inds]
       ui <- svdu_thresh(xi)
       dfi <- ncol(ui)
       projections[[key]] <- ui
-      dfi <- ncol(ui)
-      uy <- t(ui) %*% y
+      uy <- t(ui) %*% yr
       if (is.null(sigma)) {
-          aicpens[[key]] <- exp(k*dfi/n)
-          terms[[key]] <- (sum(uy^2)  - sum(y^2)) * aicpens[[key]]
+          aicpens[[key]] <- exp(k*(dfi+1)/n)
+          terms[[key]] <- (sum(yr^2) - sum(uy^2)) * aicpens[[key]]
       } else {
-          aicpens[[key]] <- sigma^2 * k * dfi/n
-          terms[[key]] <- (sum(uy^2) - sum(y^2)) - aicpens[[key]]
+          aicpens[[key]] <- 2 * sigma^2 * k * dfi/n
+          terms[[key]] <- (sum(yr^2) - sum(uy^2)) - aicpens[[key]]
       }
   }
 
   # Maximizer = group to be added
-  terms.maxind <- which.max(terms)
-  imax <- inactive[terms.maxind]
-  keyind <- which(keys == imax)
-  maxproj <- projections[[keyind]]
-  maxpen <- aicpens[[keyind]]
-  projections[[keyind]] <- NULL
-  aicpens[[keyind]] <- NULL
+  terms.optind <- which.min(terms)
+  imax <- inactive[terms.optind]
+  optkey <- which(keys == imax)
+  maxproj <- projections[[optkey]]
+  maxpen <- aicpens[[optkey]]
+  maxterm <- terms[[optkey]]
+  projections[[optkey]] <- NULL
+  aicpens[[optkey]] <- NULL
 
-  L <- terms[[terms.maxind]]
-
-  return(list(imax=imax, L=L, df = ncol(maxproj), projections = projections, maxproj = maxproj, aicpens = aicpens, maxpen = maxpen, terms = terms))
+  return(list(imax=imax, df = ncol(maxproj), projections = projections, maxproj = maxproj, aicpens = aicpens, maxpen = maxpen, maxterm = maxterm, terms = terms))
 }
 
 # -----------------------------------------------------------
@@ -272,7 +268,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
         lapply(obj$cvobj, function(cvf) {
             truncationRegion(cvf, TC, R[-cvf$fold], eta[-cvf$fold], Z[-cvf$fold])
         })))
-        intervallist <- c(intervallist, 
+        intervallist <- c(intervallist,
         lapply(obj$cvquad, function(cvquad) {
             etacvquad <- t(eta) %*% cvquad
             A <- etacvquad %*% eta
@@ -373,14 +369,14 @@ num_int_chi <- function(a, b, df, nsamp = 10000) {
 #' @param x Design matrix.
 #' @param index Group membership indicator of length p.
 #' @param center Center groups, default is TRUE.
-#' @param scale Scale groups by Frobenius norm, default is TRUE.
+#' @param normalize Scale groups by Frobenius norm, default is TRUE.
 #' @return
 #' \describe{
 #'   \item{x}{Optionally centered/scaled design matrix.}
 #'   \item{xm}{Means of groups in original design matrix.}
 #'   \item{xs}{Frobenius norms of groups in original design matrix.}
 #' }
-scaleGroups <- function(x, index, center = TRUE, scale = TRUE) {
+scaleGroups <- function(x, index, center = TRUE, normalize = TRUE) {
   keys <- unique(index)
   xm <- rep(0, ncol(x))
   xs <- rep(1, ncol(x))
@@ -396,7 +392,7 @@ scaleGroups <- function(x, index, center = TRUE, scale = TRUE) {
     xsj <- sqrt(normsq)
     xs[inds] <- xsj
     if (xsj > 0) {
-        if (scale) x[, inds] <- x[, inds] / xsj
+        if (normalize) x[, inds] <- x[, inds] / xsj
     } else {
         stop(paste("Design matrix contains identically zero group of variables:", j))
     }
@@ -469,7 +465,7 @@ print.groupfs <- function(x, ...) {
     action <- x$action
     vnames <- attr(x, "varnames")
     if (length(vnames) > 0) action <- vnames[action]
-    tab = data.frame(Group = action, Rank = x$log$df, RSS = round(x$log$RSS, 3))
+    tab = data.frame(Group = action, Rank = x$log$df, RSS = round(x$log$RSS, 3), AIC = round(x$log$AIC, 3))
     rownames(tab) = 1:nsteps
     print(tab)
     cat("\nUse groupfsInf() to compute P-values\n")
