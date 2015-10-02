@@ -47,7 +47,7 @@ truncationRegion <- function(obj, TC, R, eta, Z, tol = 1e-15) {
           B <- 2 * as.numeric(t(Ugeta) %*% UgZ - t(Uheta) %*% UhZ)
           C <- sum(UgZ^2) - sum(UhZ^2) - pendiff
       }
-      
+
       quadratic_roots(A, B, C, tol)
     })
     }
@@ -62,7 +62,7 @@ quadratic_roots <- function(A, B, C, tol) {
     b2a <- -B/(2*A)
 
     if (disc > tol) {
-        # Real roots        
+        # Real roots
         pm <- sqrt(disc)/(2*A)
         endpoints <- sort(c(b2a - pm, b2a + pm))
 
@@ -73,7 +73,7 @@ quadratic_roots <- function(A, B, C, tol) {
             return(Intervals(c(-Inf,0)))
         } else {
           # Quadratic form always negative
-            stop(paste("Empty TC support is infeasible", s, "-", l))
+            stop("Empty TC support is infeasible")
         }
     }
 
@@ -91,7 +91,7 @@ quadratic_roots <- function(A, B, C, tol) {
           # Parabola opens downward
             if (endpoints[2] < 0) {
             # Positive quadratic form only when t negative
-                stop(paste("Negative TC support is infeasible", s, "-", l))
+                stop("Negative TC support is infeasible")
             } else {
             # Part which is positive
                 if (endpoints[1] > 0) {
