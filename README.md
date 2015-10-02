@@ -1,7 +1,7 @@
 # R-software
-R software for [selective inference](http://cran.r-project.org/web/packages/selectiveInference/).
+R software for [selective inference](http://cran.r-project.org/web/packages/selectiveInference/).  
 Authors: Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid  
-Maintainer: Rob Tibshirani <tibs@stanford.edu>  
+Maintainer: Rob Tibshirani <tibs@stanford.edu>
 
 New tools for inference after selection, for use with forward stepwise regression, least angle regression, the lasso, and the many means problem. The package is available on [CRAN](http://cran.r-project.org/web/packages/selectiveInference/). See [this paper](http://www.pnas.org/content/112/25/7629.full) for a high level introduction to selective inference.
 
@@ -13,4 +13,3 @@ Code is in the directory selectiveInference/R.
 * funs.inf.R: Common functions for inference with fixed, fs, lar, and manymeans (but not group).
 * funs.lar.R: Inference for least angle regression.
 * funs.max.R: Some numerical approximations. Deprecated?
-
