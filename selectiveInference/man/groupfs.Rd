@@ -4,7 +4,7 @@
 \title{Select a model with forward stepwise.}
 \usage{
 groupfs(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE,
-  normalize = TRUE, verbose = FALSE)
+  center = TRUE, normalize = TRUE, verbose = FALSE)
 }
 \arguments{
 \item{x}{Matrix of predictors (n by p).}
@@ -20,6 +20,8 @@ groupfs(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE,
 \item{k}{Multiplier of model size penalty, the default is \code{k = 2} for AIC. Use \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.}
 
 \item{intercept}{Should an intercept be included in the model? Default is TRUE.}
+
+\item{center}{Should the columns of the design matrix be centered? Default is TRUE.}
 
 \item{normalize}{Should the design matrix be normalized? Default is TRUE.}
 

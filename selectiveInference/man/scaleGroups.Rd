@@ -3,7 +3,7 @@
 \alias{scaleGroups}
 \title{Center and scale design matrix by groups}
 \usage{
-scaleGroups(x, index, center = TRUE, scale = TRUE)
+scaleGroups(x, index, center = TRUE, normalize = TRUE)
 }
 \arguments{
 \item{x}{Design matrix.}
@@ -12,7 +12,7 @@ scaleGroups(x, index, center = TRUE, scale = TRUE)
 
 \item{center}{Center groups, default is TRUE.}
 
-\item{scale}{Scale groups by Frobenius norm, default is TRUE.}
+\item{normalize}{Scale groups by Frobenius norm, default is TRUE.}
 }
 \value{
 \describe{
