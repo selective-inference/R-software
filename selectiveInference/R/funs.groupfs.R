@@ -103,11 +103,6 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
         added$AIC <- n * log(added$maxterm/n) - k * added$df + n + n*log(2*pi) + k * modelrank
     } else {
         added$AIC <- sum(y.update^2)/sigma^2 - n + k * modelrank
-        if (verbose) {
-            aics <- matrix(round(unlist(added$terms) - n + k * (modelrank - added$df), 2), ncol = 1)
-            rownames(aics) <- names(added$terms)
-            write.table(aics, col.names = F, quote = F)
-        }
     }
 
     projections[[step]] <- added$projections
