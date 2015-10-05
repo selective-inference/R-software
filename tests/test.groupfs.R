@@ -1,9 +1,9 @@
-library(selectiveInference)
+#library(selectiveInference)
 #library(lars)
-#library(intervals)
-#source("../selectiveInference/R/funs.groupfs.R")
-#source("../selectiveInference/R/funs.quadratic.R")
-#source("../selectiveInference/R/funs.common.R")
+library(intervals)
+source("../selectiveInference/R/funs.groupfs.R")
+source("../selectiveInference/R/funs.quadratic.R")
+source("../selectiveInference/R/funs.common.R")
 
 set.seed(1)
 n <- 40
@@ -128,3 +128,4 @@ print(colMeans(pvalmk))
 
 print(mean(pvalm))
 print(mean(pvalmk))
+
