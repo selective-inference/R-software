@@ -11,6 +11,7 @@
 #' @param intercept Should an intercept be included in the model? Default is TRUE.
 #' @param center Should the columns of the design matrix be centered? Default is TRUE.
 #' @param normalize Should the design matrix be normalized? Default is TRUE.
+#' @param aicstop Early stopping if AIC increases, default is FALSE.
 #' @param verbose Print out progress along the way? Default is FALSE.
 #' @return An object of class "groupfs" containing information about the sequence of models in the forward stepwise algorithm. Call the function \code{\link{groupfsInf}} on this object to compute selective p-values.
 #' @examples
@@ -20,7 +21,7 @@
 #' fit = groupfs(x, y, index, maxsteps = 5)
 #' pvals = groupfsInf(fit)
 #' @seealso \code{\link{groupfsInf}}
-groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE, center = TRUE, normalize = TRUE, verbose = FALSE) {
+groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE, center = TRUE, normalize = TRUE, aicstop = FALSE, verbose = FALSE) {
 
   if (missing(index)) stop("Missing argument: index.")
   p <- ncol(x)
@@ -41,7 +42,6 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
       maxsteps <- max(which(cumsum(gsizes) < nrow(x)))
       warning(paste("If the largest groups are included the model will be saturated/overdetermined. To prevent this maxsteps has been changed to", maxsteps))
   }
-
 
   # Initialize copies of data for loop
   by <- mean(y)
@@ -65,6 +65,7 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
   path.info <- data.frame(imax=integer(maxsteps), df=integer(maxsteps), AIC=numeric(maxsteps), RSS=numeric(maxsteps), RSSdrop=numeric(maxsteps), chisq=numeric(maxsteps))
 
   modelrank <- as.numeric(intercept)
+  aic.last <- n*(log(2*pi) + log(mean(y.update^2)) + 1 + k * (is.null(sigma) + intercept))
 
   # Begin main loop
   for (step in 1:maxsteps) {
@@ -101,7 +102,6 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
     if (step > 1) cumprojs[[step]] <- P.imax %*% cumprojs[[step-1]]
     terms[[step]] <- added$terms
 
-
     # Compute RSS for unadjusted chisq p-values
     added$RSS <- sum(y.update^2)
     scale.chisq <- 1
@@ -109,11 +109,18 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
     added$RSSdrop <- sum((y.last - y.update)^2)
     added$chisq <- pchisq(added$RSSdrop/scale.chisq, lower.tail=FALSE, df = added$df)
     y.last <- y.update
-
+    
     # Projections are stored separately
     step.info <- data.frame(added[-c(3:(length(added)-4))])
     path.info[step, ] <- step.info
 
+    if (aic.last < added$AIC) {
+        # TODO tomorrow
+        # Modify the object somehow
+        # and groupfsInf
+        break
+    }
+    aic.last <- added$AIC
     if (verbose) print(step.info)
   }
 
