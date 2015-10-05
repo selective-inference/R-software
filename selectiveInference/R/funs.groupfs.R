@@ -58,6 +58,7 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
 
   x.begin <- x.update
   y.begin <- y.update
+  stopped <- FALSE
   # Store all projections computed along the path
   terms = projections = maxprojs = aicpens = maxpens = cumprojs = vector("list", maxsteps)
 
@@ -70,6 +71,7 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
   } else {
       aic.begin <- aic.last <- sum(y.update^2)/sigma^2 - n + k * intercept
   }
+  if (verbose) print(paste0("Start:  AIC=", round(aic.begin, 3)), quote = FALSE)
 
   # Begin main loop
   for (step in 1:maxsteps) {
@@ -98,9 +100,14 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
 
     # Compute AIC
     if (is.null(sigma)) {
-        added$AIC <- n*log(exp(k*modelrank/n) * added$maxterm/n) + n*(log(2*pi) + 1)
+        added$AIC <- n * log(added$maxterm/n) - k * added$df + n + n*log(2*pi) + k * modelrank
     } else {
         added$AIC <- sum(y.update^2)/sigma^2 - n + k * modelrank
+        if (verbose) {
+            aics <- matrix(round(unlist(added$terms) - n + k * (modelrank - added$df), 2), ncol = 1)
+            rownames(aics) <- names(added$terms)
+            write.table(aics, col.names = F, quote = F)
+        }
     }
 
     projections[[step]] <- added$projections
@@ -123,6 +130,8 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
     step.info <- data.frame(added[-c(3:(length(added)-4))])
     path.info[step, ] <- step.info
 
+    if (verbose) print(round(step.info, 3))
+
     if (aicstop > 0 && step >= aicstop && aic.last < added$AIC) {
         ########## Incomplete ##########
         ## cut off the last aicstop variables as well?
@@ -135,16 +144,17 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
             cumprojs[(step+1):maxsteps] <- NULL
             terms[(step+1):maxsteps] <- NULL
             maxsteps <- step
+            stopped <- TRUE
             # add additional projections
             break
         }
     }
     aic.last <- added$AIC
-    if (verbose) print(step.info)
   }
 
   # Create output object
   value <- list(action=path.info$imax, L=path.info$L, AIC=path.info$AIC, projections = projections, maxprojs = maxprojs, aicpens = aicpens, maxpens = maxpens, cumprojs = cumprojs, log = path.info, index = index, y = y.begin, x = x.begin, bx = xm, sx = xs, sigma = sigma, intercept = intercept, call = match.call(), terms = terms)
+
   class(value) <- "groupfs"
   attr(value, "labels") <- labels
   attr(value, "index") <- index
@@ -152,6 +162,7 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
   attr(value, "sigma") <- sigma
   attr(value, "k") <- k
   attr(value, "aicstop") <- aicstop
+  if (aicstop > 0) attr(value, "stopped") <- stopped
   if (is.null(attr(x, "varnames"))) {
     attr(value, "varnames") <- colnames(x)
   } else {
@@ -194,11 +205,11 @@ add1.groupfs <- function(xr, yr, index, labels, inactive, k, sigma = NULL) {
       projections[[key]] <- ui
       uy <- t(ui) %*% yr
       if (is.null(sigma)) {
-          aicpens[[key]] <- exp(k*(dfi+1)/n)
+          aicpens[[key]] <- exp(k*dfi/n)
           terms[[key]] <- (sum(yr^2) - sum(uy^2)) * aicpens[[key]]
       } else {
-          aicpens[[key]] <- k * dfi/n
-          terms[[key]] <- (sum(yr^2) - sum(uy^2))/sigma^2 - aicpens[[key]]
+          aicpens[[key]] <- k * dfi
+          terms[[key]] <- (sum(yr^2) - sum(uy^2))/sigma^2 + aicpens[[key]]
       }
   }
 
