@@ -11,17 +11,17 @@
 #' @param intercept Should an intercept be included in the model? Default is TRUE.
 #' @param center Should the columns of the design matrix be centered? Default is TRUE.
 #' @param normalize Should the design matrix be normalized? Default is TRUE.
-#' @param aicstop Early stopping if AIC increases, default is FALSE.
+#' @param aicstop Early stopping if AIC increases. Default is 0 corresponding to no early stopping. Positive integer values specify the number of times the AIC is allowed to increase in a row, e.g. with \code{aicstop = 2} the algorithm will stop if the AIC criterion increases for 2 steps in a row. The default of \code{\link[stats]{step}} corresponds to \code{aicstop = 1}.
 #' @param verbose Print out progress along the way? Default is FALSE.
 #' @return An object of class "groupfs" containing information about the sequence of models in the forward stepwise algorithm. Call the function \code{\link{groupfsInf}} on this object to compute selective p-values.
 #' @examples
 #' x = matrix(rnorm(20*40), nrow=20)
 #' index = sort(rep(1:20, 2))
-#' y = rnorm(20) + 2 * (x[,1] - x[,2]) - (x[,3] - x[,4])
+#' y = rnorm(20) + 2 * x[,1] - x[,4]
 #' fit = groupfs(x, y, index, maxsteps = 5)
 #' pvals = groupfsInf(fit)
-#' @seealso \code{\link{groupfsInf}}
-groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE, center = TRUE, normalize = TRUE, aicstop = FALSE, verbose = FALSE) {
+#' @seealso \code{\link{groupfsInf}}, \code{\link{factorDesign}}.
+groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE, center = TRUE, normalize = TRUE, aicstop = 0, verbose = FALSE) {
 
   if (missing(index)) stop("Missing argument: index.")
   p <- ncol(x)
@@ -65,7 +65,11 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
   path.info <- data.frame(imax=integer(maxsteps), df=integer(maxsteps), AIC=numeric(maxsteps), RSS=numeric(maxsteps), RSSdrop=numeric(maxsteps), chisq=numeric(maxsteps))
 
   modelrank <- as.numeric(intercept)
-  aic.last <- n*(log(2*pi) + log(mean(y.update^2)) + 1 + k * (is.null(sigma) + intercept))
+  if (is.null(sigma)) {
+      aic.begin <- aic.last <- n*(log(2*pi) + log(mean(y.update^2)) + 1 + k * (is.null(sigma) + intercept))
+  } else {
+      aic.begin <- aic.last <- sum(y.update^2)/sigma^2 - n + k * intercept
+  }
 
   # Begin main loop
   for (step in 1:maxsteps) {
@@ -78,8 +82,6 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
     active <- union(active, imax)
     inactive.inds <- which(!index %in% active)
 
-    # Compute AIC
-    added$AIC <- n*log(exp(k*modelrank/n) * added$maxterm/n) + n*(log(2*pi) + 1)
     # Rank of group
     modelrank <- modelrank + added$df
 
@@ -93,6 +95,13 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
     P.imax <- diag(rep(1, n)) - P.imax
     y.update <- P.imax %*% y.update
     x.update[, inactive.inds] <- P.imax %*% x.update[, inactive.inds]
+
+    # Compute AIC
+    if (is.null(sigma)) {
+        added$AIC <- n*log(exp(k*modelrank/n) * added$maxterm/n) + n*(log(2*pi) + 1)
+    } else {
+        added$AIC <- sum(y.update^2)/sigma^2 - n + k * modelrank
+    }
 
     projections[[step]] <- added$projections
     maxprojs[[step]] <- added$maxproj
@@ -109,36 +118,47 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
     added$RSSdrop <- sum((y.last - y.update)^2)
     added$chisq <- pchisq(added$RSSdrop/scale.chisq, lower.tail=FALSE, df = added$df)
     y.last <- y.update
-    
+
     # Projections are stored separately
     step.info <- data.frame(added[-c(3:(length(added)-4))])
     path.info[step, ] <- step.info
 
-    if (aic.last < added$AIC) {
-        # TODO tomorrow
-        # Modify the object somehow
-        # and groupfsInf
-        break
+    if (aicstop > 0 && step >= aicstop && aic.last < added$AIC) {
+        ########## Incomplete ##########
+        ## cut off the last aicstop variables as well?
+        if (all(diff(c(aic.begin, path.info$AIC)[(step+1-aicstop):(step+1)]) > 0)) {
+            path.info <- path.info[1:step, ]
+            projections[(step+1):maxsteps] <- NULL
+            maxprojs[(step+1):maxsteps] <- NULL
+            aicpens[(step+1):maxsteps] <- NULL
+            maxpens[(step+1):maxsteps] <- NULL
+            cumprojs[(step+1):maxsteps] <- NULL
+            terms[(step+1):maxsteps] <- NULL
+            maxsteps <- step
+            # add additional projections
+            break
+        }
     }
     aic.last <- added$AIC
     if (verbose) print(step.info)
   }
 
   # Create output object
-  value <- list(action=path.info$imax, L=path.info$L, projections = projections, maxprojs = maxprojs, aicpens = aicpens, maxpens = maxpens, cumprojs = cumprojs, log = path.info, index = index, y = y.begin, x = x.begin, bx = xm, sx = xs, sigma = sigma, intercept = intercept, call = match.call(), terms = terms)
+  value <- list(action=path.info$imax, L=path.info$L, AIC=path.info$AIC, projections = projections, maxprojs = maxprojs, aicpens = aicpens, maxpens = maxpens, cumprojs = cumprojs, log = path.info, index = index, y = y.begin, x = x.begin, bx = xm, sx = xs, sigma = sigma, intercept = intercept, call = match.call(), terms = terms)
   class(value) <- "groupfs"
   attr(value, "labels") <- labels
   attr(value, "index") <- index
   attr(value, "maxsteps") <- maxsteps
   attr(value, "sigma") <- sigma
   attr(value, "k") <- k
+  attr(value, "aicstop") <- aicstop
   if (is.null(attr(x, "varnames"))) {
     attr(value, "varnames") <- colnames(x)
   } else {
     attr(value, "varnames") <- attr(x, "varnames")
   }
 
-  invisible(value)
+  return(value)
 }
 
 #' Add one group to the model in \code{groupfs}.
@@ -177,8 +197,8 @@ add1.groupfs <- function(xr, yr, index, labels, inactive, k, sigma = NULL) {
           aicpens[[key]] <- exp(k*(dfi+1)/n)
           terms[[key]] <- (sum(yr^2) - sum(uy^2)) * aicpens[[key]]
       } else {
-          aicpens[[key]] <- 2 * sigma^2 * k * dfi/n
-          terms[[key]] <- (sum(yr^2) - sum(uy^2)) - aicpens[[key]]
+          aicpens[[key]] <- k * dfi/n
+          terms[[key]] <- (sum(yr^2) - sum(uy^2))/sigma^2 - aicpens[[key]]
       }
   }
 
@@ -203,8 +223,10 @@ add1.groupfs <- function(xr, yr, index, labels, inactive, k, sigma = NULL) {
 #'
 #' @param obj Object returned by \code{\link{groupfs}} function
 #' @param sigma Estimate of error standard deviation. If NULL (default), this is estimated using the mean squared residual of the full least squares fit when n >= 2p, and the mean squared residual of the selected model when n < 2p. In the latter case, the user should use \code{\link{estimateSigma}} function for a more accurate estimate.
+#' @param type Type of conditional p-values to compute. With "all" (default), p-values are computed conditional on the final model with all variables up to \code{maxsteps}; with "aic" the number of steps is chosen after which the AIC criterion increases \code{ntimes} in a row, and then the same type of analysis as in "all" is carried out for the active variables at that number of steps.
+#' @param ntimes Number of steps for which AIC criterion has to increase before minimizing point is declared.
 #' @param verbose Print out progress along the way? Default is FALSE.
-#' @return An object of class "groupfsInf" containing selective p-values for the fitted model \code{obj}. The default printing behavior should supply adequate information.
+#' @return An object of class "groupfsInf" containing selective p-values for the fitted model \code{obj}. For comparison with \code{\link{fsInf}}, note that the option \code{type = "active"} is not available.
 #'
 #' \describe{
 #'   \item{vars}{Labels of the active groups in the order they were included.}
@@ -214,8 +236,9 @@ add1.groupfs <- function(xr, yr, index, labels, inactive, k, sigma = NULL) {
 #'   \item{df}{Rank of group of variables when it was added to the model.}
 #'   \item{support}{List of intervals defining the truncation region of the truncated chi.}
 #' }
-groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
+groupfsInf <- function(obj, sigma = NULL, type = c("all", "aic"), ntimes = 2, verbose = FALSE) {
 
+  type <- match.arg(type)
   n <- nrow(obj$x)
   p <- ncol(obj$x)
   maxsteps <- attr(obj, "maxsteps")
@@ -304,7 +327,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
   if (!is.null(attr(obj, "varnames"))) {
       attr(out, "varnames") <- attr(obj, "varnames")
   }
-  invisible(out)
+  return(out)
 }
 
 # -----------------------------------------------------------

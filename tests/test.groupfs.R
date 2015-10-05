@@ -14,7 +14,7 @@ sparsity <- 5
 snr <- 3
 
 system.time({
-for (iter in 1:10) {
+for (iter in 1:100) {
     y <- rnorm(n)
     x <- matrix(rnorm(n*p), nrow=n)
     beta <- rep(0, p)

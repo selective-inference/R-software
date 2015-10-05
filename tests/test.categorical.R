@@ -10,7 +10,7 @@ n <- 100
 G <- 10
 maxsteps <- 10
 snr <- 1
-niter <- 200
+niter <- 100
 
 print("Comparing step with groupfs on random categorical designs")
 aicdiffs <- numeric(niter)
@@ -29,14 +29,14 @@ for (iter in 1:niter) {
     y <- y - mean(y)
     df$y <- y
     capture.output(fsfit <- step(lm(y ~ 0, df), direction="forward", scope = formula(lm(y~.-1, df)), steps = maxsteps, trace = 1000), file = "/dev/null")
-    fit <- groupfs(fd$x, df$y, fd$index, maxsteps = 10, intercept = F, center = F, normalize = F)
+    fit <- groupfs(fd$x, df$y, fd$index, maxsteps = 10, intercept = F, center = F, normalize = F, aicstop = 1)
     fsnames <- names(fsfit$coefficients)
     if (length(fsnames) > 0) {
         fsnames <- unique(substr(fsnames, 1, nchar(fsnames) - 1))
         k <- length(fsnames)
-        fitnames <- attr(fit, "varnames")[fit$action][1:k]
+        fitnames <- attr(fit, "varnames")[fit$action][1:(length(fit$action)-attr(fit, "aicstop"))]
         aicdiffs[iter] <- AIC(fsfit) - fit$log$AIC[k]
-        if (any(fsnames != fitnames)) {
+        if (length(fitnames) !=k || any(fsnames != fitnames)) {
             print(paste("Mismatch at iteration", iter))
             print(fsnames)
             print(fitnames)
