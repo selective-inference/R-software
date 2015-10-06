@@ -131,33 +131,6 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
         ########## Incomplete ##########
         ## cut off the last aicstop variables as well?
         if (all(diff(c(aic.begin, path.info$AIC)[(step+1-aicstop):(step+1)]) > 0)) {
-            stopquads <- ulist <- zlist <- penlist <- vector("list", aicstop)
-            for (s in seq(aicstop)) {
-                etas <- cumprojs[[step - aicstop + s]] %*% eta
-                Zs <- cumprojs[[step - aicstop + s]] %*% Z
-                maxprojs[[(step-aicstop):step]][[s]]
-                maxpens[[(step-aicstop):step]][[s]]
-            }
-
-      Uheta <- t(Uh) %*% etas
-      Ugeta <- t(Ug) %*% etas
-      UhZ <- t(Uh) %*% Zs
-      UgZ <- t(Ug) %*% Zs
-      etasZs <- t(etas) %*% Zs
-      peng <- obj$maxpens[[s]]
-      penh <- obj$aicpens[[s]][[l]]
-      pendiff <- peng-penh
-      if (is.null(obj$sigma)) {
-          A <- sum(Ugeta^2) * peng - sum(Uheta^2) * penh - sum(etas^2) * pendiff
-          B <- 2 * as.numeric(t(Ugeta) %*% UgZ * peng - t(Uheta) %*% UhZ * penh - etasZs * pendiff)
-          C <- sum(UgZ^2) * peng - sum(UhZ^2) * penh - sum(Zs^2) * pendiff
-      } else {
-          # Check this
-          A <- sum(Ugeta^2) - sum(Uheta^2)
-          B <- 2 * as.numeric(t(Ugeta) %*% UgZ - t(Uheta) %*% UhZ)
-          C <- sum(UgZ^2) - sum(UhZ^2) - pendiff
-      }
-
 
             if (is.null(sigma)) {
                 added$AIC <- n * log(added$maxterm/n) - k * added$df + n + n*log(2*pi) + k * modelrank
@@ -351,13 +324,39 @@ groupfsInf <- function(obj, sigma = NULL, type = c("all", "aic"), ntimes = 2, ve
                           }))
     }
     if (attr(obj, "stopped")) {
+
+            ulist <- etalist <- zlist <- penlist <- vector("list", aicstop)
+            for (s in seq(aicstop)) {
+                stepind <- maxsteps - aicstop + s
+                if (stepind > 1) {
+                    etalist[[s]] <- cumprojs[[stepind]] %*% eta
+                    zlist[[s]] <- cumprojs[[stepind]] %*% Z
+                } else {
+                    etalist[[s]] <- eta
+                    zlist[[s]] <- Z
+                }
+                ulist[[s]] <- obj$maxprojs[[stepind]]
+                penlist[[s]] <- obj$maxpens[[stepind]]
+            }
+
         intervallist <- c(intervallist,
-                          lapply(obj$stopquads, function(squad) {
-                              etasquad <- t(eta) %*% squad
-                              A <- etasquad %*% eta
-                              B <- 2 * etasquad %*% Z
-                              C <- t(Z) %*% squad %*% Z
-                              quadratic_roots(A, B, C, tol = 1e-15)
+                          lapply(0:(aicstop-1), function(s) {
+                               # ^ fix this ^
+                              # check indexing direction
+                              Ug <- ulist[[s]]
+                              Uh <- ulist[[s+1]]
+                              peng <- penlist[[s]]
+                              penh <- penlist[[s+1]]
+                              etag <- etalist[[s]]
+                              etah <- etalist[[s+1]]
+                              Zg <- zlist[[s]]
+                              Zh <- zlist[[s+1]]
+                              
+                              coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh)
+                              quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol)
+
+                              # additional constant term
+                              # pendiff * (sum(rs^2) - sum(r_(s-1)^2)) ?
                           }))
     }
 
