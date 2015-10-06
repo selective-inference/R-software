@@ -131,6 +131,40 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
         ########## Incomplete ##########
         ## cut off the last aicstop variables as well?
         if (all(diff(c(aic.begin, path.info$AIC)[(step+1-aicstop):(step+1)]) > 0)) {
+            stopquads <- ulist <- zlist <- penlist <- vector("list", aicstop)
+            for (s in seq(aicstop)) {
+                etas <- cumprojs[[step - aicstop + s]] %*% eta
+                Zs <- cumprojs[[step - aicstop + s]] %*% Z
+                maxprojs[[(step-aicstop):step]][[s]]
+                maxpens[[(step-aicstop):step]][[s]]
+            }
+
+      Uheta <- t(Uh) %*% etas
+      Ugeta <- t(Ug) %*% etas
+      UhZ <- t(Uh) %*% Zs
+      UgZ <- t(Ug) %*% Zs
+      etasZs <- t(etas) %*% Zs
+      peng <- obj$maxpens[[s]]
+      penh <- obj$aicpens[[s]][[l]]
+      pendiff <- peng-penh
+      if (is.null(obj$sigma)) {
+          A <- sum(Ugeta^2) * peng - sum(Uheta^2) * penh - sum(etas^2) * pendiff
+          B <- 2 * as.numeric(t(Ugeta) %*% UgZ * peng - t(Uheta) %*% UhZ * penh - etasZs * pendiff)
+          C <- sum(UgZ^2) * peng - sum(UhZ^2) * penh - sum(Zs^2) * pendiff
+      } else {
+          # Check this
+          A <- sum(Ugeta^2) - sum(Uheta^2)
+          B <- 2 * as.numeric(t(Ugeta) %*% UgZ - t(Uheta) %*% UhZ)
+          C <- sum(UgZ^2) - sum(UhZ^2) - pendiff
+      }
+
+
+            if (is.null(sigma)) {
+                added$AIC <- n * log(added$maxterm/n) - k * added$df + n + n*log(2*pi) + k * modelrank
+            } else {
+                added$AIC <- sum(y.update^2)/sigma^2 - n + k * modelrank
+            }
+
             path.info <- path.info[1:step, ]
             projections[(step+1):maxsteps] <- NULL
             maxprojs[(step+1):maxsteps] <- NULL
@@ -157,13 +191,15 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
   attr(value, "sigma") <- sigma
   attr(value, "k") <- k
   attr(value, "aicstop") <- aicstop
-  if (aicstop > 0) attr(value, "stopped") <- stopped
+  attr(value, "stopped") <- stopped
+  if (stopped) {
+      value$stopquads <- stopquads
+  }
   if (is.null(attr(x, "varnames"))) {
     attr(value, "varnames") <- colnames(x)
   } else {
     attr(value, "varnames") <- attr(x, "varnames")
   }
-
   return(value)
 }
 
@@ -300,18 +336,29 @@ groupfsInf <- function(obj, sigma = NULL, type = c("all", "aic"), ntimes = 2, ve
 
     intervallist <- truncationRegion(obj, TC, R, eta, Z)
     if (!is.null(obj$cvobj)) {
+        if (attr(obj, "stopped")) stop("Cross-validation and early stopping cannot be used simultaneously")
         intervallist <- c(intervallist, do.call(c,
         lapply(obj$cvobj, function(cvf) {
             truncationRegion(cvf, TC, R[-cvf$fold], eta[-cvf$fold], Z[-cvf$fold])
         })))
         intervallist <- c(intervallist,
-        lapply(obj$cvquad, function(cvquad) {
-            etacvquad <- t(eta) %*% cvquad
-            A <- etacvquad %*% eta
-            B <- 2 * etacvquad %*% Z
-            C <- t(Z) %*% cvquad %*% Z
-            quadratic_roots(A, B, C, tol = 1e-15)
-        }))
+                          lapply(obj$cvquad, function(cvquad) {
+                              etacvquad <- t(eta) %*% cvquad
+                              A <- etacvquad %*% eta
+                              B <- 2 * etacvquad %*% Z
+                              C <- t(Z) %*% cvquad %*% Z
+                              quadratic_roots(A, B, C, tol = 1e-15)
+                          }))
+    }
+    if (attr(obj, "stopped")) {
+        intervallist <- c(intervallist,
+                          lapply(obj$stopquads, function(squad) {
+                              etasquad <- t(eta) %*% squad
+                              A <- etasquad %*% eta
+                              B <- 2 * etasquad %*% Z
+                              C <- t(Z) %*% squad %*% Z
+                              quadratic_roots(A, B, C, tol = 1e-15)
+                          }))
     }
 
     # Compute intersection:
