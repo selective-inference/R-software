@@ -6,8 +6,7 @@ truncationRegion <- function(obj, TC, R, eta, Z, tol = 1e-15) {
   L <- lapply(1:length(obj$action), function(s) {
 
     Ug <- obj$maxprojs[[s]]
-    dfg <- ncol(Ug)
-
+    peng <- obj$maxpens[[s]]
     if (s > 1) {
         etas <- obj$cumprojs[[s-1]] %*% eta
         Zs <- obj$cumprojs[[s-1]] %*% Z
@@ -19,25 +18,34 @@ truncationRegion <- function(obj, TC, R, eta, Z, tol = 1e-15) {
     num.projs <- length(obj$projections[[s]])
     if (num.projs == 0) {
         return(list(Intervals(c(-Inf,0))))
+        
     } else {
       lapply(1:num.projs, function(l) {
 
-      Uh <- obj$projections[[s]][[l]]
-      dfh <- ncol(Uh)
-      # The quadratic form corresponding to
-      # (t*U + Z)^T %*% Q %*% (t*U + Z) \geq 0
-      # we find the roots in t, if there are any
-      # and return the interval of potential t
+          Uh <- obj$projections[[s]][[l]]
+          penh <- obj$aicpens[[s]][[l]]      
+          # The quadratic form corresponding to
+          # (t*U + Z)^T %*% Q %*% (t*U + Z) \geq 0
+          # we find the roots in t, if there are any
+          # and return the interval of potential t
+          coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etas, etas, Zs, Zs)
+          quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol)
+      })
+    }
+    # LL is a list of intervals
+  })
+  # L is now a list of lists of intervals
+  return(unlist(L, recursive = FALSE, use.names = FALSE))
+}
 
+quadratic_coefficients <- function(sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh) {
       Uheta <- t(Uh) %*% etas
       Ugeta <- t(Ug) %*% etas
       UhZ <- t(Uh) %*% Zs
       UgZ <- t(Ug) %*% Zs
       etasZs <- t(etas) %*% Zs
-      peng <- obj$maxpens[[s]]
-      penh <- obj$aicpens[[s]][[l]]
       pendiff <- peng-penh
-      if (is.null(obj$sigma)) {
+      if (is.null(sigma)) {
           A <- sum(Ugeta^2) * peng - sum(Uheta^2) * penh - sum(etas^2) * pendiff
           B <- 2 * as.numeric(t(Ugeta) %*% UgZ * peng - t(Uheta) %*% UhZ * penh - etasZs * pendiff)
           C <- sum(UgZ^2) * peng - sum(UhZ^2) * penh - sum(Zs^2) * pendiff
@@ -45,16 +53,9 @@ truncationRegion <- function(obj, TC, R, eta, Z, tol = 1e-15) {
           # Check this
           A <- sum(Ugeta^2) - sum(Uheta^2)
           B <- 2 * as.numeric(t(Ugeta) %*% UgZ - t(Uheta) %*% UhZ)
-          C <- sum(UgZ^2) - sum(UhZ^2) - pendiff
+          C <- sum(UgZ^2) - sum(UhZ^2) - sigma^2 * pendiff
       }
-
-      quadratic_roots(A, B, C, tol)
-    })
-    }
-    # LL is a list of intervals
-  })
-  # L is now a list of lists of intervals
-  return(unlist(L, recursive = FALSE, use.names = FALSE))
+      return(list(A = A, B = B, C= C))
 }
 
 quadratic_roots <- function(A, B, C, tol) {
