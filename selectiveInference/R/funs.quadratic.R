@@ -39,23 +39,25 @@ truncationRegion <- function(obj, TC, R, eta, Z, tol = 1e-15) {
 }
 
 quadratic_coefficients <- function(sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh) {
-      Uheta <- t(Uh) %*% etas
-      Ugeta <- t(Ug) %*% etas
-      UhZ <- t(Uh) %*% Zs
-      UgZ <- t(Ug) %*% Zs
-      etasZs <- t(etas) %*% Zs
-      pendiff <- peng-penh
-      if (is.null(sigma)) {
-          A <- sum(Ugeta^2) * peng - sum(Uheta^2) * penh - sum(etas^2) * pendiff
-          B <- 2 * as.numeric(t(Ugeta) %*% UgZ * peng - t(Uheta) %*% UhZ * penh - etasZs * pendiff)
-          C <- sum(UgZ^2) * peng - sum(UhZ^2) * penh - sum(Zs^2) * pendiff
-      } else {
+    # g indexes minimizer, h the comparison
+    Uheta <- t(Uh) %*% etah
+    Ugeta <- t(Ug) %*% etag
+    UhZ <- t(Uh) %*% Zh
+    UgZ <- t(Ug) %*% Zg
+    etaZh <- t(etah) %*% Zh
+    etaZg <- t(etag) %*% Zg
+    if (is.null(sigma)) {
+        # Check the signs, make it consistent
+        A <- penh * (sum(etah^2) - sum(Uheta^2)) - peng * (sum(etag)^2 - sum(Ugeta^2))
+        B <- 2 * penh * (etaZh - t(Uheta) %*% UhZ) - 2 * peng * (etaZg - t(Ugeta) %*% UgZ)
+        C <- penh * (sum(Zh^2) - sum(UhZ^2)) - peng * (sum(Zg^2) - sum(UgZ^2))
+    } else {
           # Check this
-          A <- sum(Ugeta^2) - sum(Uheta^2)
-          B <- 2 * as.numeric(t(Ugeta) %*% UgZ - t(Uheta) %*% UhZ)
-          C <- sum(UgZ^2) - sum(UhZ^2) - sigma^2 * pendiff
-      }
-      return(list(A = A, B = B, C= C))
+        A <- (sum(etah^2) - sum(Uheta^2)) - (sum(etag)^2 - sum(Ugeta^2))
+        B <- 2 * (etaZh - t(Uheta) %*% UhZ) - 2 * (etaZg - t(Ugeta) %*% UgZ)
+        C <- (sum(Zh^2) - sum(UhZ^2) + penh) - (sum(Zg^2) - sum(UgZ^2) + peng) 
+    }
+    return(list(A = A, B = B, C= C))
 }
 
 quadratic_roots <- function(A, B, C, tol) {
@@ -107,7 +109,7 @@ quadratic_roots <- function(A, B, C, tol) {
                 if (B > 0) {
                     return(Intervals(c(-Inf, max(0, -C/B))))
                 } else {
-                    if (-C/B < 0) stop("Error: infeasible linear equation")
+                    if (-C/B < 0) stop("Infeasible linear equation")
                     return(Intervals(rbind(c(-Inf, 0), c(-C/B, Inf))))
                 }
             } else {
