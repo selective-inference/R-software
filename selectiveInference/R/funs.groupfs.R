@@ -165,9 +165,6 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
   attr(value, "k") <- k
   attr(value, "aicstop") <- aicstop
   attr(value, "stopped") <- stopped
-  if (stopped) {
-      value$stopquads <- stopquads
-  }
   if (is.null(attr(x, "varnames"))) {
     attr(value, "varnames") <- colnames(x)
   } else {
@@ -212,8 +209,8 @@ add1.groupfs <- function(xr, yr, index, labels, inactive, k, sigma = NULL) {
           aicpens[[key]] <- exp(k*dfi/n)
           terms[[key]] <- (sum(yr^2) - sum(uy^2)) * aicpens[[key]]
       } else {
-          aicpens[[key]] <- k * dfi
-          terms[[key]] <- (sum(yr^2) - sum(uy^2))/sigma^2 + aicpens[[key]]
+          aicpens[[key]] <- sigma^2 * k * dfi
+          terms[[key]] <- (sum(yr^2) - sum(uy^2)) + aicpens[[key]]
       }
   }
 
@@ -252,6 +249,10 @@ add1.groupfs <- function(xr, yr, index, labels, inactive, k, sigma = NULL) {
 #'   \item{support}{List of intervals defining the truncation region of the truncated chi.}
 #' }
 groupfsInf <- function(obj, sigma = NULL, type = c("all", "aic"), ntimes = 2, verbose = FALSE) {
+
+  if (!is.null(obj$cvobj) && attr(obj, "stopped")) {
+      stop("Cross-validation and early stopping cannot be used simultaneously")
+  }
 
   type <- match.arg(type)
   n <- nrow(obj$x)
@@ -309,7 +310,6 @@ groupfsInf <- function(obj, sigma = NULL, type = c("all", "aic"), ntimes = 2, ve
 
     intervallist <- truncationRegion(obj, TC, R, eta, Z)
     if (!is.null(obj$cvobj)) {
-        if (attr(obj, "stopped")) stop("Cross-validation and early stopping cannot be used simultaneously")
         intervallist <- c(intervallist, do.call(c,
         lapply(obj$cvobj, function(cvf) {
             truncationRegion(cvf, TC, R[-cvf$fold], eta[-cvf$fold], Z[-cvf$fold])
@@ -324,40 +324,39 @@ groupfsInf <- function(obj, sigma = NULL, type = c("all", "aic"), ntimes = 2, ve
                           }))
     }
     if (attr(obj, "stopped")) {
+        aicstop <- attr(obj, "aicstop")
 
-            ulist <- etalist <- zlist <- penlist <- vector("list", aicstop)
-            for (s in seq(aicstop)) {
-                stepind <- maxsteps - aicstop + s
-                if (stepind > 1) {
-                    etalist[[s]] <- cumprojs[[stepind]] %*% eta
-                    zlist[[s]] <- cumprojs[[stepind]] %*% Z
-                } else {
-                    etalist[[s]] <- eta
-                    zlist[[s]] <- Z
-                }
-                ulist[[s]] <- obj$maxprojs[[stepind]]
-                penlist[[s]] <- obj$maxpens[[stepind]]
+        ulist <- etalist <- zlist <- penlist <- vector("list", aicstop+1)
+        for (s in seq(aicstop+1)) {
+            stepind <- maxsteps - (aicstop+1) + s
+#            print(c(s, stepind))
+            if (stepind > 1) {
+                etalist[[s]] <- obj$cumprojs[[stepind-1]] %*% eta
+                zlist[[s]] <- obj$cumprojs[[stepind-1]] %*% Z
+            } else {
+                etalist[[s]] <- eta
+                zlist[[s]] <- Z
             }
+            ulist[[s]] <- obj$maxprojs[[stepind]]
+            penlist[[s]] <- obj$maxpens[[stepind]]
+        }
 
         intervallist <- c(intervallist,
-                          lapply(0:(aicstop-1), function(s) {
-                               # ^ fix this ^
-                              # check indexing direction
-                              Ug <- ulist[[s]]
-                              Uh <- ulist[[s+1]]
-                              peng <- penlist[[s]]
-                              penh <- penlist[[s+1]]
-                              etag <- etalist[[s]]
-                              etah <- etalist[[s+1]]
-                              Zg <- zlist[[s]]
-                              Zh <- zlist[[s+1]]
-                              
-                              coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh)
-                              quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol)
+                          do.call(c, lapply(1:aicstop, function(s) {
+                              lapply((s+1):(aicstop+1), function(sp) {
+                                  Ug <- ulist[[s]]
+                                  Uh <- ulist[[sp]]
+                                  peng <- penlist[[s]]
+                                  penh <- prod(unlist(penlist[s:sp]))
+                                  etag <- etalist[[s]]
+                                  etah <- etalist[[sp]]
+                                  Zg <- zlist[[s]]
+                                  Zh <- zlist[[sp]]
 
-                              # additional constant term
-                              # pendiff * (sum(rs^2) - sum(r_(s-1)^2)) ?
-                          }))
+                                  coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh)
+                                  quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol = 1e-15)
+                              })
+                          })))
     }
 
     # Compute intersection:
