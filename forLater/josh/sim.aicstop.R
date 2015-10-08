@@ -1,4 +1,5 @@
 library(intervals)
+source("funs.sims.R")
 source("selectiveInference/R/cv.R")
 source("../../selectiveInference/R/funs.groupfs.R")
 source("../../selectiveInference/R/funs.quadratic.R")
