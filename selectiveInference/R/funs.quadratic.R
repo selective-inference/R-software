@@ -18,12 +18,11 @@ truncationRegion <- function(obj, TC, R, eta, Z, tol = 1e-15) {
     num.projs <- length(obj$projections[[s]])
     if (num.projs == 0) {
         return(list(Intervals(c(-Inf,0))))
-        
+
     } else {
       lapply(1:num.projs, function(l) {
-
           Uh <- obj$projections[[s]][[l]]
-          penh <- obj$aicpens[[s]][[l]]      
+          penh <- obj$aicpens[[s]][[l]]
           # The quadratic form corresponding to
           # (t*U + Z)^T %*% Q %*% (t*U + Z) \geq 0
           # we find the roots in t, if there are any
@@ -48,14 +47,14 @@ quadratic_coefficients <- function(sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh
     etaZg <- t(etag) %*% Zg
     if (is.null(sigma)) {
         # Check the signs, make it consistent
-        A <- penh * (sum(etah^2) - sum(Uheta^2)) - peng * (sum(etag)^2 - sum(Ugeta^2))
+        A <- penh * (sum(etah^2) - sum(Uheta^2)) - peng * (sum(etag^2) - sum(Ugeta^2))
         B <- 2 * penh * (etaZh - t(Uheta) %*% UhZ) - 2 * peng * (etaZg - t(Ugeta) %*% UgZ)
         C <- penh * (sum(Zh^2) - sum(UhZ^2)) - peng * (sum(Zg^2) - sum(UgZ^2))
     } else {
           # Check this
-        A <- (sum(etah^2) - sum(Uheta^2)) - (sum(etag)^2 - sum(Ugeta^2))
+        A <- (sum(etah^2) - sum(Uheta^2)) - (sum(etag^2) - sum(Ugeta^2))
         B <- 2 * (etaZh - t(Uheta) %*% UhZ) - 2 * (etaZg - t(Ugeta) %*% UgZ)
-        C <- (sum(Zh^2) - sum(UhZ^2) + penh) - (sum(Zg^2) - sum(UgZ^2) + peng) 
+        C <- (sum(Zh^2) - sum(UhZ^2) + penh) - (sum(Zg^2) - sum(UgZ^2) + peng)
     }
     return(list(A = A, B = B, C= C))
 }

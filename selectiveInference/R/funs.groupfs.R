@@ -304,9 +304,9 @@ groupfsInf <- function(obj, sigma = NULL, type = c("all", "aic"), ntimes = 2, ve
     TC <- sqrt(sum(R^2))
     eta <- Ugtilde %*% R / TC
     Z <- obj$y - eta * TC
-    df <- ncol(Ugtilde)
+    dfi <- ncol(Ugtilde)
     TCs[j] <- TC
-    dfs[j] <- df
+    dfs[j] <- dfi
 
     intervallist <- truncationRegion(obj, TC, R, eta, Z)
     if (!is.null(obj$cvobj)) {
@@ -369,7 +369,7 @@ groupfsInf <- function(obj, sigma = NULL, type = c("all", "aic"), ntimes = 2, ve
     supports[[j]] <- E
 
     # E is now potentially a union of intervals
-    pvals[j] <- TC_surv(TC, sigma, df, E)
+    pvals[j] <- TC_surv(TC, sigma, dfi, E)
   }
   if (nanconv) warning("P-value NaNs of the form 0/0 converted to 0. This typically occurs for numerical reasons in the presence of a large signal-to-noise ratio.")
   names(pvals) <- obj$action
