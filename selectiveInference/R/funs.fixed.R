@@ -37,6 +37,10 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
                   "(to within specified tolerances)"))
 
   vars = which(abs(beta) > tol.beta / sqrt(colSums(x^2)))
+  if(length(vars)==0){
+      cat("Empty model",fill=T)
+      return()
+  }
   if (any(sign(g[vars]) != sign(beta[vars])))
     warning(paste("Solution beta does not satisfy the KKT conditions",
                   "(to within specified tolerances). You might try rerunning",
