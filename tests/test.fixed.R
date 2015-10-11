@@ -281,3 +281,9 @@ gfit = glmnet(X,y,standardize=F)
 coef = coef(gfit, s=lam/n, exact=T)[-1]
 sint = fixedLassoInf(X,y,coef,lam,sigma=sigma,alpha=alpha,type="partial")
 # Error in v %*% diag(d) : non-conformable arguments
+
+## lucas again
+
+load("params_for_Rob.rdata") #variables: X, y, coef, lam, sigma, alpha
+
+sint = fixedLassoInf(X,y,coef,lam,sigma=sigma,alpha=alpha,type="partial")

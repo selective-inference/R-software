@@ -139,6 +139,23 @@ arXiv:1405.3340.
 #mu = c(rep(signal, floor (n/5)), rep(0, n-floor(n/5))) # 20% of elements get the signal; rest 0
 #y = mu + rnorm (n, 0, 1)
 #mmObj = manyMeans(y, bh.q=0.1)
+#
+#
+# Forward stepwise with grouped variables
+#set.seed(1)
+#n <- 40
+#p <- 20
+#index <- sort(rep(1:(p/2), 2))
+#steps <- 10
+#sparsity <- 5
+#snr <- 3
+#   x <- matrix(rnorm(n*p), nrow=n)
+#      beta <- rep(0, p)
+#      beta[which(index %in% 1:sparsity)] <- snr
+#      y <-  x %*% beta+rnorm(n)
+#fit <- groupfs(x, y, index=1:p, maxsteps = steps)
+#out<- groupfsInf(fit)
+
 
 
 ##estimation of sigma for use in fsInf or larInf or fixedLassoInf
