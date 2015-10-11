@@ -1,11 +1,9 @@
-library(intervals)
-source("../selectiveInference/R/funs.common.R")
-source("../selectiveInference/R/funs.groupfs.R")
-source("../selectiveInference/R/funs.quadratic.R")
-source("../selectiveInference/R/funs.fs.R")
-source("../selectiveInference/R/funs.lar.R")
 #library(selectiveInference)
 #library(lars)
+library(intervals)
+source("../selectiveInference/R/funs.groupfs.R")
+source("../selectiveInference/R/funs.quadratic.R")
+source("../selectiveInference/R/funs.common.R")
 
 set.seed(1)
 n <- 40
@@ -16,7 +14,7 @@ sparsity <- 5
 snr <- 3
 
 system.time({
-for (iter in 1:10) {
+for (iter in 1:100) {
     y <- rnorm(n)
     x <- matrix(rnorm(n*p), nrow=n)
     beta <- rep(0, p)
@@ -65,8 +63,8 @@ for (j in 1:ncol(state.x77)) {
     states[,j] <- var
 }
 states <- cbind(states, state.division)
-x <- factor_design(states)$x
-X <- scale_groups(x, index)$x
+x <- factorDesign(states)$x
+X <- scaleGroups(x, index)$x
 
 p <- ncol(x)
 y <- rnorm(n)
@@ -78,7 +76,7 @@ y <- y + x %*% beta
 y <- y-mean(y)
 df <- data.frame(y = y, states)
 fsfit <- step(lm(y ~ 0, df), direction="forward", scope = formula(lm(y~., df)), steps = maxsteps, k = 2)
-fit <- groupfs(x, y, index, maxsteps, k = 2, normalize = T)
+fit <- groupfs(x, y, index, maxsteps, k = 2, intercept = F, center = F, normalize = T)
 # names(fsfit$coefficients)[-1]
 if (length(fsfit$coefficients) > 0) {
     fsnames <- cnames[which(!is.na(charmatch(cnames,names(fsfit$coefficients)[-1])))][order(unlist(lapply(cnames, function(cn) {
@@ -92,13 +90,10 @@ cnames[fit$action]#[1:length(fsnames)]
     print("empty")
 }
 
-<<<<<<< HEAD:forLater/josh/tests/test.groupfs.R
-=======
-set.seed(1)
 n = 100
 p = 120
 maxsteps = 9
-niter = 50
+niter = 500
 # 10 groups of size 10, 10 groups of size 2
 index = sort(c(c(1, 1), rep(2:11, 10), rep(12:20, 2)))
 pvalm = pvalmk = matrix(NA, nrow=niter, ncol=maxsteps)
@@ -108,7 +103,7 @@ for (iter in 1:niter) {
     y = rnorm(n)
     fit = groupfs(x, y, index, maxsteps)
     pvals = groupfsInf(fit)
-    pvalm[iter, ] = pvals$pv    
+    pvalm[iter, ] = pvals$pv
     fitk = groupfs(x, y, index, maxsteps, sigma = 1)
     pvalsk = groupfsInf(fitk)
     pvalmk[iter, ] = pvalsk$pv
@@ -133,29 +128,4 @@ print(colMeans(pvalmk))
 
 print(mean(pvalm))
 print(mean(pvalmk))
-<<<<<<< HEAD
->>>>>>> 5c372de287b5ff9455ddce7dd513fb868d09e7e6:tests/test.groupfs.R
-=======
 
-
-
- set.seed(1)
- n <- 40
- p <- 20
- index <- sort(rep(1:(p/2), 2))
- steps <- 10
- sparsity <- 5
- snr <- 3
- sigma=3
- 
-     y <- rnorm(n)*sigma
-     x <- matrix(rnorm(n*p), nrow=n)
- 
-   
-       beta <- rep(0, p)
-       beta[which(index %in% 1:sparsity)] <- snr
-       y <- y + x %*% beta
-   
- fit <- groupfs(x, y, index=index, maxsteps = steps)
- foo=groupfsInf(fit)
->>>>>>> bc141572a79c89a69ca48574049b3006fa4b38ca
