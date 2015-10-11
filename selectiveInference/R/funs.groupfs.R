@@ -1,25 +1,27 @@
 #' Select a model with forward stepwise.
 #'
-#' This function implements forward selection of linear models almost identically to \code{\link{stepAIC}} with \code{direction = "forward"}. The reason this is a separate function from \code{\link{fs}} is that groups of variables (e.g. dummies encoding levels of a categorical variable) must be handled differently in the selective inference framework.
+#' This function implements forward selection of linear models almost identically to \code{\link[stats]{step}} with \code{direction = "forward"}. The reason this is a separate function from \code{\link{fs}} is that groups of variables (e.g. dummies encoding levels of a categorical variable) must be handled differently in the selective inference framework.
 #'
 #' @param x Matrix of predictors (n by p).
 #' @param y Vector of outcomes (length n).
 #' @param index Group membership indicator of length p.
 #' @param maxsteps Maximum number of steps for forward stepwise.
-#' @param sigma Estimate of error standard deviation for use in AIC criterion. This determines the relative scale between RSS and the degrees of freedom penalty. Default is NULL corresponding to unknown sigma. See \code{\link{extractAIC}} for details.
+#' @param sigma Estimate of error standard deviation for use in AIC criterion. This determines the relative scale between RSS and the degrees of freedom penalty. Default is NULL corresponding to unknown sigma. See \code{\link[stats]{extractAIC}} for details.
 #' @param k Multiplier of model size penalty, the default is \code{k = 2} for AIC. Use \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.
 #' @param intercept Should an intercept be included in the model? Default is TRUE.
+#' @param center Should the columns of the design matrix be centered? Default is TRUE.
 #' @param normalize Should the design matrix be normalized? Default is TRUE.
+#' @param aicstop Early stopping if AIC increases. Default is 0 corresponding to no early stopping. Positive integer values specify the number of times the AIC is allowed to increase in a row, e.g. with \code{aicstop = 2} the algorithm will stop if the AIC criterion increases for 2 steps in a row. The default of \code{\link[stats]{step}} corresponds to \code{aicstop = 1}.
 #' @param verbose Print out progress along the way? Default is FALSE.
 #' @return An object of class "groupfs" containing information about the sequence of models in the forward stepwise algorithm. Call the function \code{\link{groupfsInf}} on this object to compute selective p-values.
 #' @examples
 #' x = matrix(rnorm(20*40), nrow=20)
 #' index = sort(rep(1:20, 2))
-#' y = rnorm(20) + 2 * (x[,1] - x[,2]) - (x[,3] - x[,4])
+#' y = rnorm(20) + 2 * x[,1] - x[,4]
 #' fit = groupfs(x, y, index, maxsteps = 5)
 #' pvals = groupfsInf(fit)
-#' @seealso \code{\link{groupfsInf}}
-groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE, normalize = TRUE, verbose = FALSE) {
+#' @seealso \code{\link{groupfsInf}}, \code{\link{factorDesign}}.
+groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE, center = TRUE, normalize = TRUE, aicstop = 0, verbose = FALSE) {
 
   if (missing(index)) stop("Missing argument: index.")
   p <- ncol(x)
@@ -41,7 +43,6 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
       warning(paste("If the largest groups are included the model will be saturated/overdetermined. To prevent this maxsteps has been changed to", maxsteps))
   }
 
-
   # Initialize copies of data for loop
   by <- mean(y)
   y.update <- y
@@ -50,20 +51,27 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
   x.update <- x
 
   # Center and scale design matrix
-  xscaled <- scaleGroups(x.update, index, scale = normalize)
+  xscaled <- scaleGroups(x.update, index, center, normalize)
   xm <- xscaled$xm
   xs <- xscaled$xs
   x.update <- xscaled$x
 
   x.begin <- x.update
   y.begin <- y.update
+  stopped <- FALSE
   # Store all projections computed along the path
   terms = projections = maxprojs = aicpens = maxpens = cumprojs = vector("list", maxsteps)
 
   # Store other information from each step
-  path.info <- data.frame(imax=integer(maxsteps), L=numeric(maxsteps), df=integer(maxsteps), RSS=numeric(maxsteps), RSSdrop=numeric(maxsteps), chisq=numeric(maxsteps))
+  path.info <- data.frame(imax=integer(maxsteps), df=integer(maxsteps), AIC=numeric(maxsteps), RSS=numeric(maxsteps), RSSdrop=numeric(maxsteps), chisq=numeric(maxsteps))
 
-  modelrank <- 1
+  modelrank <- as.numeric(intercept)
+  if (is.null(sigma)) {
+      aic.begin <- aic.last <- n*(log(2*pi) + log(mean(y.update^2)) + 1 + k * (is.null(sigma) + intercept))
+  } else {
+      aic.begin <- aic.last <- sum(y.update^2)/sigma^2 - n + k * intercept
+  }
+  if (verbose) print(paste0("Start:  AIC=", round(aic.begin, 3)), quote = FALSE)
 
   # Begin main loop
   for (step in 1:maxsteps) {
@@ -86,14 +94,16 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
 
     # Regress added group out of y and inactive x
     P.imax <- added$maxproj %*% t(added$maxproj)
-    if (is.null(sigma)) {
-        P.imax <- P.imax / exp(k*added$df/n)
-    } else {
-        P.imax <- P.imax * sigma^2
-    }
     P.imax <- diag(rep(1, n)) - P.imax
     y.update <- P.imax %*% y.update
     x.update[, inactive.inds] <- P.imax %*% x.update[, inactive.inds]
+
+    # Compute AIC
+    if (is.null(sigma)) {
+        added$AIC <- n * log(added$maxterm/n) - k * added$df + n + n*log(2*pi) + k * modelrank
+    } else {
+        added$AIC <- sum(y.update^2)/sigma^2 - n + k * modelrank
+    }
 
     projections[[step]] <- added$projections
     maxprojs[[step]] <- added$maxproj
@@ -112,50 +122,77 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
     y.last <- y.update
 
     # Projections are stored separately
-    step.info <- data.frame(added[-c(4:(length(added)-3))])
+    step.info <- data.frame(added[-c(3:(length(added)-4))])
     path.info[step, ] <- step.info
 
-    if (verbose) print(step.info)
+    if (verbose) print(round(step.info, 3))
+
+    if (aicstop > 0 && step >= aicstop && aic.last < added$AIC) {
+        ########## Incomplete ##########
+        ## cut off the last aicstop variables as well?
+        if (all(diff(c(aic.begin, path.info$AIC)[(step+1-aicstop):(step+1)]) > 0)) {
+
+            if (is.null(sigma)) {
+                added$AIC <- n * log(added$maxterm/n) - k * added$df + n + n*log(2*pi) + k * modelrank
+            } else {
+                added$AIC <- sum(y.update^2)/sigma^2 - n + k * modelrank
+            }
+
+            path.info <- path.info[1:step, ]
+            projections[(step+1):maxsteps] <- NULL
+            maxprojs[(step+1):maxsteps] <- NULL
+            aicpens[(step+1):maxsteps] <- NULL
+            maxpens[(step+1):maxsteps] <- NULL
+            cumprojs[(step+1):maxsteps] <- NULL
+            terms[(step+1):maxsteps] <- NULL
+            maxsteps <- step
+            stopped <- TRUE
+            # add additional projections
+            break
+        }
+    }
+    aic.last <- added$AIC
   }
 
   # Create output object
-  value <- list(action=path.info$imax, L=path.info$L, projections = projections, maxprojs = maxprojs, aicpens = aicpens, maxpens = maxpens, cumprojs = cumprojs, log = path.info, index = index, y = y.begin, x = x.begin, bx = xm, sx = xs, sigma = sigma, intercept = intercept, terms = terms)
+  value <- list(action=path.info$imax, L=path.info$L, AIC=path.info$AIC, projections = projections, maxprojs = maxprojs, aicpens = aicpens, maxpens = maxpens, cumprojs = cumprojs, log = path.info, index = index, y = y.begin, x = x.begin, bx = xm, sx = xs, sigma = sigma, intercept = intercept, call = match.call(), terms = terms)
+
   class(value) <- "groupfs"
   attr(value, "labels") <- labels
   attr(value, "index") <- index
   attr(value, "maxsteps") <- maxsteps
   attr(value, "sigma") <- sigma
   attr(value, "k") <- k
+  attr(value, "aicstop") <- aicstop
+  attr(value, "stopped") <- stopped
   if (is.null(attr(x, "varnames"))) {
     attr(value, "varnames") <- colnames(x)
   } else {
     attr(value, "varnames") <- attr(x, "varnames")
   }
-
-  invisible(value)
+  return(value)
 }
 
 #' Add one group to the model in \code{groupfs}.
 #'
 #' For internal use by \code{\link{groupfs}}.
 #'
-#' @param x Design matrix.
-#' @param y Response vector.
+#' @param xr Design matrix at current step.
+#' @param yr Response vector residual at current step.
 #' @param index Group membership indicator of length p.
 #' @param labels The unique elements of \code{index}.
 #' @param inactive Labels of inactive groups.
 #' @param k Multiplier of model size penalty, use \code{k = 2} for AIC, \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.
 #' @param sigma Estimate of error standard deviation for use in AIC criterion. This determines the relative scale between RSS and the degrees of freedom penalty. See \code{\link{extractAIC}} for details.
 #' @return Index \code{imax} of added group, value \code{L} of maximized negative AIC, lists of projection matrices defining quadratic model selection event.
-add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
+add1.groupfs <- function(xr, yr, index, labels, inactive, k, sigma = NULL) {
 
   # Use characters to avoid issues where
   # list() populates NULL lists in the positions
   # of the active variables
   ### Question for later: does this slow down lapply?
   keys = as.character(inactive)
-  n2y <- sum(y^2)
-  n <- ncol(x)
+  n <- nrow(xr)
 
   # Compute sums of squares to determine which group is added
   # penalized by rank of group if k > 0
@@ -163,46 +200,45 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
   names(projections) = names(terms) = names(aicpens) = keys
   for (key in keys) {
       inds <- which(index == key)
-      xi <- x[,inds]
+      xi <- xr[,inds]
       ui <- svdu_thresh(xi)
       dfi <- ncol(ui)
       projections[[key]] <- ui
-      dfi <- ncol(ui)
-      uy <- t(ui) %*% y
+      uy <- t(ui) %*% yr
       if (is.null(sigma)) {
           aicpens[[key]] <- exp(k*dfi/n)
-          terms[[key]] <- (sum(uy^2)  - sum(y^2)) * aicpens[[key]]
+          terms[[key]] <- (sum(yr^2) - sum(uy^2)) * aicpens[[key]]
       } else {
-          aicpens[[key]] <- sigma^2 * k * dfi/n
-          terms[[key]] <- (sum(uy^2) - sum(y^2)) - aicpens[[key]]
+          aicpens[[key]] <- sigma^2 * k * dfi
+          terms[[key]] <- (sum(yr^2) - sum(uy^2)) + aicpens[[key]]
       }
   }
 
   # Maximizer = group to be added
-  terms.maxind <- which.max(terms)
-  imax <- inactive[terms.maxind]
-  keyind <- which(keys == imax)
-  maxproj <- projections[[keyind]]
-  maxpen <- aicpens[[keyind]]
-  projections[[keyind]] <- NULL
-  aicpens[[keyind]] <- NULL
+  terms.optind <- which.min(terms)
+  imax <- inactive[terms.optind]
+  optkey <- which(keys == imax)
+  maxproj <- projections[[optkey]]
+  maxpen <- aicpens[[optkey]]
+  maxterm <- terms[[optkey]]
+  projections[[optkey]] <- NULL
+  aicpens[[optkey]] <- NULL
 
-  L <- terms[[terms.maxind]]
-
-  return(list(imax=imax, L=L, df = ncol(maxproj), projections = projections, maxproj = maxproj, aicpens = aicpens, maxpen = maxpen, terms = terms))
+  return(list(imax=imax, df = ncol(maxproj), projections = projections, maxproj = maxproj, aicpens = aicpens, maxpen = maxpen, maxterm = maxterm, terms = terms))
 }
 
 # -----------------------------------------------------------
 
 #' Compute selective p-values for a model fitted by \code{groupfs}.
 #'
-#' Computes p-values for each group of variables in a model fitted by \code{\link{groupfs}}. These p-values adjust for selection by truncating the usual \code{chi^2} statistics to the regions implied by the model selection event. Details are provided in a forthcoming work.
+#' Computes p-values for each group of variables in a model fitted by \code{\link{groupfs}}. These p-values adjust for selection by truncating the usual \eqn{\chi^2} statistics to the regions implied by the model selection event. Details are provided in a forthcoming work.
 #'
 #' @param obj Object returned by \code{\link{groupfs}} function
 #' @param sigma Estimate of error standard deviation. If NULL (default), this is estimated using the mean squared residual of the full least squares fit when n >= 2p, and the mean squared residual of the selected model when n < 2p. In the latter case, the user should use \code{\link{estimateSigma}} function for a more accurate estimate.
-#' @param projs Additional projections to define model selection event. For use with cross-validation. Default is NULL and it is not recommended to change this.
+#' @param type Type of conditional p-values to compute. With "all" (default), p-values are computed conditional on the final model with all variables up to \code{maxsteps}; with "aic" the number of steps is chosen after which the AIC criterion increases \code{ntimes} in a row, and then the same type of analysis as in "all" is carried out for the active variables at that number of steps.
+#' @param ntimes Number of steps for which AIC criterion has to increase before minimizing point is declared.
 #' @param verbose Print out progress along the way? Default is FALSE.
-#' @return An object of class "groupfsInf" containing selective p-values for the fitted model \code{obj}. The default printing behavior should supply adequate information.
+#' @return An object of class "groupfsInf" containing selective p-values for the fitted model \code{obj}. For comparison with \code{\link{fsInf}}, note that the option \code{type = "active"} is not available.
 #'
 #' \describe{
 #'   \item{vars}{Labels of the active groups in the order they were included.}
@@ -212,23 +248,24 @@ add1.groupfs <- function(x, y, index, labels, inactive, k, sigma = NULL) {
 #'   \item{df}{Rank of group of variables when it was added to the model.}
 #'   \item{support}{List of intervals defining the truncation region of the truncated chi.}
 #' }
-groupfsInf <- function(obj, sigma = NULL, projs = NULL, verbose = FALSE) {
+groupfsInf <- function(obj, sigma = NULL, type = c("all", "aic"), ntimes = 2, verbose = FALSE) {
 
+  if (!is.null(obj$cvobj) && attr(obj, "stopped")) {
+      stop("Cross-validation and early stopping cannot be used simultaneously")
+  }
+
+  type <- match.arg(type)
   n <- nrow(obj$x)
   p <- ncol(obj$x)
-  active <- obj$action
   maxsteps <- attr(obj, "maxsteps")
   k <- attr(obj, "k")
   index <- obj$index
   x <- obj$x
   y <- obj$y
-  Eindex <- which(index %in% active)
-  Ep <- length(Eindex)
+  Ep <- sum(index %in% obj$action)
 
   nanconv <- FALSE
-  pvals <- numeric(maxsteps)
-  dfs <- numeric(maxsteps)
-  TCs <- numeric(maxsteps)
+  pvals = dfs = TCs = numeric(maxsteps)
   supports <- list()
 
   if (!is.null(sigma)) {
@@ -250,40 +287,106 @@ groupfsInf <- function(obj, sigma = NULL, projs = NULL, verbose = FALSE) {
 
   # Compute p-value for each active group
   for (j in 1:maxsteps) {
-    i <- active[j]
-    if (verbose) cat(paste0("Step ", j, "/", maxsteps, ": computing P-value for group ", i, "\n"))    
+    i <- obj$action[j]
+    if (verbose) cat(paste0("Step ", j, "/", attr(obj, "maxsteps"), ": computing P-value for group ", i, "\n"))
     # Form projection onto active set minus i
     # and project x_i orthogonally
-    x_i <- x[,which(index == i), drop = FALSE]
-    if (length(active) > 1) {
-        minus_i <- setdiff(active, i)
-        x_minus_i <- svdu_thresh(x[,which(index %in% minus_i), drop = FALSE])
+    x_i <- obj$x[,which(obj$index == i), drop = FALSE]
+    if (length(obj$action) > 1) {
+        minus_i <- setdiff(obj$action, i)
+        x_minus_i <- svdu_thresh(obj$x[,which(obj$index %in% minus_i), drop = FALSE])
         x_i <- x_i - x_minus_i %*% t(x_minus_i) %*% x_i
     }
 
     # Project y onto what remains of x_i
     Ugtilde <- svdu_thresh(x_i)
-    R <- t(Ugtilde) %*% y
+    R <- t(Ugtilde) %*% obj$y
     TC <- sqrt(sum(R^2))
     eta <- Ugtilde %*% R / TC
-    df <- ncol(Ugtilde)
-    dfs[j] <- df
+    Z <- obj$y - eta * TC
+    dfi <- ncol(Ugtilde)
     TCs[j] <- TC
+    dfs[j] <- dfi
 
-    # For each step...
-    L <- interval_groupfs(obj, TC, R, eta, Ugtilde)
+    intervallist <- truncationRegion(obj, TC, R, eta, Z)
+    if (!is.null(obj$cvobj)) {
+        intervallist <- c(intervallist, do.call(c,
+        lapply(obj$cvobj, function(cvf) {
+            truncationRegion(cvf, TC, R[-cvf$fold], eta[-cvf$fold], Z[-cvf$fold])
+        })))
+        intervallist <- c(intervallist,
+                          lapply(obj$cvquad, function(cvquad) {
+                              etacvquad <- t(eta) %*% cvquad
+                              A <- etacvquad %*% eta
+                              B <- 2 * etacvquad %*% Z
+                              C <- t(Z) %*% cvquad %*% Z
+                              quadratic_roots(A, B, C, tol = 1e-15)
+                          }))
+    }
+    if (attr(obj, "stopped")) {
+        aicstop <- attr(obj, "aicstop")
 
-    # Any additional projections, e.g. from cross-validation?
-    if (!is.null(projs)) L <- c(L, projs)
+        ulist <- etalist <- zlist <- penlist <- vector("list", aicstop+1)
+        for (s in seq(aicstop+1)) {
+            stepind <- maxsteps - (aicstop+1) + s
+#            print(c(s, stepind))
+            if (stepind > 1) {
+                etalist[[s]] <- obj$cumprojs[[stepind-1]] %*% eta
+                zlist[[s]] <- obj$cumprojs[[stepind-1]] %*% Z
+            } else {
+                etalist[[s]] <- eta
+                zlist[[s]] <- Z
+            }
+            ulist[[s]] <- obj$maxprojs[[stepind]]
+            penlist[[s]] <- obj$maxpens[[stepind]]
+        }
+
+        intervallist <- c(intervallist,
+                          do.call(c, lapply(1:aicstop, function(s) {
+                              lapply((s+1):(aicstop+1), function(sp) {
+                                  Ug <- ulist[[s]]
+                                  Uh <- ulist[[sp]]
+                                  peng <- penlist[[s]]
+                                  penh <- prod(unlist(penlist[s:sp]))
+                                  etag <- etalist[[s]]
+                                  etah <- etalist[[sp]]
+                                  Zg <- zlist[[s]]
+                                  Zh <- zlist[[sp]]
+
+                                  coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh)
+                                  quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol = 1e-15)
+                              })
+                          })))
+    }
 
     # Compute intersection:
-    Lunion <- do.call(interval_union, L)
-    Lunion <- interval_union(Lunion, Intervals(c(-Inf,0)))
-    E <- interval_complement(Lunion, check_valid = FALSE)
+    region <- do.call(interval_union, intervallist)
+    region <- interval_union(region, Intervals(c(-Inf,0)))
+    E <- interval_complement(region, check_valid = FALSE)
+    if (length(E) == 0) {
+        stop(paste("Empty TC support at step", j))
+    }
     supports[[j]] <- E
 
     # E is now potentially a union of intervals
-    if (length(E) == 0) stop("Trivial intersection")
+    pvals[j] <- TC_surv(TC, sigma, dfi, E)
+  }
+  if (nanconv) warning("P-value NaNs of the form 0/0 converted to 0. This typically occurs for numerical reasons in the presence of a large signal-to-noise ratio.")
+  names(pvals) <- obj$action
+  out <- list(vars = obj$action, pv=pvals, sigma=sigma, TC=TCs, df = dfs, support=supports)
+  class(out) <- "groupfsInf"
+  if (!is.null(attr(obj, "varnames"))) {
+      attr(out, "varnames") <- attr(obj, "varnames")
+  }
+  return(out)
+}
+
+# -----------------------------------------------------------
+
+TC_surv <- function(TC, sigma, df, E) {
+    if (length(E) == 0) {
+        stop("Empty TC support")
+    }
 
     # Sum truncated cdf over each part of E
     denom <- do.call(sum, lapply(1:nrow(E), function(v) {
@@ -319,19 +422,8 @@ groupfsInf <- function(obj, sigma = NULL, projs = NULL, verbose = FALSE) {
     # Force p-value to lie in the [0,1] interval
     # in case of numerical issues
     value <- max(0, min(1, value))
-    pvals[j] <- value
-  }
-  if (nanconv) warning("P-value NaNs of the form 0/0 converted to 0. This typically occurs for numerical reasons in the presence of a large signal-to-noise ratio.")
-  names(pvals) <- obj$action
-  out <- list(vars = active, pv=pvals, sigma=sigma, TC=TCs, df = dfs, support=supports)
-  class(out) <- "groupfsInf"
-  if (!is.null(attr(obj, "varnames"))) {
-      attr(out, "varnames") <- attr(obj, "varnames")
-  }
-  invisible(out)
+    value
 }
-
-# -----------------------------------------------------------
 
 tchi_interval <- function(lower, upper, sigma, df) {
   a <- (lower/sigma)^2
@@ -356,12 +448,19 @@ num_int_chi <- function(a, b, df, nsamp = 10000) {
 
 #' Center and scale design matrix by groups
 #'
+#' For internal use by \code{\link{groupfs}}.
+#'
 #' @param x Design matrix.
 #' @param index Group membership indicator of length p.
 #' @param center Center groups, default is TRUE.
-#' @param scale Scale groups by Frobenius norm, default is TRUE.
-#' @return Scaled design matrix
-scaleGroups <- function(x, index, center = TRUE, scale = TRUE) {
+#' @param normalize Scale groups by Frobenius norm, default is TRUE.
+#' @return
+#' \describe{
+#'   \item{x}{Optionally centered/scaled design matrix.}
+#'   \item{xm}{Means of groups in original design matrix.}
+#'   \item{xs}{Frobenius norms of groups in original design matrix.}
+#' }
+scaleGroups <- function(x, index, center = TRUE, normalize = TRUE) {
   keys <- unique(index)
   xm <- rep(0, ncol(x))
   xs <- rep(1, ncol(x))
@@ -377,7 +476,7 @@ scaleGroups <- function(x, index, center = TRUE, scale = TRUE) {
     xsj <- sqrt(normsq)
     xs[inds] <- xsj
     if (xsj > 0) {
-        if (scale) x[, inds] <- x[, inds] / xsj
+        if (normalize) x[, inds] <- x[, inds] / xsj
     } else {
         stop(paste("Design matrix contains identically zero group of variables:", j))
     }
@@ -386,8 +485,8 @@ scaleGroups <- function(x, index, center = TRUE, scale = TRUE) {
 }
 
 #' Expand a data frame with factors to form a design matrix with the full binary encoding of each factor.
-#' 
-#' When using \code{\link{groupfs}} with factor variables call this function first to create a design matrix. 
+#'
+#' When using \code{\link{groupfs}} with factor variables call this function first to create a design matrix.
 #'
 #' @param df Data frame containing some columns which are \code{factors}.
 #' @return List containing
@@ -450,7 +549,7 @@ print.groupfs <- function(x, ...) {
     action <- x$action
     vnames <- attr(x, "varnames")
     if (length(vnames) > 0) action <- vnames[action]
-    tab = data.frame(Group = action, Rank = x$log$df, RSS = round(x$log$RSS, 3))
+    tab = data.frame(Group = action, Rank = x$log$df, RSS = round(x$log$RSS, 3), AIC = round(x$log$AIC, 3))
     rownames(tab) = 1:nsteps
     print(tab)
     cat("\nUse groupfsInf() to compute P-values\n")

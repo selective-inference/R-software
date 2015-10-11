@@ -5,7 +5,7 @@
 \title{Select a model with forward stepwise.}
 \usage{
 groupfs(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE,
-  normalize = TRUE, verbose = FALSE)
+  center = TRUE, normalize = TRUE, aicstop = FALSE, verbose = FALSE)
 }
 \arguments{
 \item{x}{Matrix of predictors (n by p).}
@@ -16,13 +16,17 @@ groupfs(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE,
 
 \item{maxsteps}{Maximum number of steps for forward stepwise.}
 
-\item{sigma}{Estimate of error standard deviation for use in AIC criterion. This determines the relative scale between RSS and the degrees of freedom penalty. Default is NULL corresponding to unknown sigma. See \code{\link{extractAIC}} for details.}
+\item{sigma}{Estimate of error standard deviation for use in AIC criterion. This determines the relative scale between RSS and the degrees of freedom penalty. Default is NULL corresponding to unknown sigma. See \code{\link[stats]{extractAIC}} for details.}
 
 \item{k}{Multiplier of model size penalty, the default is \code{k = 2} for AIC. Use \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.}
 
 \item{intercept}{Should an intercept be included in the model? Default is TRUE.}
 
+\item{center}{Should the columns of the design matrix be centered? Default is TRUE.}
+
 \item{normalize}{Should the design matrix be normalized? Default is TRUE.}
+
+\item{aicstop}{Early stopping if AIC increases, default is FALSE.}
 
 \item{verbose}{Print out progress along the way? Default is FALSE.}
 }
@@ -30,7 +34,7 @@ groupfs(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE,
 An object of class "groupfs" containing information about the sequence of models in the forward stepwise algorithm. Call the function \code{\link{groupfsInf}} on this object to compute selective p-values.
 }
 \description{
-This function implements forward selection of linear models almost identically to \code{\link{stepAIC}} with \code{direction = "forward"}. The reason this is a separate function from \code{\link{fs}} is that groups of variables (e.g. dummies encoding levels of a categorical variable) must be handled differently in the selective inference framework.
+This function implements forward selection of linear models almost identically to \code{\link[stats]{step}} with \code{direction = "forward"}. The reason this is a separate function from \code{\link{fs}} is that groups of variables (e.g. dummies encoding levels of a categorical variable) must be handled differently in the selective inference framework.
 }
 \examples{
 x = matrix(rnorm(20*40), nrow=20)

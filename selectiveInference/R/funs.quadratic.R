@@ -1,14 +1,12 @@
 
-interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
+truncationRegion <- function(obj, TC, R, eta, Z, tol = 1e-15) {
 
-  Z <- obj$y - eta * TC
   n <- nrow(obj$x)
 
   L <- lapply(1:length(obj$action), function(s) {
 
     Ug <- obj$maxprojs[[s]]
-    dfg <- ncol(Ug)
-
+    peng <- obj$maxpens[[s]]
     if (s > 1) {
         etas <- obj$cumprojs[[s-1]] %*% eta
         Zs <- obj$cumprojs[[s-1]] %*% Z
@@ -20,94 +18,18 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
     num.projs <- length(obj$projections[[s]])
     if (num.projs == 0) {
         return(list(Intervals(c(-Inf,0))))
+
     } else {
       lapply(1:num.projs, function(l) {
-
-      Uh <- obj$projections[[s]][[l]]
-      dfh <- ncol(Uh)
-      # The quadratic form corresponding to
-      # (t*U + Z)^T %*% Q %*% (t*U + Z) \geq 0
-      # we find the roots in t, if there are any
-      # and return the interval of potential t
-
-      Uheta <- t(Uh) %*% etas
-      Ugeta <- t(Ug) %*% etas
-      UhZ <- t(Uh) %*% Zs
-      UgZ <- t(Ug) %*% Zs
-      etasZs <- t(etas) %*% Zs
-      peng <- obj$maxpens[[s]]
-      penh <- obj$aicpens[[s]][[l]]
-      pendiff <- peng-penh
-      if (is.null(obj$sigma)) {
-          A <- sum(Ugeta^2) * peng - sum(Uheta^2) * penh - sum(etas^2) * pendiff
-          B <- 2 * as.numeric(t(Ugeta) %*% UgZ * peng - t(Uheta) %*% UhZ * penh - etasZs * pendiff)
-          C <- sum(UgZ^2) * peng - sum(UhZ^2) * penh - sum(Zs^2) * pendiff
-      } else {
-          # Check this
-          A <- sum(Ugeta^2) - sum(Uheta^2)
-          B <- 2 * as.numeric(t(Ugeta) %*% UgZ - t(Uheta) %*% UhZ)
-          C <- sum(UgZ^2) - sum(UhZ^2) - pendiff
-      }
-
-      disc <- B^2 - 4*A*C
-      b2a <- -B/(2*A)
-
-      if (disc > tol) {
-        # Real roots
-        pm <- sqrt(disc)/(2*A)
-        endpoints <- sort(c(b2a - pm, b2a + pm))
-
-      } else {
-
-        # No real roots
-        if (A > -tol) {
-          # Quadratic form always positive
-          return(Intervals(c(-Inf,0)))
-        } else {
-          # Quadratic form always negative
-          stop(paste("Empty TC support is infeasible", s, "-", l))
-        }
-      }
-
-      if (A > tol) {
-        # Parabola opens upward
-        if (min(endpoints) > 0) {
-          # Both roots positive, union of intervals
-          return(Intervals(rbind(c(-Inf,0), endpoints)))
-        } else {
-          # At least one negative root
-          return(Intervals(c(-Inf, max(0, endpoints[2]))))
-        }
-      } else {
-        if (A < -tol) {
-          # Parabola opens downward
-          if (endpoints[2] < 0) {
-            # Positive quadratic form only when t negative
-            stop(paste("Negative TC support is infeasible", s, "-", l))
-          } else {
-            # Part which is positive
-            if (endpoints[1] > 0) {
-                return(Intervals(rbind(c(-Inf, endpoints[1]), c(endpoints[2], Inf))))
-            } else {
-                return(Intervals(c(endpoints[2], Inf)))
-            }
-          }
-        } else {
-          # a is too close to 0, quadratic is actually linear
-          if (abs(B) > tol) {
-            if (B > 0) {
-              return(Intervals(c(-Inf, max(0, -C/B))))
-            } else {
-              if (-C/B < 0) stop("Error: infeasible linear equation")
-              return(Intervals(rbind(c(-Inf, 0), c(-C/B, Inf))))
-            }
-          } else {
-            warning("Ill-conditioned quadratic")
-            return(Intervals(c(-Inf,0)))
-          }
-        }
-      }
-    })
+          Uh <- obj$projections[[s]][[l]]
+          penh <- obj$aicpens[[s]][[l]]
+          # The quadratic form corresponding to
+          # (t*U + Z)^T %*% Q %*% (t*U + Z) \geq 0
+          # we find the roots in t, if there are any
+          # and return the interval of potential t
+          coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etas, etas, Zs, Zs)
+          quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol)
+      })
     }
     # LL is a list of intervals
   })
@@ -115,6 +37,87 @@ interval_groupfs <- function(obj, TC, R, eta, Ugtilde, tol = 1e-15) {
   return(unlist(L, recursive = FALSE, use.names = FALSE))
 }
 
+quadratic_coefficients <- function(sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh) {
+    # g indexes minimizer, h the comparison
+    Uheta <- t(Uh) %*% etah
+    Ugeta <- t(Ug) %*% etag
+    UhZ <- t(Uh) %*% Zh
+    UgZ <- t(Ug) %*% Zg
+    etaZh <- t(etah) %*% Zh
+    etaZg <- t(etag) %*% Zg
+    if (is.null(sigma)) {
+        # Check the signs, make it consistent
+        A <- penh * (sum(etah^2) - sum(Uheta^2)) - peng * (sum(etag^2) - sum(Ugeta^2))
+        B <- 2 * penh * (etaZh - t(Uheta) %*% UhZ) - 2 * peng * (etaZg - t(Ugeta) %*% UgZ)
+        C <- penh * (sum(Zh^2) - sum(UhZ^2)) - peng * (sum(Zg^2) - sum(UgZ^2))
+    } else {
+          # Check this
+        A <- (sum(etah^2) - sum(Uheta^2)) - (sum(etag^2) - sum(Ugeta^2))
+        B <- 2 * (etaZh - t(Uheta) %*% UhZ) - 2 * (etaZg - t(Ugeta) %*% UgZ)
+        C <- (sum(Zh^2) - sum(UhZ^2) + penh) - (sum(Zg^2) - sum(UgZ^2) + peng)
+    }
+    return(list(A = A, B = B, C= C))
+}
+
+quadratic_roots <- function(A, B, C, tol) {
+    disc <- B^2 - 4*A*C
+    b2a <- -B/(2*A)
+
+    if (disc > tol) {
+        # Real roots
+        pm <- sqrt(disc)/(2*A)
+        endpoints <- sort(c(b2a - pm, b2a + pm))
+
+    } else {
+        # No real roots
+        if (A > -tol) {
+          # Quadratic form always positive
+            return(Intervals(c(-Inf,0)))
+        } else {
+          # Quadratic form always negative
+            stop("Empty TC support is infeasible")
+        }
+    }
+
+    if (A > tol) {
+        # Parabola opens upward
+        if (min(endpoints) > 0) {
+          # Both roots positive, union of intervals
+            return(Intervals(rbind(c(-Inf,0), endpoints)))
+        } else {
+          # At least one negative root
+            return(Intervals(c(-Inf, max(0, endpoints[2]))))
+        }
+    } else {
+        if (A < -tol) {
+          # Parabola opens downward
+            if (endpoints[2] < 0) {
+            # Positive quadratic form only when t negative
+                stop("Negative TC support is infeasible")
+            } else {
+            # Part which is positive
+                if (endpoints[1] > 0) {
+                    return(Intervals(rbind(c(-Inf, endpoints[1]), c(endpoints[2], Inf))))
+                } else {
+                    return(Intervals(c(endpoints[2], Inf)))
+                }
+            }
+        } else {
+          # a is too close to 0, quadratic is actually linear
+            if (abs(B) > tol) {
+                if (B > 0) {
+                    return(Intervals(c(-Inf, max(0, -C/B))))
+                } else {
+                    if (-C/B < 0) stop("Infeasible linear equation")
+                    return(Intervals(rbind(c(-Inf, 0), c(-C/B, Inf))))
+                }
+            } else {
+                warning("Ill-conditioned quadratic")
+                return(Intervals(c(-Inf,0)))
+            }
+        }
+    }
+}
 
 roots_to_checkpoints <- function(roots) {
     checkpoints <- unique(sort(c(0, roots)))
