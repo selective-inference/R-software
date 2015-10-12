@@ -154,8 +154,13 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
     aic.last <- added$AIC
   }
 
+  # Is there a better way of doing this?
+  # Use some projections already computed?
+  beta <- coef(lm(y.begin ~ x.begin[,index %in% path.info$imax]-1))
+  names(beta) <- index[index %in% path.info$imax]
+  
   # Create output object
-  value <- list(action=path.info$imax, L=path.info$L, AIC=path.info$AIC, projections = projections, maxprojs = maxprojs, aicpens = aicpens, maxpens = maxpens, cumprojs = cumprojs, log = path.info, index = index, y = y.begin, x = x.begin, bx = xm, sx = xs, sigma = sigma, intercept = intercept, call = match.call(), terms = terms)
+  value <- list(action=path.info$imax, L=path.info$L, AIC=path.info$AIC, projections = projections, maxprojs = maxprojs, aicpens = aicpens, maxpens = maxpens, cumprojs = cumprojs, log = path.info, index = index, y = y.begin, x = x.begin, coefficients = beta, bx = xm, sx = xs, sigma = sigma, intercept = intercept, call = match.call(), terms = terms)
 
   class(value) <- "groupfs"
   attr(value, "labels") <- labels
@@ -301,6 +306,7 @@ groupfsInf <- function(obj, sigma = NULL, type = c("all", "aic"), ntimes = 2, ve
     # Project y onto what remains of x_i
     Ugtilde <- svdu_thresh(x_i)
     R <- t(Ugtilde) %*% obj$y
+    print(R)
     TC <- sqrt(sum(R^2))
     eta <- Ugtilde %*% R / TC
     Z <- obj$y - eta * TC
