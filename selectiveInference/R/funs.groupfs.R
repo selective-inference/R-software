@@ -158,13 +158,14 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
   # Use some projections already computed?
   beta <- coef(lm(y.begin ~ x.begin[,index %in% path.info$imax]-1))
   names(beta) <- index[index %in% path.info$imax]
-  
+
   # Create output object
-  value <- list(action=path.info$imax, L=path.info$L, AIC=path.info$AIC, projections = projections, maxprojs = maxprojs, aicpens = aicpens, maxpens = maxpens, cumprojs = cumprojs, log = path.info, index = index, y = y.begin, x = x.begin, coefficients = beta, bx = xm, sx = xs, sigma = sigma, intercept = intercept, call = match.call(), terms = terms)
+  value <- list(action = path.info$imax, L = path.info$L, AIC = path.info$AIC, projections = projections, maxprojs = maxprojs, aicpens = aicpens, maxpens = maxpens, cumprojs = cumprojs, log = path.info, index = index, y = y.begin, x = x.begin, coefficients = beta, bx = xm, by = by, sx = xs, sigma = sigma, intercept = intercept, call = match.call(), terms = terms)
 
   class(value) <- "groupfs"
+  attr(value, "center") <- center
+  attr(value, "normalize") <- normalize
   attr(value, "labels") <- labels
-  attr(value, "index") <- index
   attr(value, "maxsteps") <- maxsteps
   attr(value, "sigma") <- sigma
   attr(value, "k") <- k
@@ -306,7 +307,6 @@ groupfsInf <- function(obj, sigma = NULL, type = c("all", "aic"), ntimes = 2, ve
     # Project y onto what remains of x_i
     Ugtilde <- svdu_thresh(x_i)
     R <- t(Ugtilde) %*% obj$y
-    print(R)
     TC <- sqrt(sum(R^2))
     eta <- Ugtilde %*% R / TC
     Z <- obj$y - eta * TC
@@ -560,6 +560,32 @@ print.groupfs <- function(x, ...) {
     print(tab)
     cat("\nUse groupfsInf() to compute P-values\n")
     invisible()
+}
+
+
+coef.groupfs <- function(object, ...) {
+    return(object$coefficients)
+}
+
+#' @name predict.groupfs
+#' @aliases predict.groupfs
+#' @aliases coef.groupfs
+#'
+#' @title Prediction and coefficient functions for \code{\link{groupfs}}.
+#'
+#' Make predictions or extract coefficients from a groupfs forward stepwise object.
+#'
+#' @param object Object returned by a call to \code{\link{groupfs}}.
+#' @param newx Matrix of x values at which the predictions are desired. If NULL, the x values from groupfs fitting are used.
+#' @return A vector of predictions or a vector of coefficients.
+predict.groupfs <- function(object, newx, ...) {
+    beta <- coef.groupfs(object)
+    if (missing(newx)) {
+        newx = object$x
+    } else {
+        newx <- scaleGroups(newx, object$index, attr(object, "center"), attr(object, "normalize"))
+    }
+    return(newx[, index %in% object$action] %*% beta + ifelse(object$intercept, object$by, 0))
 }
 
 print.groupfsInf <- function(x, ...) {
