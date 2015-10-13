@@ -6,10 +6,10 @@ source("../../selectiveInference/R/funs.quadratic.R")
 source("../../selectiveInference/R/funs.common.R")
 
 set.seed(1)
-niters <- 200
+niters <- 100
 n <- 100
-p <- 100
-G <- 50
+p <- 200
+G <- 100
 maxsteps <- 15
 sparsity <- 5
 snr <- 1
@@ -24,7 +24,7 @@ instance <- function(n, p, G, sparsity, snr, rho, maxsteps, aicstop) {
     index <- simd$index
 
     fit <- groupfs(x, y, index, maxsteps, k = log(n), aicstop = aicstop)
-    pvals <- groupfsInf(fit, verbose=T)
+    pvals <- groupfsInf(fit, sigma = 1, verbose=T)
     return(list(variable = fit$action, pvals = pvals$pv, stopped = attr(fit, "stopped")))
 }
 
@@ -41,6 +41,6 @@ save(pvals, vars, stopped, file = paste0(
                       "_p", p,
                       "_sparsity", sparsity,
                       "_snr", snr,
-                      ".RData"))
+                      "_known.RData"))
 
 print(time)
