@@ -38,7 +38,7 @@ randomGaussianFixedP <- function(n, p, G = p, sparsity = 0, snr = 0, sigma = 1, 
     if (sparsity > 0 && snr > 0) {
         for (j in 1:sparsity) {
             inds <- which(index == j)
-            beta[inds] <- snr/sqrt(length(inds))
+            beta[inds] <- snr/sqrt(n*length(inds))
         }
     }
     y <- x %*% beta + sigma * rnorm(n)
