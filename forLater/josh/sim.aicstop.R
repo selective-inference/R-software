@@ -8,17 +8,18 @@ source("../../selectiveInference/R/funs.common.R")
 set.seed(1)
 niters <- 100
 n <- 100
-p <- 200
-G <- 100
+p <- 100
+G <- 50
 maxsteps <- 15
 sparsity <- 5
 snr <- 1
+sigma <- 1
 rho <- .1
 aicstop <- 1
 
 instance <- function(n, p, G, sparsity, snr, rho, maxsteps, aicstop) {
 
-    simd <- randomGaussianFixedP(n, p, G, sparsity, snr, rho)
+    simd <- randomGaussianFixedP(n, p, G, sparsity, snr, sigma, rho)
     x <- simd$x
     y <- simd$y
     index <- simd$index
