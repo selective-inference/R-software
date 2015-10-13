@@ -127,7 +127,7 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
 
     if (verbose) print(round(step.info, 3))
 
-    if (aicstop > 0 && step < maxstep && step >= aicstop && aic.last < added$AIC) {
+    if (aicstop > 0 && step < maxsteps && step >= aicstop && aic.last < added$AIC) {
         if (all(diff(c(aic.begin, path.info$AIC)[(step+1-aicstop):(step+1)]) > 0)) {
 
             if (is.null(sigma)) {
