@@ -6,7 +6,7 @@ source("../../selectiveInference/R/funs.quadratic.R")
 source("../../selectiveInference/R/funs.common.R")
 
 set.seed(1)
-niters <- 500
+niters <- 200
 n <- 100
 p <- 100
 G <- 50
