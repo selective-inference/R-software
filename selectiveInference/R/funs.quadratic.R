@@ -1,8 +1,15 @@
 
-truncationRegion <- function(obj, TC, R, eta, Z, tol = 1e-15) {
+truncationRegion <- function(obj, ydecomp, type, tol = 1e-15) {
 
   n <- nrow(obj$x)
-
+  R <- ydecomp$R
+  Z <- ydecomp$Z
+  if (type == "TC") {
+      eta <- ydecomp$eta
+  } else {
+      Vd <- ydecomp$Vd
+      V2 <- ydecomp$V2
+  }
   L <- lapply(1:length(obj$action), function(s) {
 
     Ug <- obj$maxprojs[[s]]
@@ -27,8 +34,13 @@ truncationRegion <- function(obj, TC, R, eta, Z, tol = 1e-15) {
           # (t*U + Z)^T %*% Q %*% (t*U + Z) \geq 0
           # we find the roots in t, if there are any
           # and return the interval of potential t
-          coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etas, etas, Zs, Zs)
-          quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol)
+          if (type == "TC") {
+              coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etas, etas, Zs, Zs)
+              quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol)
+          } else {
+              coeffs <- TF_coefficients(R, Ug, Uh, peng, penh, Zg, Zh, Vdg, Vdh, V2g, V2h)
+              TF_roots(R, C, coeffs)
+          }
       })
     }
     # LL is a list of intervals
@@ -119,32 +131,44 @@ quadratic_roots <- function(A, B, C, tol) {
     }
 }
 
-roots_to_checkpoints <- function(roots) {
-    checkpoints <- unique(sort(c(0, roots)))
-    return(c(0, (checkpoints + c(checkpoints[-1], 2 + checkpoints[length(checkpoints)]))/2))
+
+# Efficiently compute coefficients of one-dimensional TF slice function
+TF_coefficients <- function(R, Ug, Uh, peng, penh, Zg, Zh, Vdg, Vdh, V2g, V2h) {
+
+    UhZ <- t(Uh) %*% Zh
+    UgZ <- t(Ug) %*% Zg
+    UhVd <- t(Uh) %*% Vdh
+    UgVd <- t(Ug) %*% Vdg
+    UhV2 <- t(Uh) %*% V2h
+    UgV2 <- t(Ug) %*% V2g
+    VdZh <- t(Vdh) %*% Zh    
+    VdZg <- t(Vdg) %*% Zg
+    V2Zh <- t(V2h) %*% Zh
+    V2Zg <- t(V2g) %*% Zg
+    
+    x0 <- peng * (sum(Zg^2) - sum(UgZ^2)) - penh * (sum(Zh^2) - sum(UhZ^2))
+    x1 <- 2*R*(peng * (VdZg - t(UgZ) %*% UgVd) - penh * (VdZh - t(UhZ) %*% UhVd))
+    x2 <- 2*R*(peng * (V2Zg - t(UgZ) %*% UgV2) - penh * (V2Zh - t(UhZ) %*% UhV2))
+    x12 <- 2*R*(peng * (t(Vdg) %*% V2g - t(UgVd) %*% UgV2) - penh * (t(Vdh) %*% V2h - t(UhVd) %*% UhV2))
+    x11 <- R^2*(peng * (sum(Vdg^2) - sum(UgVd^2)) - penh*(sum(Vdh^2) - sum(UhVd^2)))
+    x22 <- R^2*(peng * (sum(V2g^2) - sum(UgV2^2)) - penh*(sum(V2h^2) - sum(UhV2^2)))
+
+    return(list(x11=x11, x22=x22, x12=x12, x1=x1, x2=x2, x0=x0))
 }
 
-roots_to_partition <- function(roots) {
-    checkpoints <- unique(sort(c(0, roots)))
-    return(list(endpoints = c(checkpoints, Inf), midpoints = (checkpoints + c(checkpoints[-1], 2 + checkpoints[length(checkpoints)]))/2))
-}
+# Numerically solve for roots of TF slice using
+# hybrid polyroot/uniroot approach
+TF_roots <- function(R, C, coeffs, tol = 1e-14) {
 
-# Tchi_roots <- function(Q, a, b, )
+    x11 <- coeffs$x11
+    x22 <- coeffs$x22
+    x12 <- coeffs$x12
+    x1 <- coeffs$x1
+    x2 <- coeffs$x2
+    x0 <- coeffs$x0
 
-TF_roots <- function(Q, a, b, Vdelta, V2, z, C, r, tol = 1e-14) {
-
-    # z = y - R1
-    VdeltaQ <- t(Vdelta) %*% Q
-    V2Q <- t(V2) %*% Q
-    x11 <- VdeltaQ %*% Vdelta
-    x12 <- 2 * VdeltaQ %*% V2
-    x22 <- V2Q %*% V2
-    x1 <- 2 * VdeltaQ %*% z + t(a) %*% Vdelta
-    x2 <- 2 * V2Q %*% z + t(a) %*% V2
-    x0 <- t(z) %*% Q %*% z + t(a) %*% z + b
-
-    g1 <- function(t) r*sqrt(C*t/(1+C*t))
-    g2 <- function(t) r/sqrt(1+C*t)
+    g1 <- function(t) R*sqrt(C*t/(1+C*t))
+    g2 <- function(t) R/sqrt(1+C*t)
     I <- function(t) x11*g1(t)^2 + x12*g1(t)*g2(t) + x22*g2(t)^2 + x1*g1(t) + x2*g2(t) + x0
 
     z4 <- r*complex(real = -x11 + x22, imaginary = -x12)/2
@@ -152,7 +176,7 @@ TF_roots <- function(Q, a, b, Vdelta, V2, z, C, r, tol = 1e-14) {
     z2 <- complex(real = r*x11+r*x22+2*x0/r)
     z1 <- Conj(z3)
     z0 <- Conj(z4)
-    zcoefs <- r*c(z0, z1, z2, z3, z4)/2
+    zcoefs <- R*c(z0, z1, z2, z3, z4)/2
     croots <- polyroot(zcoefs)
     thetas <- Arg(croots)
     modinds <- Mod(croots) <= 1 + tol & Mod(croots) >= 1 - tol
@@ -176,7 +200,10 @@ TF_roots <- function(Q, a, b, Vdelta, V2, z, C, r, tol = 1e-14) {
         }))
         partition <- roots_to_partition(roots)
         positive <- which(I(partition$midpoints) > 0)
-
+########################################        
+        # Store the complement!
+        # interval_intersect uses complement anyway
+########################################
         intervals <- matrix(NA, ncol=2)
         for (i in 1:length(positive)) {
             ind <- positive[i]
@@ -191,4 +218,14 @@ TF_roots <- function(Q, a, b, Vdelta, V2, z, C, r, tol = 1e-14) {
     }
 
     return(list(intervals = Intervals(c(0,Inf)), I=I))
+}
+
+# Helper functions for TF roots
+roots_to_checkpoints <- function(roots) {
+    checkpoints <- unique(sort(c(0, roots)))
+    return(c(0, (checkpoints + c(checkpoints[-1], 2 + checkpoints[length(checkpoints)]))/2))
+}
+roots_to_partition <- function(roots) {
+    checkpoints <- unique(sort(c(0, roots)))
+    return(list(endpoints = c(checkpoints, Inf), midpoints = (checkpoints + c(checkpoints[-1], 2 + checkpoints[length(checkpoints)]))/2))
 }
