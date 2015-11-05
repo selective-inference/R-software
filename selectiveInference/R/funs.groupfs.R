@@ -239,8 +239,6 @@ add1.groupfs <- function(xr, yr, index, labels, inactive, k, sigma = NULL) {
 #'
 #' @param obj Object returned by \code{\link{groupfs}} function
 #' @param sigma Estimate of error standard deviation. If NULL (default), this is estimated using the mean squared residual of the full least squares fit when n >= 2p, and the mean squared residual of the selected model when n < 2p. In the latter case, the user should use \code{\link{estimateSigma}} function for a more accurate estimate.
-#' @param type Type of conditional p-values to compute. With "all" (default), p-values are computed conditional on the final model with all variables up to \code{maxsteps}; with "aic" the number of steps is chosen after which the AIC criterion increases \code{ntimes} in a row, and then the same type of analysis as in "all" is carried out for the active variables at that number of steps.
-#' @param ntimes Number of steps for which AIC criterion has to increase before minimizing point is declared.
 #' @param verbose Print out progress along the way? Default is FALSE.
 #' @return An object of class "groupfsInf" containing selective p-values for the fitted model \code{obj}. For comparison with \code{\link{fsInf}}, note that the option \code{type = "active"} is not available.
 #'
@@ -252,13 +250,14 @@ add1.groupfs <- function(xr, yr, index, labels, inactive, k, sigma = NULL) {
 #'   \item{df}{Rank of group of variables when it was added to the model.}
 #'   \item{support}{List of intervals defining the truncation region of the truncated chi.}
 #' }
-groupfsInf <- function(obj, sigma = NULL, type = c("all", "aic"), ntimes = 2, verbose = FALSE) {
+groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
 
   if (!is.null(obj$cvobj) && attr(obj, "stopped")) {
-      stop("Cross-validation and early stopping cannot be used simultaneously")
+      stop("Cross-validation and early stopping cannot be used simultaneously.")
+      # This shouldn't happen in the first place!
+      # (it wouldn't anyway unless someone tries to trick it)
   }
 
-  type <- match.arg(type)
   n <- nrow(obj$x)
   p <- ncol(obj$x)
   maxsteps <- attr(obj, "maxsteps")
@@ -268,8 +267,7 @@ groupfsInf <- function(obj, sigma = NULL, type = c("all", "aic"), ntimes = 2, ve
   y <- obj$y
   Ep <- sum(index %in% obj$action)
 
-  nanconv <- FALSE
-  pvals = dfs = TCs = numeric(maxsteps)
+  pvals = dfs = Tstats = numeric(maxsteps)
   supports <- list()
 
   if (!is.null(sigma)) {
@@ -278,6 +276,7 @@ groupfsInf <- function(obj, sigma = NULL, type = c("all", "aic"), ntimes = 2, ve
       }
   } else {
       if (is.null(obj$sigma)) {
+          type <- "TF"
           if (n >= 2*p) {
               sigma <- sqrt(sum(lsfit(obj$x, obj$y, intercept = obj$intercept)$res^2)/(n-p-obj$intercept))
           } else {
@@ -285,6 +284,7 @@ groupfsInf <- function(obj, sigma = NULL, type = c("all", "aic"), ntimes = 2, ve
               warning(paste(sprintf("p > n/2, and sigmahat = %0.3f used as an estimate of sigma;",sigma), "you may want to use the estimateSigma function"))
           }
       } else {
+          type <- "TC"
           sigma <- obj$sigma
       }
   }
@@ -293,47 +293,92 @@ groupfsInf <- function(obj, sigma = NULL, type = c("all", "aic"), ntimes = 2, ve
   for (j in 1:maxsteps) {
     i <- obj$action[j]
     if (verbose) cat(paste0("Step ", j, "/", attr(obj, "maxsteps"), ": computing P-value for group ", i, "\n"))
-    # Form projection onto active set minus i
-    # and project x_i orthogonally
-    x_i <- obj$x[,which(obj$index == i), drop = FALSE]
-    if (length(obj$action) > 1) {
-        minus_i <- setdiff(obj$action, i)
-        x_minus_i <- svdu_thresh(obj$x[,which(obj$index %in% minus_i), drop = FALSE])
-        x_i <- x_i - x_minus_i %*% t(x_minus_i) %*% x_i
+
+    if (!is.null(obj$sigma)) {
+        # Form projection onto active set minus i
+        # and project x_i orthogonally
+        x_i <- obj$x[,which(obj$index == i), drop = FALSE]
+        if (length(obj$action) > 1) {
+            minus_i <- setdiff(obj$action, i)
+            x_minus_i <- svdu_thresh(obj$x[,which(obj$index %in% minus_i), drop = FALSE])
+            x_i <- x_i - x_minus_i %*% t(x_minus_i) %*% x_i
+        }
+
+        # Project y onto what remains of x_i
+        Ugtilde <- svdu_thresh(x_i)
+        R <- t(Ugtilde) %*% obj$y
+        TC <- sqrt(sum(R^2))
+        eta <- Ugtilde %*% R / TC
+        Z <- obj$y - eta * TC
+        dfi <- ncol(Ugtilde)
+        Tstats[j] <- TC
+        dfs[j] <- dfi
+
+        ydecomp <- list(R=R, Z=Z, eta=eta)
+
+    } else {
+
+        Pfull <- svdu_thresh(obj$x[,which(obj$index %in% obj$action), drop = FALSE])
+        if (length(obj$action) > 1) {
+            minus_i <- setdiff(obj$action, i)
+            Psub <- svdu_thresh(obj$x[,which(obj$index %in% minus_i), drop = FALSE])
+            Z <- Psub %*% y
+            C <- (ncol(Pfull) - ncol(Psub))/(n - ncol(Pfull))
+        } else {
+            Z <- 0
+            C <- ncol(Pfull)/(n-ncol(Pfull))
+        }
+        R1 <- y - z        
+        R2 <- y - Pfull %*% y
+        R <- sqrt(sum(R1^2))
+        U <- R1/r
+        delta <- R1-R2
+        Vdelta <- delta/sqrt(sum(delta^2))
+        V2 <- R2/sqrt(sum(R2^2))
+        ydecomp <- list(R=R, Z=Z, Vd=Vdelta, V2=V2)
+        
     }
+    
+    intervallist <- truncationRegion(obj, ydecomp, type)
 
-    # Project y onto what remains of x_i
-    Ugtilde <- svdu_thresh(x_i)
-    R <- t(Ugtilde) %*% obj$y
-    TC <- sqrt(sum(R^2))
-    eta <- Ugtilde %*% R / TC
-    Z <- obj$y - eta * TC
-    dfi <- ncol(Ugtilde)
-    TCs[j] <- TC
-    dfs[j] <- dfi
-
-    intervallist <- truncationRegion(obj, TC, R, eta, Z)
+    # Additional constraints from cross-validation?
     if (!is.null(obj$cvobj)) {
         intervallist <- c(intervallist, do.call(c,
-        lapply(obj$cvobj, function(cvf) {
-            truncationRegion(cvf, TC, R[-cvf$fold], eta[-cvf$fold], Z[-cvf$fold])
-        })))
+                          lapply(obj$cvobj, function(cvf) {
+                              if (type == "TC") {
+                                  ydecomp <- list(R=R[-cvf$fold], eta=eta[-cvf$fold], Z=Z[-cvf$fold])
+                              } else {
+ ####################################                                 
+           # THINK ABOUT THIS AGAIN
+     # when you're not falling asleep
+ ####################################                                  
+                                  ydecomp <- list(R=R[-cvf$fold], Z=Z[-cvf$fold], Vd=Vdelta[-cvf$fold], V2=V2[-cvf$fold])
+                              }
+                              truncationRegion(cvf, ydecomp, type)
+                          })))
         intervallist <- c(intervallist,
                           lapply(obj$cvquad, function(cvquad) {
-                              etacvquad <- t(eta) %*% cvquad
-                              A <- etacvquad %*% eta
-                              B <- 2 * etacvquad %*% Z
-                              C <- t(Z) %*% cvquad %*% Z
-                              quadratic_roots(A, B, C, tol = 1e-15)
+                              if (type == "TC") {
+                                  etacvquad <- t(eta) %*% cvquad
+                                  A <- etacvquad %*% eta
+                                  B <- 2 * etacvquad %*% Z
+                                  C <- t(Z) %*% cvquad %*% Z
+                                  quadratic_roots(A, B, C, tol = 1e-15)
+                              } else {
+ ####################################
+                # DO THIS NEXT
+ ####################################                                  
+                              }
                           }))
     }
+
+    # Additional constraints from AIC stopping?
     if (attr(obj, "stopped")) {
         aicstop <- attr(obj, "aicstop")
-
+        
         ulist <- etalist <- zlist <- penlist <- vector("list", aicstop+1)
         for (s in seq(aicstop+1)) {
             stepind <- maxsteps - (aicstop+1) + s
-#            print(c(s, stepind))
             if (stepind > 1) {
                 etalist[[s]] <- obj$cumprojs[[stepind-1]] %*% eta
                 zlist[[s]] <- obj$cumprojs[[stepind-1]] %*% Z
@@ -348,22 +393,27 @@ groupfsInf <- function(obj, sigma = NULL, type = c("all", "aic"), ntimes = 2, ve
         intervallist <- c(intervallist,
                           do.call(c, lapply(1:aicstop, function(s) {
                               lapply((s+1):(aicstop+1), function(sp) {
-                                  Ug <- ulist[[s]]
-                                  Uh <- ulist[[sp]]
-                                  peng <- penlist[[s]]
-                                  penh <- prod(unlist(penlist[s:sp]))
-                                  etag <- etalist[[s]]
-                                  etah <- etalist[[sp]]
-                                  Zg <- zlist[[s]]
-                                  Zh <- zlist[[sp]]
-
-                                  coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh)
-                                  quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol = 1e-15)
+                                  if (type == "TC") {
+                                      Ug <- ulist[[s]]
+                                      Uh <- ulist[[sp]]
+                                      peng <- penlist[[s]]
+                                      penh <- prod(unlist(penlist[s:sp]))
+                                      etag <- etalist[[s]]
+                                      etah <- etalist[[sp]]
+                                      Zg <- zlist[[s]]
+                                      Zh <- zlist[[sp]]
+                                      coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh)
+                                      quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol = 1e-15)
+                                  } else {
+###################################
+              # DO THIS TOO
+###################################                                      
+                                  }
                               })
                           })))
     }
 
-    # Compute intersection:
+        # Compute intersection:
     region <- do.call(interval_union, intervallist)
     region <- interval_union(region, Intervals(c(-Inf,0)))
     E <- interval_complement(region, check_valid = FALSE)
@@ -371,13 +421,31 @@ groupfsInf <- function(obj, sigma = NULL, type = c("all", "aic"), ntimes = 2, ve
         stop(paste("Empty TC support at step", j))
     }
     supports[[j]] <- E
-
+        
     # E is now potentially a union of intervals
-    pvals[j] <- TC_surv(TC, sigma, dfi, E)
+    if (type == "TC") {
+        pvals[j] <- TC_surv(TC, sigma, dfi, E)
+    } else {
+        pvals[j] <- TF_surv(TF, df1, df2, E)
+    }
+    
   }
-  if (nanconv) warning("P-value NaNs of the form 0/0 converted to 0. This typically occurs for numerical reasons in the presence of a large signal-to-noise ratio.")
+
+  if (any(is.nan(pvals))) {
+      nanp <- which(is.nan(pvals))
+      pvals[nanp] <- 0
+      warning(paste0("P-value NaNs of the form 0/0 converted to 0 for group(s) ", paste(obj$action[nanp], collapse=","), ". This typically occurs for numerical reasons in the presence of a large signal-to-noise ratio."))
+  }
+  
   names(pvals) <- obj$action
-  out <- list(vars = obj$action, pv=pvals, sigma=sigma, TC=TCs, df = dfs, support=supports)
+  out <- list(vars = obj$action, pv=pvals, sigma=sigma)
+  if (type == "TC") {
+      out$TC <- Tstats
+  } else {
+      out$TF <- Tstats
+  }
+  out$df <- dfs
+  out$support <- supports
   class(out) <- "groupfsInf"
   if (!is.null(attr(obj, "varnames"))) {
       attr(out, "varnames") <- attr(obj, "varnames")
@@ -419,10 +487,6 @@ TC_surv <- function(TC, sigma, df, E) {
 
     # Survival function
     value <- numer/denom
-    if (is.nan(value)) {
-      value <- 0
-      nanconv <- TRUE
-    }
     # Force p-value to lie in the [0,1] interval
     # in case of numerical issues
     value <- max(0, min(1, value))
