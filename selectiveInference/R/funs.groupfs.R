@@ -267,7 +267,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
   y <- obj$y
   Ep <- sum(index %in% obj$action)
 
-  pvals = dfs = Tstats = numeric(maxsteps)
+  pvals = dfs = dfs2 = Tstats = numeric(maxsteps)
   supports <- list()
 
   if (!is.null(sigma)) {
@@ -322,23 +322,34 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
         if (length(obj$action) > 1) {
             minus_i <- setdiff(obj$action, i)
             Psub <- svdu_thresh(obj$x[,which(obj$index %in% minus_i), drop = FALSE])
-            Z <- Psub %*% y
-            C <- (ncol(Pfull) - ncol(Psub))/(n - ncol(Pfull))
+            Z <- Psub %*% t(Psub) %*% y
+            df2 <- ncol(Pfull) - ncol(Psub)
+            C <- df2/(n - ncol(Pfull))
+
         } else {
             Z <- 0
-            C <- ncol(Pfull)/(n-ncol(Pfull))
+            df2 <- ncol(Pfull)
+            C <- df2/(n-ncol(Pfull))
         }
-        R1 <- y - z        
-        R2 <- y - Pfull %*% y
+        R1 <- y - Z
+        R2 <- y - Pfull %*% t(Pfull) %*% y
         R <- sqrt(sum(R1^2))
-        U <- R1/r
+        R2sq <- sum(R2^2)
+        U <- R1/R
+
+        # cv-folds redefine Vdelta/V2?
+
         delta <- R1-R2
         Vdelta <- delta/sqrt(sum(delta^2))
         V2 <- R2/sqrt(sum(R2^2))
-        ydecomp <- list(R=R, Z=Z, Vd=Vdelta, V2=V2)
-        
+        TF <- (R^2-R2sq)/(C*R2sq)
+        Tstats[j] <- TF
+        dfs[j] <- ncol(Psub)
+
+        ydecomp <- list(R=R, Z=Z, Vd=Vdelta, V2=V2, C=C)
+
     }
-    
+
     intervallist <- truncationRegion(obj, ydecomp, type)
 
     # Additional constraints from cross-validation?
@@ -348,11 +359,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
                               if (type == "TC") {
                                   ydecomp <- list(R=R[-cvf$fold], eta=eta[-cvf$fold], Z=Z[-cvf$fold])
                               } else {
- ####################################                                 
-           # THINK ABOUT THIS AGAIN
-     # when you're not falling asleep
- ####################################                                  
-                                  ydecomp <- list(R=R[-cvf$fold], Z=Z[-cvf$fold], Vd=Vdelta[-cvf$fold], V2=V2[-cvf$fold])
+                                  ydecomp <- list(R=R, Z=Z[-cvf$fold], Vd=Vdelta[-cvf$fold], V2=V2[-cvf$fold], C=C) # C correct?
                               }
                               truncationRegion(cvf, ydecomp, type)
                           })))
@@ -365,25 +372,52 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
                                   C <- t(Z) %*% cvquad %*% Z
                                   quadratic_roots(A, B, C, tol = 1e-15)
                               } else {
- ####################################
-                # DO THIS NEXT
- ####################################                                  
+
+                                  zcvquad <- t(Z) %*% cvquad
+                                  vdcvquad <- t(Vdelta) %*% cvquad
+                                  v2cvquad <- t(V2) %*% cvquad
+                                  # (r*(vd*g1 + v2*g2) + z)^T cvquad (r*(vd*g1 + v2*g2) + z)
+                                  x0 <- zcvquad %*% Z
+                                  x1 <- 2*R*zcvquad %*% Vd
+                                  x2 <- 2*R*zcvquad %*% V2
+                                  x12 <- 2*R*vdcvquad %*% V2
+                                  x11 <- R^2*vdcvquad %*% Vd
+                                  x22 <- R^2*v2cvquad %*% V2
+                                  TF_roots(R, C, coeffs = list(x0=x0, x1=x1, x2=x2, x12=x12, x11=x11, x22=x22))
                               }
                           }))
     }
 
     # Additional constraints from AIC stopping?
     if (attr(obj, "stopped")) {
+
         aicstop <- attr(obj, "aicstop")
-        
-        ulist <- etalist <- zlist <- penlist <- vector("list", aicstop+1)
+        ulist <- penlist <- zlist <- vector("list", aicstop+1)
+
+        if (type == "TC") {
+            etalist <- vector("list", aicstop+1)
+        } else {
+            vdlist <- v2list <- vector("list", aicstop+1)
+        }
+
         for (s in seq(aicstop+1)) {
             stepind <- maxsteps - (aicstop+1) + s
             if (stepind > 1) {
-                etalist[[s]] <- obj$cumprojs[[stepind-1]] %*% eta
-                zlist[[s]] <- obj$cumprojs[[stepind-1]] %*% Z
+                cproj <- obj$cumprojs[[stepind-1]]
+                if (type == "TC") {
+                    etalist[[s]] <- cproj %*% eta
+                } else {
+                    v2list[[s]] <- cproj %*% V2
+                    vdlist[[s]] <- cproj %*% Vdelta
+                }
+                zlist[[s]] <- cproj %*% Z
             } else {
-                etalist[[s]] <- eta
+                if (type == "TC") {
+                    etalist[[s]] <- eta
+                } else {
+                    v2list[[s]] <- V2
+                    vdlist[[s]] <- Vdelta
+                }
                 zlist[[s]] <- Z
             }
             ulist[[s]] <- obj$maxprojs[[stepind]]
@@ -405,9 +439,19 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
                                       coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh)
                                       quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol = 1e-15)
                                   } else {
-###################################
-              # DO THIS TOO
-###################################                                      
+
+                                      Ug <- ulist[[s]]
+                                      Uh <- ulist[[sp]]
+                                      peng <- penlist[[s]]
+                                      penh <- prod(unlist(penlist[s:sp]))
+                                      Vdg <- vdlist[[s]]
+                                      Vdh <- vdlist[[sp]]
+                                      V2g <- vdlist[[s]]
+                                      V2h <- vdlist[[sp]]
+                                      Zg <- zlist[[s]]
+                                      Zh <- zlist[[sp]]
+                                      coeffs <- TF_coefficients(R, Ug, Uh, peng, penh, Zg, Zh, Vdg, Vdh, V2g, V2h)
+                                      TF_roots(R, C, coeffs)
                                   }
                               })
                           })))
@@ -418,17 +462,17 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
     region <- interval_union(region, Intervals(c(-Inf,0)))
     E <- interval_complement(region, check_valid = FALSE)
     if (length(E) == 0) {
-        stop(paste("Empty TC support at step", j))
+        stop(paste("Empty support at step", j))
     }
     supports[[j]] <- E
-        
+
     # E is now potentially a union of intervals
     if (type == "TC") {
         pvals[j] <- TC_surv(TC, sigma, dfi, E)
     } else {
         pvals[j] <- TF_surv(TF, df1, df2, E)
     }
-    
+
   }
 
   if (any(is.nan(pvals))) {
@@ -436,7 +480,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
       pvals[nanp] <- 0
       warning(paste0("P-value NaNs of the form 0/0 converted to 0 for group(s) ", paste(obj$action[nanp], collapse=","), ". This typically occurs for numerical reasons in the presence of a large signal-to-noise ratio."))
   }
-  
+
   names(pvals) <- obj$action
   out <- list(vars = obj$action, pv=pvals, sigma=sigma)
   if (type == "TC") {

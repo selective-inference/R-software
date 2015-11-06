@@ -3,23 +3,26 @@ truncationRegion <- function(obj, ydecomp, type, tol = 1e-15) {
 
   n <- nrow(obj$x)
   R <- ydecomp$R
-  Z <- ydecomp$Z
+  Z = Zs = ydecomp$Z
   if (type == "TC") {
-      eta <- ydecomp$eta
+      eta = etas = ydecomp$eta
   } else {
-      Vd <- ydecomp$Vd
-      V2 <- ydecomp$V2
+      Vd = Vds = ydecomp$Vd
+      V2 = V2s = ydecomp$V2
+      C = ydecomp$C
   }
   L <- lapply(1:length(obj$action), function(s) {
 
     Ug <- obj$maxprojs[[s]]
     peng <- obj$maxpens[[s]]
     if (s > 1) {
-        etas <- obj$cumprojs[[s-1]] %*% eta
-        Zs <- obj$cumprojs[[s-1]] %*% Z
-    } else {
-        etas <- eta
-        Zs <- Z
+        if (type == "TC") {
+            etas <- obj$cumprojs[[s-1]] %*% eta
+            Zs <- obj$cumprojs[[s-1]] %*% Z
+        } else {
+            Vds <- obj$cumprojs[[s-1]] %*% Vd
+            V2s <- obj$cumprojs[[s-1]] %*% V2
+        }
     }
 
     num.projs <- length(obj$projections[[s]])
@@ -38,7 +41,7 @@ truncationRegion <- function(obj, ydecomp, type, tol = 1e-15) {
               coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etas, etas, Zs, Zs)
               quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol)
           } else {
-              coeffs <- TF_coefficients(R, Ug, Uh, peng, penh, Zg, Zh, Vdg, Vdh, V2g, V2h)
+              coeffs <- TF_coefficients(R, Ug, Uh, peng, penh, Zs, Zs, Vds, Vds, V2s, V2s)
               TF_roots(R, C, coeffs)
           }
       })
@@ -58,17 +61,15 @@ quadratic_coefficients <- function(sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh
     etaZh <- t(etah) %*% Zh
     etaZg <- t(etag) %*% Zg
     if (is.null(sigma)) {
-        # Check the signs, make it consistent
         A <- penh * (sum(etah^2) - sum(Uheta^2)) - peng * (sum(etag^2) - sum(Ugeta^2))
         B <- 2 * penh * (etaZh - t(Uheta) %*% UhZ) - 2 * peng * (etaZg - t(Ugeta) %*% UgZ)
         C <- penh * (sum(Zh^2) - sum(UhZ^2)) - peng * (sum(Zg^2) - sum(UgZ^2))
     } else {
-          # Check this
         A <- (sum(etah^2) - sum(Uheta^2)) - (sum(etag^2) - sum(Ugeta^2))
         B <- 2 * (etaZh - t(Uheta) %*% UhZ) - 2 * (etaZg - t(Ugeta) %*% UgZ)
         C <- (sum(Zh^2) - sum(UhZ^2) + penh) - (sum(Zg^2) - sum(UgZ^2) + peng)
     }
-    return(list(A = A, B = B, C= C))
+    return(list(A = A, B = B, C = C))
 }
 
 quadratic_roots <- function(A, B, C, tol) {
@@ -141,11 +142,11 @@ TF_coefficients <- function(R, Ug, Uh, peng, penh, Zg, Zh, Vdg, Vdh, V2g, V2h) {
     UgVd <- t(Ug) %*% Vdg
     UhV2 <- t(Uh) %*% V2h
     UgV2 <- t(Ug) %*% V2g
-    VdZh <- t(Vdh) %*% Zh    
+    VdZh <- t(Vdh) %*% Zh
     VdZg <- t(Vdg) %*% Zg
     V2Zh <- t(V2h) %*% Zh
     V2Zg <- t(V2g) %*% Zg
-    
+
     x0 <- peng * (sum(Zg^2) - sum(UgZ^2)) - penh * (sum(Zh^2) - sum(UhZ^2))
     x1 <- 2*R*(peng * (VdZg - t(UgZ) %*% UgVd) - penh * (VdZh - t(UhZ) %*% UhVd))
     x2 <- 2*R*(peng * (V2Zg - t(UgZ) %*% UgV2) - penh * (V2Zh - t(UhZ) %*% UhV2))
@@ -200,10 +201,10 @@ TF_roots <- function(R, C, coeffs, tol = 1e-14) {
         }))
         partition <- roots_to_partition(roots)
         positive <- which(I(partition$midpoints) > 0)
-########################################        
+########################################
         # Store the complement!
         # interval_intersect uses complement anyway
-########################################
+
         intervals <- matrix(NA, ncol=2)
         for (i in 1:length(positive)) {
             ind <- positive[i]
