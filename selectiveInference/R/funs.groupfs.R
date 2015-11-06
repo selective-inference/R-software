@@ -314,7 +314,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
         Tstats[j] <- TC
         dfs[j] <- dfi
 
-        ydecomp <- list(R=R, Z=Z, eta=eta)
+        ydecomp <- list(Z=Z, eta=eta)
 
     } else {
 
@@ -335,10 +335,6 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
         R2 <- y - Pfull %*% t(Pfull) %*% y
         R <- sqrt(sum(R1^2))
         R2sq <- sum(R2^2)
-        U <- R1/R
-
-        # cv-folds redefine Vdelta/V2?
-
         delta <- R1-R2
         Vdelta <- delta/sqrt(sum(delta^2))
         V2 <- R2/sqrt(sum(R2^2))
@@ -351,6 +347,9 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
     }
 
     intervallist <- truncationRegion(obj, ydecomp, type)
+
+    region <- do.call(interval_union, intervallist)
+    # DELETE THIS ###########
 
     # Additional constraints from cross-validation?
     if (!is.null(obj$cvobj)) {
@@ -461,8 +460,9 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
     region <- do.call(interval_union, intervallist)
     region <- interval_union(region, Intervals(c(-Inf,0)))
     E <- interval_complement(region, check_valid = FALSE)
+    print(E)
     if (length(E) == 0) {
-        stop(paste("Empty support at step", j))
+#        stop(paste("Empty support at step", j))
     }
     supports[[j]] <- E
 
@@ -470,7 +470,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
     if (type == "TC") {
         pvals[j] <- TC_surv(TC, sigma, dfi, E)
     } else {
-        pvals[j] <- TF_surv(TF, df1, df2, E)
+#        pvals[j] <- TF_surv(TF, df1, df2, E)
     }
 
   }
