@@ -28,9 +28,9 @@ truncationRegion <- function(obj, ydecomp, type, tol = 1e-15) {
     num.projs <- length(obj$projections[[s]])
     if (num.projs == 0) {
         return(list(Intervals(c(-Inf,0))))
-        print("no projections")
     } else {
       lapply(1:num.projs, function(l) {
+
           Uh <- obj$projections[[s]][[l]]
           penh <- obj$aicpens[[s]][[l]]
           # The quadratic form corresponding to
@@ -75,6 +75,7 @@ quadratic_coefficients <- function(sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh
 quadratic_roots <- function(A, B, C, tol) {
     disc <- B^2 - 4*A*C
     b2a <- -B/(2*A)
+
 
     if (disc > tol) {
         # Real roots
@@ -207,6 +208,7 @@ TF_roots <- function(R, C, coeffs, tol = 1e-14, tol2 = 1e-8) {
     }
 
     checkpoints <- roots_to_checkpoints(troots)
+
     signs <- sign(I(checkpoints))
     diffs <- c(0, diff(signs))
     changeinds <- which(diffs != 0)
@@ -216,8 +218,6 @@ TF_roots <- function(R, C, coeffs, tol = 1e-14, tol2 = 1e-8) {
         roots <- unlist(lapply(changeinds, function(ind) {
             uniroot(I, lower = checkpoints[ind-1], upper = checkpoints[ind], tol = tol2)$root
         }))
-
-#        if (x2 == 0) print(roots)
 
         partition <- roots_to_partition(roots)
         negative <- which(I(partition$midpoints) < 0)
@@ -236,6 +236,7 @@ TF_roots <- function(R, C, coeffs, tol = 1e-14, tol2 = 1e-8) {
         #return(list(intervals = Intervals(intervals[-1,]), I=I))
         return(Intervals(intervals[-1,]))
     }
+
     #return(list(intervals = Intervals(c(0,Inf)), I=I))
     return(Intervals(c(-Inf,0)))
 }
