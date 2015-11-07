@@ -322,17 +322,16 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
         if (length(obj$action) > 1) {
             minus_i <- setdiff(obj$action, i)
             Psub <- svdu_thresh(obj$x[,which(obj$index %in% minus_i), drop = FALSE])
-            Z <- Psub %*% t(Psub) %*% y
-            df2 <- ncol(Pfull) - ncol(Psub)
-            C <- df2/(n - ncol(Pfull))
-
+            Z <- Psub %*% t(Psub) %*% obj$y
+            df1 <- ncol(Pfull) - ncol(Psub)
         } else {
             Z <- 0
-            df2 <- ncol(Pfull)
-            C <- df2/(n-ncol(Pfull))
+            df1 <- ncol(Pfull)
         }
-        R1 <- y - Z
-        R2 <- y - Pfull %*% t(Pfull) %*% y
+        df2 <- n - ncol(Pfull)
+        C <- df1/df2
+        R1 <- obj$y - Z
+        R2 <- obj$y - Pfull %*% t(Pfull) %*% obj$y
         R <- sqrt(sum(R1^2))
         R2sq <- sum(R2^2)
         delta <- R1-R2
@@ -340,15 +339,13 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
         V2 <- R2/sqrt(sum(R2^2))
         TF <- (R^2-R2sq)/(C*R2sq)
         Tstats[j] <- TF
-        dfs[j] <- ncol(Psub)
+        dfs[j] <- df1
 
         ydecomp <- list(R=R, Z=Z, Vd=Vdelta, V2=V2, C=C)
 
     }
 
     intervallist <- truncationRegion(obj, ydecomp, type)
-
-    #region <- do.call(interval_union, intervallist)
 
     # Additional constraints from cross-validation?
     if (!is.null(obj$cvobj)) {
@@ -459,7 +456,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
     region <- do.call(interval_union, intervallist)
     region <- interval_union(region, Intervals(c(-Inf,0)))
     E <- interval_complement(region, check_valid = FALSE)
-    print(E)
+
     if (length(E) == 0) {
         stop(paste("Empty support at step", j))
     }
@@ -470,7 +467,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
         pvals[j] <- TC_surv(TC, sigma, dfi, E)
     } else {
         # write TF_surv function first
-#        pvals[j] <- TF_surv(TF, df1, df2, E)
+        pvals[j] <- TF_surv(TF, df1, df2, E)
     }
 
   }
@@ -557,6 +554,63 @@ num_int_chi <- function(a, b, df, nsamp = 10000) {
   return((b-a)*mean(integrand))
 }
 
+TF_surv <- function(TF, df1, df2, E) {
+    if (length(E) == 0) {
+        stop("Empty TF support")
+    }
+
+    # Sum truncated cdf over each part of E
+    denom <- do.call(sum, lapply(1:nrow(E), function(v) {
+      TF_interval(E[v,1], E[v,2], df1, df2)
+    }))
+
+    # Sum truncated cdf from observed value to max of
+    # truncation region
+    numer <- do.call(sum, lapply(1:nrow(E), function(v) {
+      lower <- E[v,1]
+      upper <- E[v,2]
+      if (upper > TF) {
+        # Observed value is left of this interval's right endpoint
+        if (lower < TF) {
+          # Observed value is in this interval
+          return(TF_interval(TF, upper, df1, df2))
+        } else {
+          # Observed value is not in this interval
+          return(TF_interval(lower, upper, df1, df2))
+        }
+      } else {
+        # Observed value is right of this entire interval
+        return(0)
+      }
+    }))
+
+    # Survival function
+    value <- numer/denom
+    # Force p-value to lie in the [0,1] interval
+    # in case of numerical issues
+    value <- max(0, min(1, value))
+    value
+}
+
+TF_interval <- function(lower, upper, df1, df2) {
+  a <- lower
+  b <- upper
+  if (b == Inf) {
+      integral <- pf(a, df1, df2, lower.tail = FALSE)
+  } else {
+      integral <- pf(b, df1, df2) - pf(a, df1, df2)
+  }
+  if ((integral < .Machine$double.eps) && (b < Inf)) {
+      integral <- num_int_F(a, b, df1, df2)
+  }
+  return(integral)
+}
+
+num_int_F <- function(a, b, df1, df2, nsamp = 10000) {
+  grid <- seq(from=a, to=b, length.out=nsamp)
+  integrand <- df(grid, df1, df2)
+  return((b-a)*mean(integrand))
+}
 
 #' Center and scale design matrix by groups
 #'
@@ -697,13 +751,21 @@ predict.groupfs <- function(object, newx, ...) {
 print.groupfsInf <- function(x, ...) {
     cat(sprintf("\nStandard deviation of noise (specified or estimated) sigma = %0.3f\n", x$sigma))
     action <- x$vars
+    isTC <- "TC" %in% names(x)
+    if (isTC) {
+        Tstat <- x$TC
+    } else {
+        Tstat <- x$TF
+    }
     vnames <- attr(x, "varnames")
     if (length(vnames) > 0) action <- vnames[action]
-    tab = data.frame(Group = action, Pvalue = round(x$pv, 3), Tchi = round(x$TC, 3),
+    tab = data.frame(Group = action, Pvalue = round(x$pv, 3),
+        TC = round(Tstat, 3),
         df = x$df, Size = round(unlist(lapply(lapply(x$support, size), sum)), 3),
         Ints = unlist(lapply(x$support, nrow)), Min =round(unlist(lapply(x$support, min)), 3),
         Max = round(unlist(lapply(x$support, max)), 3))
     rownames(tab) = 1:length(x$vars)
+    if (!isTC) names(tab)[3] <- "TF"
     print(tab)
     cat("\nInts is the number of intervals in the truncated chi selection region and Size is the sum of their lengths. Min and Max are the lowest and highest endpoints of the truncation region. No confidence intervals are reported by groupfsInf.\n")
     invisible()

@@ -41,6 +41,7 @@ truncationRegion <- function(obj, ydecomp, type, tol = 1e-15) {
               coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etas, etas, Zs, Zs)
               quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol)
           } else {
+       #       Q <- peng * (diag(rep(1,n)) - Ug %*% t(Ug)) - penh * (diag(rep(1,n)) - Uh %*% t(Uh))
               coeffs <- TF_coefficients(R, Ug, Uh, peng, penh, Zs, Zs, Vds, Vds, V2s, V2s)
               TF_roots(R, C, coeffs)
           }
@@ -134,6 +135,16 @@ quadratic_roots <- function(A, B, C, tol) {
 }
 
 
+# Helper functions for TF roots
+roots_to_checkpoints <- function(roots) {
+    checkpoints <- unique(sort(c(0, roots)))
+    return(c(0, (checkpoints + c(checkpoints[-1], 200 + checkpoints[length(checkpoints)]))/2))
+}
+roots_to_partition <- function(roots) {
+    checkpoints <- unique(sort(c(0, roots)))
+    return(list(endpoints = c(checkpoints, Inf), midpoints = (checkpoints + c(checkpoints[-1], 200 + checkpoints[length(checkpoints)]))/2))
+}
+
 # Efficiently compute coefficients of one-dimensional TF slice function
 TF_coefficients <- function(R, Ug, Uh, peng, penh, Zg, Zh, Vdg, Vdh, V2g, V2h) {
 
@@ -148,17 +159,12 @@ TF_coefficients <- function(R, Ug, Uh, peng, penh, Zg, Zh, Vdg, Vdh, V2g, V2h) {
     V2Zh <- sum(V2h*Zh) #check
     V2Zg <- sum(V2g*Zg) #check
 
-    x0 <- peng * (sum(Zg^2) - sum(UgZ^2)) - penh * (sum(Zh^2) - sum(UhZ^2)) #check
-
-    x1 <- 2*R*(peng * (VdZg - sum(UgZ*UgVd)) - penh * (VdZh - sum(UhZ*UhVd))) #check
-
-    x2 <- 2*R*(peng * (V2Zg - sum(UgZ*UgV2)) - penh * (V2Zh - sum(UhZ*UhV2))) #check
-
-    x12 <- 2*R^2*(peng * (sum(Vdg*V2g) - sum(UgVd*UgV2)) - penh * (sum(Vdh*V2h) - sum(UhVd*UhV2))) #fixed R -> R^2
-
-    x11 <- R^2*(peng * (sum(Vdg^2) - sum(UgVd^2)) - penh * (sum(Vdh^2) - sum(UhVd^2))) #check
-    x22 <- R^2*(peng * (sum(V2g^2) - sum(UgV2^2)) - penh * (sum(V2h^2) - sum(UhV2^2))) #check
-#    if (x22 == 0) print(c(sum(UgV2^2), sum(UhV2^2)))
+    x0 <- penh * (sum(Zh^2) - sum(UhZ^2)) - peng * (sum(Zg^2) - sum(UgZ^2))
+    x1 <- 2*R*(penh * (VdZh - sum(UhZ*UhVd)) - peng * (VdZg - sum(UgZ*UgVd)))
+    x2 <- 2*R*(penh * (V2Zh - sum(UhZ*UhV2)) - peng * (V2Zg - sum(UgZ*UgV2)))
+    x12 <- 2*R^2*(penh * (sum(Vdh*V2h) - sum(UhVd*UhV2)) - peng * (sum(Vdg*V2g) - sum(UgVd*UgV2)))
+    x11 <- R^2*(penh * (sum(Vdh^2) - sum(UhVd^2)) - peng * (sum(Vdg^2) - sum(UgVd^2))) #check
+    x22 <- R^2*(penh * (sum(V2h^2) - sum(UhV2^2)) - peng * (sum(V2g^2) - sum(UgV2^2)))
 
     return(list(x11=x11, x22=x22, x12=x12, x1=x1, x2=x2, x0=x0))
 }
@@ -174,32 +180,33 @@ TF_roots <- function(R, C, coeffs, tol = 1e-14, tol2 = 1e-8) {
     x2 <- coeffs$x2
     x0 <- coeffs$x0
 
-    # Handle some special cases
-    if ((x11 == 0) && (max(abs(c(x22, x12, x1, x2))) < tol2)) {
-#        print("Special case 1")
-        return(Intervals(c(-Inf, 0)))
-    }
+##     # Handle some special cases
+##     if ((x11 == 0) && (max(abs(c(x22, x12, x1, x2))) < tol2)) {
+## #        print("Special case 1")
+##         return(Intervals(c(-Inf, 0)))
+##     }
 
-    if ((x22 == 0) && (max(abs(c(x2, x12))) < tol2)) {
-        x2 <- 0
-        x12 <- 0
-    }
+##     if ((x22 == 0) && (max(abs(c(x2, x12))) < tol2)) {
+##         x2 <- 0
+##         x12 <- 0
+##     }
 
-    g1 <- function(t) R*sqrt(C*t/(1+C*t))
-    g2 <- function(t) R/sqrt(1+C*t)
+    g1 <- function(t) sqrt(C*t/(1+C*t))
+    g2 <- function(t) 1/sqrt(1+C*t)
     I <- function(t) x11*g1(t)^2 + x12*g1(t)*g2(t) + x22*g2(t)^2 + x1*g1(t) + x2*g2(t) + x0
 
-    z4 <- R*complex(real = -x11 + x22, imaginary = -x12)/2
-    z3 <- complex(real = x2, imaginary = -x1)
-    z2 <- complex(real = R*x11+R*x22+2*x0/R)
+    z4 <- complex(real = -x11 + x22, imaginary = -x12)/4
+    z3 <- complex(real = x2, imaginary = -x1)/2
+    z2 <- complex(real = x11/2+x22/2+x0)
     z1 <- Conj(z3)
     z0 <- Conj(z4)
-    zcoefs <- R*c(z0, z1, z2, z3, z4)/2
+
+    zcoefs <- c(z0, z1, z2, z3, z4)
     croots <- polyroot(zcoefs)
     thetas <- Arg(croots)
     modinds <- Mod(croots) <= 1 + tol & Mod(croots) >= 1 - tol
     angleinds <- thetas >=0 & thetas <= pi/2
-    roots <- unique(thetas[modinds * angleinds])
+    roots <- unique(thetas[which(modinds & angleinds)])
     troots <- tan(roots)^2/C
 
     if (length(troots) == 0) {
@@ -241,12 +248,3 @@ TF_roots <- function(R, C, coeffs, tol = 1e-14, tol2 = 1e-8) {
     return(Intervals(c(-Inf,0)))
 }
 
-# Helper functions for TF roots
-roots_to_checkpoints <- function(roots) {
-    checkpoints <- unique(sort(c(0, roots)))
-    return(c(0, (checkpoints + c(checkpoints[-1], 200 + checkpoints[length(checkpoints)]))/2))
-}
-roots_to_partition <- function(roots) {
-    checkpoints <- unique(sort(c(0, roots)))
-    return(list(endpoints = c(checkpoints, Inf), midpoints = (checkpoints + c(checkpoints[-1], 200 + checkpoints[length(checkpoints)]))/2))
-}
