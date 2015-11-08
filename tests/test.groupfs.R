@@ -9,9 +9,9 @@ set.seed(1)
 n <- 40
 p <- 80
 index <- sort(rep(1:(p/2), 2))
-maxsteps <- 10
-sparsity <- 5
-snr <- 3
+maxsteps <- 8
+sparsity <- 4
+snr <- 2
 
 system.time({
 for (iter in 1:100) {
@@ -21,7 +21,7 @@ for (iter in 1:100) {
     beta[which(index %in% 1:sparsity)] <- snr
     y <- y + x %*% beta
     fit <- groupfs(x, y, index, maxsteps = maxsteps)
-    pvals <- groupfsInf(fit)
+    pvals <- groupfsInf(fit, verbose = T)
 }
 })
 

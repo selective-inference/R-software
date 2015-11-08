@@ -41,7 +41,7 @@ truncationRegion <- function(obj, ydecomp, type, tol = 1e-15) {
               coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etas, etas, Zs, Zs)
               quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol)
           } else {
-       #       Q <- peng * (diag(rep(1,n)) - Ug %*% t(Ug)) - penh * (diag(rep(1,n)) - Uh %*% t(Uh))
+              #Q <- peng * (diag(rep(1,n)) - Ug %*% t(Ug)) - penh * (diag(rep(1,n)) - Uh %*% t(Uh))
               coeffs <- TF_coefficients(R, Ug, Uh, peng, penh, Zs, Zs, Vds, Vds, V2s, V2s)
               TF_roots(R, C, coeffs)
           }
