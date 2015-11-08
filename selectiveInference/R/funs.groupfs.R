@@ -277,12 +277,12 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
   } else {
       if (is.null(obj$sigma)) {
           type <- "TF"
-          if (n >= 2*p) {
-              sigma <- sqrt(sum(lsfit(obj$x, obj$y, intercept = obj$intercept)$res^2)/(n-p-obj$intercept))
-          } else {
-              sigma = sqrt(obj$log$RSS[length(obj$log$RSS)]/(n-Ep-obj$intercept))
-              warning(paste(sprintf("p > n/2, and sigmahat = %0.3f used as an estimate of sigma;",sigma), "you may want to use the estimateSigma function"))
-          }
+          ## if (n >= 2*p) {
+          ##     sigma <- sqrt(sum(lsfit(obj$x, obj$y, intercept = obj$intercept)$res^2)/(n-p-obj$intercept))
+          ## } else {
+          ##     sigma = sqrt(obj$log$RSS[length(obj$log$RSS)]/(n-Ep-obj$intercept))
+          ##     warning(paste(sprintf("p > n/2, and sigmahat = %0.3f used as an estimate of sigma;",sigma), "you may want to use the estimateSigma function"))
+          ## }
       } else {
           type <- "TC"
           sigma <- obj$sigma
@@ -294,7 +294,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
     i <- obj$action[j]
     if (verbose) cat(paste0("Step ", j, "/", attr(obj, "maxsteps"), ": computing P-value for group ", i, "\n"))
 
-    if (!is.null(obj$sigma)) {
+    if (type == "TC") {
         # Form projection onto active set minus i
         # and project x_i orthogonally
         x_i <- obj$x[,which(obj$index == i), drop = FALSE]
@@ -332,12 +332,13 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
         C <- df1/df2
         R1 <- obj$y - Z
         R2 <- obj$y - Pfull %*% t(Pfull) %*% obj$y
-        R <- sqrt(sum(R1^2))
+        R1sq <- sum(R1^2)
         R2sq <- sum(R2^2)
+        R <- sqrt(R1sq)
         delta <- R1-R2
-        Vdelta <- delta/sqrt(sum(delta^2))
-        V2 <- R2/sqrt(sum(R2^2))
-        TF <- (R^2-R2sq)/(C*R2sq)
+        Vdelta <- delta/sqrt(delta^2)
+        V2 <- R2/sqrt(R2sq)
+        TF <- (R1sq-R2sq)/(C*R2sq)
         Tstats[j] <- TF
         dfs[j] <- df1
 
@@ -479,9 +480,10 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
   }
 
   names(pvals) <- obj$action
-  out <- list(vars = obj$action, pv=pvals, sigma=sigma)
+  out <- list(vars = obj$action, pv=pvals)
   if (type == "TC") {
       out$TC <- Tstats
+      out$sigma <- sigma
   } else {
       out$TF <- Tstats
   }
@@ -749,14 +751,15 @@ predict.groupfs <- function(object, newx, ...) {
 }
 
 print.groupfsInf <- function(x, ...) {
-    cat(sprintf("\nStandard deviation of noise (specified or estimated) sigma = %0.3f\n", x$sigma))
-    action <- x$vars
-    isTC <- "TC" %in% names(x)
-    if (isTC) {
+    if (!is.null(x$sigma)) {
+        isTF <- FALSE
         Tstat <- x$TC
+        cat(sprintf("\nStandard deviation of noise (specified or estimated) sigma = %0.3f\n", x$sigma))
     } else {
+        isTF <- TRUE
         Tstat <- x$TF
     }
+    action <- x$vars
     vnames <- attr(x, "varnames")
     if (length(vnames) > 0) action <- vnames[action]
     tab = data.frame(Group = action, Pvalue = round(x$pv, 3),
@@ -765,7 +768,7 @@ print.groupfsInf <- function(x, ...) {
         Ints = unlist(lapply(x$support, nrow)), Min =round(unlist(lapply(x$support, min)), 3),
         Max = round(unlist(lapply(x$support, max)), 3))
     rownames(tab) = 1:length(x$vars)
-    if (!isTC) names(tab)[3] <- "TF"
+    if (isTF) names(tab)[3] <- "TF"
     print(tab)
     cat("\nInts is the number of intervals in the truncated chi selection region and Size is the sum of their lengths. Min and Max are the lowest and highest endpoints of the truncation region. No confidence intervals are reported by groupfsInf.\n")
     invisible()
