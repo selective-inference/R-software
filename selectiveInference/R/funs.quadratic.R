@@ -50,18 +50,18 @@ truncationRegion <- function(obj, ydecomp, type, tol = 1e-15) {
               quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol)
           } else {
               
-              # Debugging
+             # Debugging
               ## Q <- peng * (diag(rep(1,n)) - Ug %*% t(Ug)) - penh * (diag(rep(1,n)) - Uh %*% t(Uh))
-              ## g1 <- function(t) sqrt(C*t/(1+C*t))
-              ## g2 <- function(t) 1/sqrt(1+C*t)
-              ## Y <- function(t) {
-              ##     Zs + R * (Vds*g1(t) + V2s*g2(t))
-              ## }
+              ##  g1 <- function(t) sqrt(C*t/(1+C*t))
+              ##  g2 <- function(t) 1/sqrt(1+C*t)
+              ##  Y <- function(t) {
+              ##      Zs + R * (Vds*g1(t) + V2s*g2(t))
+              ##  }
               
               coeffs <- TF_coefficients(R, Ug, Uh, peng, penh, Zs, Zs, Vds, Vds, V2s, V2s)
               roots <- TF_roots(R, C, coeffs)
 
-              if (is.null(roots)) print(c(s,l))
+              ## if (is.null(roots)) print(c(s,l))
               ## print(do.call(rbind, lapply(roots, function(r) {
               ##     c(r,
               ##       t(Y(r-0.000001)) %*% Q %*% Y(r-0.000001),
@@ -242,7 +242,7 @@ TF_roots <- function(R, C, coeffs, tol = 1e-14, tol2 = 1e-8) {
         # do an additional sign change check?
         #print(c(I(0), I(100), I(10000), unlist(coeffs)), digits=1)        
         if (I(0) < 0) {
-            return(NULL)
+#            return(NULL)
             return(Intervals(c(0,Inf)))
         }
         return(Intervals(c(-Inf,0)))
@@ -280,7 +280,7 @@ TF_roots <- function(R, C, coeffs, tol = 1e-14, tol2 = 1e-8) {
     # Something bad happening, see above
     #print(c(I(0), I(100), I(10000), unlist(coeffs)), digits=1)
     if (I(0) < 0) {
-        return(NULL)
+#        return(NULL)
         return(Intervals(c(0,Inf)))
     }
     return(Intervals(c(-Inf,0)))

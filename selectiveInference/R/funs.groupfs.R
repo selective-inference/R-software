@@ -336,7 +336,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
         R2sq <- sum(R2^2)
         R <- sqrt(R1sq)
         delta <- R1-R2
-        Vdelta <- delta/sqrt(delta^2)
+        Vdelta <- delta/sqrt(sum(delta^2))
         V2 <- R2/sqrt(R2sq)
         TF <- (R1sq-R2sq)/(C*R2sq)
         Tstats[j] <- TF
