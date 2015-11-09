@@ -2,26 +2,34 @@
 truncationRegion <- function(obj, ydecomp, type, tol = 1e-15) {
 
   n <- nrow(obj$x)
-  Z = Zs = ydecomp$Z
+  Z <- ydecomp$Z
   if (type == "TC") {
-      eta = etas = ydecomp$eta
+      eta <- ydecomp$eta
   } else {
-      Vd = Vds = ydecomp$Vd
-      V2 = V2s = ydecomp$V2
-      C = ydecomp$C
-      R = ydecomp$R
+      Vd <- ydecomp$Vd
+      V2 <- ydecomp$V2
+      C <- ydecomp$C
+      R <- ydecomp$R
   }
   L <- lapply(1:length(obj$action), function(s) {
 
     Ug <- obj$maxprojs[[s]]
     peng <- obj$maxpens[[s]]
     if (s > 1) {
+        Zs <- obj$cumprojs[[s-1]] %*% Z # This was a fix!
         if (type == "TC") {
             etas <- obj$cumprojs[[s-1]] %*% eta
-            Zs <- obj$cumprojs[[s-1]] %*% Z
         } else {
             Vds <- obj$cumprojs[[s-1]] %*% Vd
             V2s <- obj$cumprojs[[s-1]] %*% V2
+        }
+    } else {
+        Zs <- Z
+        if (type == "TC") {
+            etas <- eta
+        } else {
+            Vds <- Vd
+            V2s <- V2
         }
     }
 
@@ -41,9 +49,27 @@ truncationRegion <- function(obj, ydecomp, type, tol = 1e-15) {
               coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etas, etas, Zs, Zs)
               quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol)
           } else {
-              #Q <- peng * (diag(rep(1,n)) - Ug %*% t(Ug)) - penh * (diag(rep(1,n)) - Uh %*% t(Uh))
+              
+              # Debugging
+              ## Q <- peng * (diag(rep(1,n)) - Ug %*% t(Ug)) - penh * (diag(rep(1,n)) - Uh %*% t(Uh))
+              ## g1 <- function(t) sqrt(C*t/(1+C*t))
+              ## g2 <- function(t) 1/sqrt(1+C*t)
+              ## Y <- function(t) {
+              ##     Zs + R * (Vds*g1(t) + V2s*g2(t))
+              ## }
+              
               coeffs <- TF_coefficients(R, Ug, Uh, peng, penh, Zs, Zs, Vds, Vds, V2s, V2s)
-              TF_roots(R, C, coeffs)
+              roots <- TF_roots(R, C, coeffs)
+
+              if (is.null(roots)) print(c(s,l))
+              ## print(do.call(rbind, lapply(roots, function(r) {
+              ##     c(r,
+              ##       t(Y(r-0.000001)) %*% Q %*% Y(r-0.000001),
+              ##       t(Y(r)) %*% Q %*% Y(r),
+              ##       t(Y(r+0.000001)) %*% Q %*% Y(r+0.000001))
+              ## })))
+              
+              return(roots)
           }
       })
     }
@@ -148,22 +174,22 @@ roots_to_partition <- function(roots) {
 # Efficiently compute coefficients of one-dimensional TF slice function
 TF_coefficients <- function(R, Ug, Uh, peng, penh, Zg, Zh, Vdg, Vdh, V2g, V2h) {
 
-    UhZ <- t(Uh) %*% Zh #check
-    UgZ <- t(Ug) %*% Zg #check
-    UhVd <- t(Uh) %*% Vdh #check
-    UgVd <- t(Ug) %*% Vdg #check
-    UhV2 <- t(Uh) %*% V2h #check
-    UgV2 <- t(Ug) %*% V2g #check
-    VdZh <- sum(Vdh*Zh) #check
-    VdZg <- sum(Vdg*Zg) #check
-    V2Zh <- sum(V2h*Zh) #check
-    V2Zg <- sum(V2g*Zg) #check
+    UhZ <- t(Uh) %*% Zh 
+    UgZ <- t(Ug) %*% Zg 
+    UhVd <- t(Uh) %*% Vdh 
+    UgVd <- t(Ug) %*% Vdg 
+    UhV2 <- t(Uh) %*% V2h 
+    UgV2 <- t(Ug) %*% V2g 
+    VdZh <- sum(Vdh*Zh) 
+    VdZg <- sum(Vdg*Zg) 
+    V2Zh <- sum(V2h*Zh) 
+    V2Zg <- sum(V2g*Zg) 
 
     x0 <- penh * (sum(Zh^2) - sum(UhZ^2)) - peng * (sum(Zg^2) - sum(UgZ^2))
     x1 <- 2*R*(penh * (VdZh - sum(UhZ*UhVd)) - peng * (VdZg - sum(UgZ*UgVd)))
     x2 <- 2*R*(penh * (V2Zh - sum(UhZ*UhV2)) - peng * (V2Zg - sum(UgZ*UgV2)))
     x12 <- 2*R^2*(penh * (sum(Vdh*V2h) - sum(UhVd*UhV2)) - peng * (sum(Vdg*V2g) - sum(UgVd*UgV2)))
-    x11 <- R^2*(penh * (sum(Vdh^2) - sum(UhVd^2)) - peng * (sum(Vdg^2) - sum(UgVd^2))) #check
+    x11 <- R^2*(penh * (sum(Vdh^2) - sum(UhVd^2)) - peng * (sum(Vdg^2) - sum(UgVd^2))) 
     x22 <- R^2*(penh * (sum(V2h^2) - sum(UhV2^2)) - peng * (sum(V2g^2) - sum(UgV2^2)))
 
     return(list(x11=x11, x22=x22, x12=x12, x1=x1, x2=x2, x0=x0))
@@ -210,7 +236,15 @@ TF_roots <- function(R, C, coeffs, tol = 1e-14, tol2 = 1e-8) {
     troots <- tan(roots)^2/C
 
     if (length(troots) == 0) {
-        #return(list(intervals = Intervals(c(0,Inf)), I=I))
+        # Something bad happens here
+        # sometimes there is a root and it's not caught
+        # by polyroot or something
+        # do an additional sign change check?
+        #print(c(I(0), I(100), I(10000), unlist(coeffs)), digits=1)        
+        if (I(0) < 0) {
+            return(NULL)
+            return(Intervals(c(0,Inf)))
+        }
         return(Intervals(c(-Inf,0)))
     }
 
@@ -240,11 +274,15 @@ TF_roots <- function(R, C, coeffs, tol = 1e-14, tol2 = 1e-8) {
             }
         }
 
-        #return(list(intervals = Intervals(intervals[-1,]), I=I))
         return(Intervals(intervals[-1,]))
     }
 
-    #return(list(intervals = Intervals(c(0,Inf)), I=I))
+    # Something bad happening, see above
+    #print(c(I(0), I(100), I(10000), unlist(coeffs)), digits=1)
+    if (I(0) < 0) {
+        return(NULL)
+        return(Intervals(c(0,Inf)))
+    }
     return(Intervals(c(-Inf,0)))
 }
 
