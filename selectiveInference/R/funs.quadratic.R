@@ -61,7 +61,7 @@ truncationRegion <- function(obj, ydecomp, type, tol = 1e-15) {
               coeffs <- TF_coefficients(R, Ug, Uh, peng, penh, Zs, Zs, Vds, Vds, V2s, V2s)
               roots <- TF_roots(R, C, coeffs)
 
-              ## if (is.null(roots)) print(c(s,l))
+              if (is.null(roots)) print(c(s,l))
               ## print(do.call(rbind, lapply(roots, function(r) {
               ##     c(r,
               ##       t(Y(r-0.000001)) %*% Q %*% Y(r-0.000001),
@@ -230,26 +230,23 @@ TF_roots <- function(R, C, coeffs, tol = 1e-14, tol2 = 1e-8) {
     zcoefs <- c(z0, z1, z2, z3, z4)
     croots <- polyroot(zcoefs)
     thetas <- Arg(croots)
-    modinds <- Mod(croots) <= 1 + tol & Mod(croots) >= 1 - tol
+    # Can't specify polyroot precision :(
+    modinds <- Mod(croots) <= 1 + tol2 & Mod(croots) >= 1 - tol2
     angleinds <- thetas >=0 & thetas <= pi/2
     roots <- unique(thetas[which(modinds & angleinds)])
     troots <- tan(roots)^2/C
 
     if (length(troots) == 0) {
-        # Something bad happens here
-        # sometimes there is a root and it's not caught
-        # by polyroot or something
-        # do an additional sign change check?
-        #print(c(I(0), I(100), I(10000), unlist(coeffs)), digits=1)        
-        if (I(0) < 0) {
-#            return(NULL)
-            return(Intervals(c(0,Inf)))
-        }
-        return(Intervals(c(-Inf,0)))
+        # Polyroot didn't catch any roots
+        # ad-hoc check:
+        checkpoints <- c(0, tol, tol2,
+                         seq(from = sqrt(tol2), to = 1, length.out = 50),
+                         seq(from = 1.2, to=50, length.out = 20),
+                         100, 1000, 10000)
+    } else {
+        checkpoints <- roots_to_checkpoints(troots)
     }
-
-    checkpoints <- roots_to_checkpoints(troots)
-
+    
     signs <- sign(I(checkpoints))
     diffs <- c(0, diff(signs))
     changeinds <- which(diffs != 0)
@@ -277,12 +274,8 @@ TF_roots <- function(R, C, coeffs, tol = 1e-14, tol2 = 1e-8) {
         return(Intervals(intervals[-1,]))
     }
 
-    # Something bad happening, see above
-    #print(c(I(0), I(100), I(10000), unlist(coeffs)), digits=1)
-    if (I(0) < 0) {
-#        return(NULL)
-        return(Intervals(c(0,Inf)))
-    }
+    # Apparently no roots, always positive
+    if (I(0) < 0) stop("Infeasible constraint!")
     return(Intervals(c(-Inf,0)))
 }
 
