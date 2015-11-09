@@ -271,6 +271,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
   supports <- list()
 
   if (!is.null(sigma)) {
+      type <- "TC"
       if (!is.null(obj$sigma)) {
           cat(paste("Using specified value", sigma, "for sigma in place of the value", obj$sigma, "used by groupfs()\n"))
       }
@@ -347,7 +348,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
     }
 
     intervallist <- truncationRegion(obj, ydecomp, type)
-
+    
     # Additional constraints from cross-validation?
     if (!is.null(obj$cvobj)) {
         intervallist <- c(intervallist, do.call(c,
@@ -442,8 +443,8 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
                                       penh <- prod(unlist(penlist[s:sp]))
                                       Vdg <- vdlist[[s]]
                                       Vdh <- vdlist[[sp]]
-                                      V2g <- vdlist[[s]]
-                                      V2h <- vdlist[[sp]]
+                                      V2g <- v2list[[s]]
+                                      V2h <- v2list[[sp]]
                                       Zg <- zlist[[s]]
                                       Zh <- zlist[[sp]]
                                       coeffs <- TF_coefficients(R, Ug, Uh, peng, penh, Zg, Zh, Vdg, Vdh, V2g, V2h)
