@@ -25,7 +25,7 @@ instance <- function(n, p, G, sparsity, snr, rho, maxsteps, aicstop) {
     index <- simd$index
 
     fit <- groupfs(x, y, index, maxsteps, k = log(n), aicstop = aicstop)
-    pvals <- groupfsInf(fit, sigma = 1, verbose=T)
+    pvals <- groupfsInf(fit, verbose=T)
     return(list(variable = fit$action, pvals = pvals$pv, stopped = attr(fit, "stopped")))
 }
 

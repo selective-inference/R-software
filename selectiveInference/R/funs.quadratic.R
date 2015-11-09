@@ -197,7 +197,7 @@ TF_coefficients <- function(R, Ug, Uh, peng, penh, Zg, Zh, Vdg, Vdh, V2g, V2h) {
 
 # Numerically solve for roots of TF slice using
 # hybrid polyroot/uniroot approach
-TF_roots <- function(R, C, coeffs, tol = 1e-14, tol2 = 1e-8) {
+TF_roots <- function(R, C, coeffs, tol = 1e-8, tol2 = 1e-6) {
 
     x11 <- coeffs$x11
     x22 <- coeffs$x22
@@ -254,7 +254,7 @@ TF_roots <- function(R, C, coeffs, tol = 1e-14, tol2 = 1e-8) {
     if (length(changeinds) > 0) {
 
         roots <- unlist(lapply(changeinds, function(ind) {
-            uniroot(I, lower = checkpoints[ind-1], upper = checkpoints[ind], tol = tol2)$root
+            uniroot(I, lower = checkpoints[ind-1], upper = checkpoints[ind], tol = tol)$root
         }))
 
         partition <- roots_to_partition(roots)
