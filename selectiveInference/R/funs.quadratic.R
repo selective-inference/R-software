@@ -16,7 +16,7 @@ truncationRegion <- function(obj, ydecomp, type, tol = 1e-15) {
     Ug <- obj$maxprojs[[s]]
     peng <- obj$maxpens[[s]]
     if (s > 1) {
-        Zs <- obj$cumprojs[[s-1]] %*% Z # This was a fix!
+        Zs <- obj$cumprojs[[s-1]] %*% Z
         if (type == "TC") {
             etas <- obj$cumprojs[[s-1]] %*% eta
         } else {
@@ -49,7 +49,7 @@ truncationRegion <- function(obj, ydecomp, type, tol = 1e-15) {
               coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etas, etas, Zs, Zs)
               quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol)
           } else {
-              
+
              # Debugging
               ## Q <- peng * (diag(rep(1,n)) - Ug %*% t(Ug)) - penh * (diag(rep(1,n)) - Uh %*% t(Uh))
               ##  g1 <- function(t) sqrt(C*t/(1+C*t))
@@ -57,7 +57,7 @@ truncationRegion <- function(obj, ydecomp, type, tol = 1e-15) {
               ##  Y <- function(t) {
               ##      Zs + R * (Vds*g1(t) + V2s*g2(t))
               ##  }
-              
+
               coeffs <- TF_coefficients(R, Ug, Uh, peng, penh, Zs, Zs, Vds, Vds, V2s, V2s)
               roots <- TF_roots(R, C, coeffs)
 
@@ -68,7 +68,7 @@ truncationRegion <- function(obj, ydecomp, type, tol = 1e-15) {
               ##       t(Y(r)) %*% Q %*% Y(r),
               ##       t(Y(r+0.000001)) %*% Q %*% Y(r+0.000001))
               ## })))
-              
+
               return(roots)
           }
       })
@@ -102,7 +102,6 @@ quadratic_coefficients <- function(sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh
 quadratic_roots <- function(A, B, C, tol) {
     disc <- B^2 - 4*A*C
     b2a <- -B/(2*A)
-
 
     if (disc > tol) {
         # Real roots
@@ -160,7 +159,6 @@ quadratic_roots <- function(A, B, C, tol) {
     }
 }
 
-
 # Helper functions for TF roots
 roots_to_checkpoints <- function(roots) {
     checkpoints <- unique(sort(c(0, roots)))
@@ -174,22 +172,22 @@ roots_to_partition <- function(roots) {
 # Efficiently compute coefficients of one-dimensional TF slice function
 TF_coefficients <- function(R, Ug, Uh, peng, penh, Zg, Zh, Vdg, Vdh, V2g, V2h) {
 
-    UhZ <- t(Uh) %*% Zh 
-    UgZ <- t(Ug) %*% Zg 
-    UhVd <- t(Uh) %*% Vdh 
-    UgVd <- t(Ug) %*% Vdg 
-    UhV2 <- t(Uh) %*% V2h 
-    UgV2 <- t(Ug) %*% V2g 
-    VdZh <- sum(Vdh*Zh) 
-    VdZg <- sum(Vdg*Zg) 
-    V2Zh <- sum(V2h*Zh) 
-    V2Zg <- sum(V2g*Zg) 
+    UhZ <- t(Uh) %*% Zh
+    UgZ <- t(Ug) %*% Zg
+    UhVd <- t(Uh) %*% Vdh
+    UgVd <- t(Ug) %*% Vdg
+    UhV2 <- t(Uh) %*% V2h
+    UgV2 <- t(Ug) %*% V2g
+    VdZh <- sum(Vdh*Zh)
+    VdZg <- sum(Vdg*Zg)
+    V2Zh <- sum(V2h*Zh)
+    V2Zg <- sum(V2g*Zg)
 
     x0 <- penh * (sum(Zh^2) - sum(UhZ^2)) - peng * (sum(Zg^2) - sum(UgZ^2))
     x1 <- 2*R*(penh * (VdZh - sum(UhZ*UhVd)) - peng * (VdZg - sum(UgZ*UgVd)))
     x2 <- 2*R*(penh * (V2Zh - sum(UhZ*UhV2)) - peng * (V2Zg - sum(UgZ*UgV2)))
     x12 <- 2*R^2*(penh * (sum(Vdh*V2h) - sum(UhVd*UhV2)) - peng * (sum(Vdg*V2g) - sum(UgVd*UgV2)))
-    x11 <- R^2*(penh * (sum(Vdh^2) - sum(UhVd^2)) - peng * (sum(Vdg^2) - sum(UgVd^2))) 
+    x11 <- R^2*(penh * (sum(Vdh^2) - sum(UhVd^2)) - peng * (sum(Vdg^2) - sum(UgVd^2)))
     x22 <- R^2*(penh * (sum(V2h^2) - sum(UhV2^2)) - peng * (sum(V2g^2) - sum(UgV2^2)))
 
     return(list(x11=x11, x22=x22, x12=x12, x1=x1, x2=x2, x0=x0))
@@ -246,7 +244,7 @@ TF_roots <- function(R, C, coeffs, tol = 1e-8, tol2 = 1e-6) {
     } else {
         checkpoints <- roots_to_checkpoints(troots)
     }
-    
+
     signs <- sign(I(checkpoints))
     diffs <- c(0, diff(signs))
     changeinds <- which(diffs != 0)
