@@ -278,6 +278,10 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
   } else {
       if (is.null(obj$sigma)) {
           type <- "TF"
+          Pf <- svdu_thresh(obj$x[,which(obj$index %in% obj$action), drop = FALSE])
+          dffull <- ncol(Pf)
+          df2 <- n - dffull - obj$intercept - 1
+          Pfull <- Pf %*% t(Pf)
           ## if (n >= 2*p) {
           ##     sigma <- sqrt(sum(lsfit(obj$x, obj$y, intercept = obj$intercept)$res^2)/(n-p-obj$intercept))
           ## } else {
@@ -289,7 +293,6 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
           sigma <- obj$sigma
       }
   }
-
 
   # Compute p-value for each active group
   for (j in 1:maxsteps) {
@@ -325,20 +328,19 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
 
     } else {
 
-        Pfull <- svdu_thresh(obj$x[,which(obj$index %in% obj$action), drop = FALSE])
         if (length(obj$action) > 1) {
             minus_i <- setdiff(obj$action, i)
             Psub <- svdu_thresh(obj$x[,which(obj$index %in% minus_i), drop = FALSE])
             Z <- Psub %*% t(Psub) %*% obj$y
-            df1 <- ncol(Pfull) - ncol(Psub)
+            df1 <- dffull - ncol(Psub)
         } else {
             Z <- 0
-            df1 <- ncol(Pfull)
+            df1 <- dffull + obj$intercept + 1
         }
-        df2 <- n - ncol(Pfull)
+
         C <- df1/df2
         R1 <- obj$y - Z
-        R2 <- obj$y - Pfull %*% t(Pfull) %*% obj$y
+        R2 <- obj$y - Pfull %*% obj$y
         R1sq <- sum(R1^2)
         R2sq <- sum(R2^2)
         R <- sqrt(R1sq)
@@ -500,6 +502,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
       out$sigma <- sigma
   } else {
       out$TF <- Tstats
+      out$df2 <- df2
   }
   out$df <- dfs
   out$support <- supports
@@ -604,7 +607,7 @@ TF_surv <- function(TF, df1, df2, E) {
     value <- numer/denom
     # Force p-value to lie in the [0,1] interval
     # in case of numerical issues
-    value <- max(0, min(1, value))
+    #value <- max(0, min(1, value))
     value
 }
 
@@ -623,6 +626,7 @@ TF_interval <- function(lower, upper, df1, df2) {
 }
 
 num_int_F <- function(a, b, df1, df2, nsamp = 10000) {
+    print("numerical!")
   grid <- seq(from=a, to=b, length.out=nsamp)
   integrand <- df(grid, df1, df2)
   return((b-a)*mean(integrand))

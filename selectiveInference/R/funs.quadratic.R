@@ -100,6 +100,8 @@ quadratic_coefficients <- function(sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh
 }
 
 quadratic_roots <- function(A, B, C, tol) {
+
+    print("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC")
     disc <- B^2 - 4*A*C
     b2a <- -B/(2*A)
 
