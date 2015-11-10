@@ -6,7 +6,7 @@ source("../../selectiveInference/R/funs.quadratic.R")
 source("../../selectiveInference/R/funs.common.R")
 
 set.seed(1)
-niters <- 100
+niters <- 400
 n <- 100
 p <- 100
 G <- 50
@@ -14,7 +14,7 @@ maxsteps <- 15
 sparsity <- 5
 snr <- 1
 sigma <- 1
-rho <- .1
+rho <- 0
 aicstop <- 1
 
 instance <- function(n, p, G, sparsity, snr, rho, maxsteps, aicstop) {
@@ -42,6 +42,6 @@ save(pvals, vars, stopped, file = paste0(
                       "_p", p,
                       "_sparsity", sparsity,
                       "_snr", snr,
-                      "_known.RData"))
+                      "_F_rho0.RData"))
 
 print(time)

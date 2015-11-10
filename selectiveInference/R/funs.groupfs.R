@@ -67,7 +67,7 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
 
   modelrank <- as.numeric(intercept)
   if (is.null(sigma)) {
-      aic.begin <- aic.last <- n*(log(2*pi) + log(mean(y.update^2)) + 1 + k * (is.null(sigma) + intercept))
+      aic.begin <- aic.last <- n*(log(2*pi) + log(mean(y.update^2)) + 1 + k) * (is.null(sigma) + intercept) # This was a fix
   } else {
       aic.begin <- aic.last <- sum(y.update^2)/sigma^2 - n + k * intercept
   }
@@ -145,7 +145,6 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
             terms[(step+1):maxsteps] <- NULL
             maxsteps <- step
             stopped <- TRUE
-            # add additional projections
             break
         }
     }
@@ -293,7 +292,12 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
   # Compute p-value for each active group
   for (j in 1:maxsteps) {
     i <- obj$action[j]
-    if (verbose) cat(paste0("Step ", j, "/", attr(obj, "maxsteps"), ": computing P-value for group ", i, "\n"))
+    if (verbose) {
+        string <- paste0("Step ", j, "/", attr(obj, "maxsteps"), ": computing P-value for group ", i)
+        if (!is.null(obj$cvobj)) string <- paste0(string, ", including constraints from cross-validation")
+        if (attr(obj, "stopped")) string <- paste0(string, ", including constraints from AICstop")
+        cat(paste(string, "\n"))
+    }
 
     if (type == "TC") {
         # Form projection onto active set minus i
@@ -348,7 +352,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
     }
 
     intervallist <- truncationRegion(obj, ydecomp, type)
-    
+
     # Additional constraints from cross-validation?
     if (!is.null(obj$cvobj)) {
         intervallist <- c(intervallist, do.call(c,
@@ -422,39 +426,39 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
         }
 
         intervallist <- c(intervallist,
-                          do.call(c, lapply(1:aicstop, function(s) {
-                              lapply((s+1):(aicstop+1), function(sp) {
-                                  if (type == "TC") {
-                                      Ug <- ulist[[s]]
-                                      Uh <- ulist[[sp]]
-                                      peng <- penlist[[s]]
-                                      penh <- prod(unlist(penlist[s:sp]))
-                                      etag <- etalist[[s]]
-                                      etah <- etalist[[sp]]
-                                      Zg <- zlist[[s]]
-                                      Zh <- zlist[[sp]]
-                                      coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh)
-                                      quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol = 1e-15)
-                                  } else {
-
-                                      Ug <- ulist[[s]]
-                                      Uh <- ulist[[sp]]
-                                      peng <- penlist[[s]]
-                                      penh <- prod(unlist(penlist[s:sp]))
-                                      Vdg <- vdlist[[s]]
-                                      Vdh <- vdlist[[sp]]
-                                      V2g <- v2list[[s]]
-                                      V2h <- v2list[[sp]]
-                                      Zg <- zlist[[s]]
-                                      Zh <- zlist[[sp]]
-                                      coeffs <- TF_coefficients(R, Ug, Uh, peng, penh, Zg, Zh, Vdg, Vdh, V2g, V2h)
-                                      TF_roots(R, C, coeffs)
-                                  }
-                              })
-                          })))
+                          lapply(1:aicstop, function(s) {
+                              sp <- s+1
+                              if (type == "TC") {
+                                  Ug <- ulist[[s]]
+                                  Uh <- ulist[[sp]]
+                                  # Check this: known sigma has *additive* pen terms
+                                  peng <- penlist[[s]]
+                                  penh <- prod(unlist(penlist[s:sp]))
+                                  ####################################
+                                  etag <- etalist[[s]]
+                                  etah <- etalist[[sp]]
+                                  Zg <- zlist[[s]]
+                                  Zh <- zlist[[sp]]
+                                  coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh)
+                                  quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol = 1e-15)
+                              } else {
+                                  Ug <- ulist[[s]]
+                                  Uh <- ulist[[sp]]
+                                  peng <- 1 #penlist[[s]]
+                                  penh <- penlist[[sp]]
+                                  Vdg <- vdlist[[s]]
+                                  Vdh <- vdlist[[sp]]
+                                  V2g <- v2list[[s]]
+                                  V2h <- v2list[[sp]]
+                                  Zg <- zlist[[s]]
+                                  Zh <- zlist[[sp]]
+                                  coeffs <- TF_coefficients(R, Ug, Uh, peng, penh, Zg, Zh, Vdg, Vdh, V2g, V2h)
+                                  TF_roots(R, C, coeffs)
+                              }
+                          }))
     }
 
-        # Compute intersection:
+    # Compute intersection:
     region <- do.call(interval_union, intervallist)
     region <- interval_union(region, Intervals(c(-Inf,0)))
     E <- interval_complement(region, check_valid = FALSE)
