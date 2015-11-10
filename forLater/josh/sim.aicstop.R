@@ -10,10 +10,10 @@ niters <- 200
 n <- 100
 p <- 100
 G <- 50
-maxsteps <- 15
-sparsity <- 5
+maxsteps <- 10
+sparsity <- 3
 snr <- 2
-rho <- 0.1
+rho <- 0
 aicstop <- 1
 
 instance <- function(n, p, G, sparsity, snr, rho, maxsteps, aicstop) {
@@ -21,8 +21,7 @@ instance <- function(n, p, G, sparsity, snr, rho, maxsteps, aicstop) {
     x <- simd$x
     y <- simd$y
     index <- simd$index
-
-    fit <- groupfs(x, y, index, maxsteps, k = log(n), aicstop = aicstop, verbose=T)
+    fit <- groupfs(x, y, index, maxsteps, k = log(n), aicstop = aicstop)
     pvals <- groupfsInf(fit, verbose=T)
     return(list(variable = fit$action, pvals = pvals$pv, stopped = attr(fit, "stopped")))
 }
@@ -40,6 +39,6 @@ save(pvals, vars, stopped, file = paste0(
                       "_p", p,
                       "_sparsity", sparsity,
                       "_snr", snr,
-                      "_F_rhopt1.RData"))
+                      "_F_rho0.RData"))
 
 print(time)
