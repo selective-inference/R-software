@@ -67,7 +67,7 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
 
   modelrank <- as.numeric(intercept)
   if (is.null(sigma)) {
-      aic.begin <- aic.last <- n*(log(2*pi) + log(mean(y.update^2)) + 1 + k) * (is.null(sigma) + intercept) # This was a fix
+      aic.begin <- aic.last <- n*(log(2*pi) + log(mean(y.update^2)) + 1 + k) * (is.null(sigma) + intercept) 
   } else {
       aic.begin <- aic.last <- sum(y.update^2)/sigma^2 - n + k * intercept
   }
@@ -289,6 +289,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
       }
   }
 
+
   # Compute p-value for each active group
   for (j in 1:maxsteps) {
     i <- obj$action[j]
@@ -389,73 +390,81 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
                           }))
     }
 
-    # Additional constraints from AIC stopping?
+    # Additional constraints from AIC stopping
     if (attr(obj, "stopped")) {
-
+        aicintervals <- vector("list", maxsteps-1)
         aicstop <- attr(obj, "aicstop")
-        ulist <- penlist <- zlist <- vector("list", aicstop+1)
+        AICs <- obj$AIC
+        
+        # No stopping at 0 steps?
+        ## if (is.null(sigma)) {
+        ##     aic.begin <- aic.last <- n*(log(2*pi) + log(mean(obj$y^2)) + 1 + k) * (1 + obj$intercept) 
+        ## } else {
+        ##     aic.begin <- aic.last <- sum(obj$y^2)/sigma^2 - n + k * obj$intercept
+        ## }
+        ## AICs <- c(aic.begin, obj$AIC)
 
+        ulist <- obj$maxprojs
+        penlist <- obj$maxpens
+        zlist <- vector("list", aicstop+1)
+        zlist[[1]] <- Z
         if (type == "TC") {
             etalist <- vector("list", aicstop+1)
+            etalist[[1]] <- eta
         } else {
             vdlist <- v2list <- vector("list", aicstop+1)
+            vdlist[[1]] <- Vdelta
+            v2list[[1]] <- V2
         }
-
-        for (s in seq(aicstop+1)) {
-            stepind <- maxsteps - (aicstop+1) + s
-            if (stepind > 1) {
-                cproj <- obj$cumprojs[[stepind-1]]
-                if (type == "TC") {
-                    etalist[[s]] <- cproj %*% eta
-                } else {
-                    v2list[[s]] <- cproj %*% V2
-                    vdlist[[s]] <- cproj %*% Vdelta
-                }
-                zlist[[s]] <- cproj %*% Z
+        for (step in 2:maxsteps) {
+            cproj <- obj$cumprojs[[step-1]]
+            zlist[[step]] <- cproj %*% Z            
+            if (type == "TC") {
+                etalist[[step]] <- cproj %*% eta
             } else {
-                if (type == "TC") {
-                    etalist[[s]] <- eta
-                } else {
-                    v2list[[s]] <- V2
-                    vdlist[[s]] <- Vdelta
-                }
-                zlist[[s]] <- Z
+                vdlist[[step]] <- cproj %*% Vdelta
+                v2list[[step]] <- cproj %*% V2
             }
-            ulist[[s]] <- obj$maxprojs[[stepind]]
-            penlist[[s]] <- obj$maxpens[[stepind]]
         }
 
-        intervallist <- c(intervallist,
-                          lapply(1:aicstop, function(s) {
-                              sp <- s+1
-                              if (type == "TC") {
-                                  Ug <- ulist[[s]]
-                                  Uh <- ulist[[sp]]
+        for (step in 1:(maxsteps-1)) {
+            # Compare AIC at s-1 to AIC at s
+            # sp indexes step with larger AIC
+            if (AICs[step] >= AICs[step+1]) {
+                sp <- step
+                s <- step+1
+            } else {
+                sp <- step+1
+                s <- step
+            }
+
+            if (type == "TC") {
+                Ug <- ulist[[s]]
+                Uh <- ulist[[sp]]
                                   # Check this: known sigma has *additive* pen terms
-                                  peng <- penlist[[s]]
-                                  penh <- prod(unlist(penlist[s:sp]))
+                peng <- 1
+                penh <- penlist[sp]
                                   ####################################
-                                  etag <- etalist[[s]]
-                                  etah <- etalist[[sp]]
-                                  Zg <- zlist[[s]]
-                                  Zh <- zlist[[sp]]
-                                  coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh)
-                                  quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol = 1e-15)
-                              } else {
-                                  Ug <- ulist[[s]]
-                                  Uh <- ulist[[sp]]
-                                  peng <- 1 #penlist[[s]]
-                                  penh <- penlist[[sp]]
-                                  Vdg <- vdlist[[s]]
-                                  Vdh <- vdlist[[sp]]
-                                  V2g <- v2list[[s]]
-                                  V2h <- v2list[[sp]]
-                                  Zg <- zlist[[s]]
-                                  Zh <- zlist[[sp]]
-                                  coeffs <- TF_coefficients(R, Ug, Uh, peng, penh, Zg, Zh, Vdg, Vdh, V2g, V2h)
-                                  TF_roots(R, C, coeffs)
-                              }
-                          }))
+                coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh)
+                intstep <- quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol = 1e-15)
+            } else {
+                Ug <- ulist[[s]]
+                Uh <- ulist[[sp]]
+                peng <- 1 #penlist[[s]]
+                penh <- penlist[[sp]]
+                Vdg <- vdlist[[s]]
+                Vdh <- vdlist[[sp]]
+                V2g <- v2list[[s]]
+                V2h <- v2list[[sp]]
+                Zg <- zlist[[s]]
+                Zh <- zlist[[sp]]
+                coeffs <- TF_coefficients(R, Ug, Uh, peng, penh, Zg, Zh, Vdg, Vdh, V2g, V2h)
+                intstep <- TF_roots(R, C, coeffs)
+            }
+
+            aicintervals[[step]] <- intstep
+        }
+        intervallist <- c(intervallist, aicintervals)
     }
 
     # Compute intersection:
