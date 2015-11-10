@@ -67,9 +67,10 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
 
   modelrank <- as.numeric(intercept)
   if (is.null(sigma)) {
-      aic.begin <- aic.last <- n*(log(2*pi) + log(mean(y.update^2)) + 1 + k) * (is.null(sigma) + intercept) 
+      modelrank <- modelrank + 1
+      aic.begin <- aic.last <- n*(log(2*pi) + log(mean(y.update^2)) + 1) + k * modelrank # fixed... again
   } else {
-      aic.begin <- aic.last <- sum(y.update^2)/sigma^2 - n + k * intercept
+      aic.begin <- aic.last <- sum(y.update^2)/sigma^2 - n + k * modelrank
   }
   if (verbose) print(paste0("Start:  AIC=", round(aic.begin, 3)), quote = FALSE)
 
@@ -392,43 +393,42 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
 
     # Additional constraints from AIC stopping
     if (attr(obj, "stopped")) {
-        aicintervals <- vector("list", maxsteps-1)
+        aicintervals <- vector("list", maxsteps)
         aicstop <- attr(obj, "aicstop")
-        AICs <- obj$AIC
-        
-        # No stopping at 0 steps?
-        ## if (is.null(sigma)) {
-        ##     aic.begin <- aic.last <- n*(log(2*pi) + log(mean(obj$y^2)) + 1 + k) * (1 + obj$intercept) 
-        ## } else {
-        ##     aic.begin <- aic.last <- sum(obj$y^2)/sigma^2 - n + k * obj$intercept
-        ## }
-        ## AICs <- c(aic.begin, obj$AIC)
-
-        ulist <- obj$maxprojs
-        penlist <- obj$maxpens
-        zlist <- vector("list", aicstop+1)
-        zlist[[1]] <- Z
         if (type == "TC") {
-            etalist <- vector("list", aicstop+1)
-            etalist[[1]] <- eta
+            pen0 <- k * obj$intercept
+            aic.begin <- aic.last <- sum(obj$y^2)/sigma^2 - n + k * obj$intercept
         } else {
-            vdlist <- v2list <- vector("list", aicstop+1)
-            vdlist[[1]] <- Vdelta
-            v2list[[1]] <- V2
+            pen0 <- exp(k * (1+obj$intercept)/n)
+            aic.begin <- aic.last <- n*(log(2*pi) + log(mean(obj$y^2)) + 1) + k * (1 + obj$intercept)
+        }
+        AICs <- c(aic.begin, obj$AIC)
+
+        ulist <- c(list(matrix(0, n, 1)), obj$maxprojs)
+        penlist <- c(pen0, obj$maxpens)
+        zlist <- vector("list", maxsteps+1)
+        zlist[[1]] <- zlist[[2]] <- Z
+        if (type == "TC") {
+            etalist <- vector("list", maxsteps+1)
+            etalist[[1]] <- etalist[[2]] <- eta
+        } else {
+            vdlist <- v2list <- vector("list", maxsteps+1)
+            vdlist[[1]] <- vdlist[[2]] <- Vdelta
+            v2list[[1]] <- v2list[[2]] <- V2
         }
         for (step in 2:maxsteps) {
             cproj <- obj$cumprojs[[step-1]]
-            zlist[[step]] <- cproj %*% Z            
+            zlist[[step+1]] <- cproj %*% Z
             if (type == "TC") {
-                etalist[[step]] <- cproj %*% eta
+                etalist[[step+1]] <- cproj %*% eta
             } else {
-                vdlist[[step]] <- cproj %*% Vdelta
-                v2list[[step]] <- cproj %*% V2
+                vdlist[[step+1]] <- cproj %*% Vdelta
+                v2list[[step+1]] <- cproj %*% V2
             }
         }
 
-        for (step in 1:(maxsteps-1)) {
-            # Compare AIC at s-1 to AIC at s
+        for (step in 1:maxsteps) {
+            # Compare AIC at s+1 to AIC at s
             # sp indexes step with larger AIC
             if (AICs[step] >= AICs[step+1]) {
                 sp <- step
