@@ -419,7 +419,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
             v2list[[1]] <- v2list[[2]] <- V2
         }
         for (step in 2:maxsteps) {
-            cproj <- obj$cumprojs[[step-1]]
+            cproj <- obj$cumprojs[[step]]
             zlist[[step+1]] <- cproj %*% Z
             if (type == "TC") {
                 etalist[[step+1]] <- cproj %*% eta
