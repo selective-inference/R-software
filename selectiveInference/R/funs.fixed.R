@@ -103,7 +103,7 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
     sign[j] = sign(sum(vj*y))
     vj = sign[j] * vj
     a = poly.pval(y,G,u,vj,sigma,bits)
-    pv[j] = a$pv * mj   # Unstandardize (mult by norm of vj)
+    pv[j] = a$pv 
     vlo[j] = a$vlo * mj # Unstandardize (mult by norm of vj)
     vup[j] = a$vup * mj # Unstandardize (mult by norm of vj)
     vmat[j,] = vj * mj  # Unstandardize (mult by norm of vj)
