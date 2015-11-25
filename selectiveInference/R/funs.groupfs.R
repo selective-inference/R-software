@@ -418,14 +418,14 @@ groupfsInf <- function(obj, sigma = NULL, verbose = TRUE) {
             vdlist[[1]] <- vdlist[[2]] <- Vdelta
             v2list[[1]] <- v2list[[2]] <- V2
         }
-        for (step in 1:maxsteps) {
+        for (step in 1:(maxsteps-1)) {
             cproj <- obj$cumprojs[[step]]
-            zlist[[step+1]] <- cproj %*% Z
+            zlist[[step+2]] <- cproj %*% Z
             if (type == "TC") {
-                etalist[[step+1]] <- cproj %*% eta
+                etalist[[step+2]] <- cproj %*% eta
             } else {
-                vdlist[[step+1]] <- cproj %*% Vdelta
-                v2list[[step+1]] <- cproj %*% V2
+                vdlist[[step+2]] <- cproj %*% Vdelta
+                v2list[[step+2]] <- cproj %*% V2
             }
         }
 
@@ -440,8 +440,8 @@ groupfsInf <- function(obj, sigma = NULL, verbose = TRUE) {
             } else {
                 sp <- step+1
                 s <- step
-                peng <- penlist[[sp]]
-                penh <- 1
+                peng <- 1
+                penh <- penlist[[sp]]
             }
 
             if (type == "TC") {
@@ -467,11 +467,11 @@ groupfsInf <- function(obj, sigma = NULL, verbose = TRUE) {
                 Yg <- Zg + R*(g1(TF)*Vdg + g2(TF)*V2g)
                 UYg <- t(Ug) %*% Yg
                 sse <- (sum(Yg^2) - sum(UYg^2))
-                AICg <- n*log(sse/n) + n*log(2*pi) + k * (1 + n + 5)
+                AICg <- n*log(sse/n) + n*log(2*pi) + k * (2 + n + 6)
                 Yh <- Zh + R*(g1(TF)*Vdh + g2(TF)*V2h)
                 UYh <- t(Uh) %*% Yh
                 sse <- (sum(Yh^2) - sum(UYh^2))
-                AICh <- n*log(sse/n) + n*log(2*pi) + k * (1 + n + 6)
+                AICh <- n*log(sse/n) + n*log(2*pi) + k * (2 + n + 7)
                 # This does reproduce the correct AIC values
                 # AIC(g) < AIC(h)
                 # <-> log(sseG) + (k/n) * ncol(Ug) < log(sseH)
