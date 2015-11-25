@@ -1,10 +1,38 @@
-#library(selectiveInference)
-library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+library(selectiveInference)
+#library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
 #options(error=dump.frames)
 #attach("/Users/tibs/dropbox/PAPERS/lasso/lasso3/.RData")
 
-c
+#####
+n=50
+p=10
+sigma=.7
+beta=c(3,2,0,0,rep(0,p-4))
+set.seed(43)
+nsim = 100
+pvals <- matrix(NA, nrow=nsim, ncol=p)
+x = matrix(rnorm(n*p),n,p)
+x = scale(x,T,T)/sqrt(n-1)
+mu = x%*%beta
+for (i in 1:nsim) {
+y=mu+sigma*rnorm(n)
+#y=y-mean(y)
+# first run  glmnet
+gfit=glmnet(x,y,intercept=F,standardize=F,thresh=1e-8)
+lambda = 1
+#extract coef for a given lambda; Note the 1/n factor!
+beta = coef(gfit, s=lambda/n, exact=TRUE)[-1]
+# compute fixed lambda p-values and selection intervals
+aa = fixedLassoInf(x,y,beta,lambda,intercept=F,sigma=sigma)
+pvals[i, which(beta != 0)] <- aa$pv
+}
+nulls = which(!is.na(pvals[,1]) & !is.na(pvals[,2]))
+np = pvals[nulls,-(1:2)]
+mean(np[!is.na(np)] < 0.1)
+
+#####
+
 a=lar(x,y)
 aa=larInf(a)
 
