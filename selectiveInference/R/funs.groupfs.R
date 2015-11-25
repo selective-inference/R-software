@@ -334,7 +334,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = TRUE) {
             Z <- Psub %*% t(Psub) %*% obj$y
             df1 <- dffull - ncol(Psub)
         } else {
-            Z <- 0
+            Z <- rep(0, n)
             df1 <- dffull + obj$intercept + 1
         }
 

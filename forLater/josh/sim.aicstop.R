@@ -7,7 +7,7 @@ source("../../selectiveInference/R/funs.common.R")
 
 set.seed(1)
 known <- FALSE
-niters <- 300
+niters <- 200
 n <- 50
 p <- 150
 G <- 75
