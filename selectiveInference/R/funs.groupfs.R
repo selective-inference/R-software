@@ -68,7 +68,7 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
   modelrank <- as.numeric(intercept)
   if (is.null(sigma)) {
       modelrank <- modelrank + 1
-      aic.begin <- aic.last <- n*(log(2*pi) + log(mean(y.update^2)) + 1) + k * modelrank # fixed... again
+      aic.begin <- aic.last <- n*(log(2*pi) + log(mean(y.update^2))) + k * (n + modelrank)
   } else {
       aic.begin <- aic.last <- sum(y.update^2)/sigma^2 - n + k * modelrank
   }
@@ -101,7 +101,7 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
 
     # Compute AIC
     if (is.null(sigma)) {
-        added$AIC <- n * log(added$maxterm/n) - k * added$df + n + n*log(2*pi) + k * modelrank
+        added$AIC <- n * log(added$maxterm/n) - k * added$df + n*log(2*pi) + k * (n + modelrank)
     } else {
         added$AIC <- sum(y.update^2)/sigma^2 - n + k * modelrank
     }
@@ -238,8 +238,8 @@ add1.groupfs <- function(xr, yr, index, labels, inactive, k, sigma = NULL) {
 #' Computes p-values for each group of variables in a model fitted by \code{\link{groupfs}}. These p-values adjust for selection by truncating the usual \eqn{\chi^2} statistics to the regions implied by the model selection event. Details are provided in a forthcoming work.
 #'
 #' @param obj Object returned by \code{\link{groupfs}} function
-#' @param sigma Estimate of error standard deviation. If NULL (default), this is estimated using the mean squared residual of the full least squares fit when n >= 2p, and the mean squared residual of the selected model when n < 2p. In the latter case, the user should use \code{\link{estimateSigma}} function for a more accurate estimate.
-#' @param verbose Print out progress along the way? Default is FALSE.
+#' @param sigma Estimate of error standard deviation. If NULL (default), p-values will be computed from a selective F test.
+#' @param verbose Print out progress along the way? Default is TRUE.
 #' @return An object of class "groupfsInf" containing selective p-values for the fitted model \code{obj}. For comparison with \code{\link{fsInf}}, note that the option \code{type = "active"} is not available.
 #'
 #' \describe{
@@ -250,7 +250,7 @@ add1.groupfs <- function(xr, yr, index, labels, inactive, k, sigma = NULL) {
 #'   \item{df}{Rank of group of variables when it was added to the model.}
 #'   \item{support}{List of intervals defining the truncation region of the truncated chi.}
 #' }
-groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
+groupfsInf <- function(obj, sigma = NULL, verbose = TRUE) {
 
   if (!is.null(obj$cvobj) && attr(obj, "stopped")) {
       stop("Cross-validation and early stopping cannot be used simultaneously.")
@@ -402,7 +402,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
             aic.begin <- aic.last <- sum(obj$y^2)/sigma^2 - n + k * obj$intercept
         } else {
             pen0 <- exp(k * (1+obj$intercept)/n)
-            aic.begin <- aic.last <- n*(log(2*pi) + log(mean(obj$y^2)) + 1) + k * (1 + obj$intercept)
+            aic.begin <- n*(log(2*pi) + log(mean(obj$y^2))) + k * (1 + n + obj$intercept)
         }
         AICs <- c(aic.begin, obj$AIC)
 
@@ -418,7 +418,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
             vdlist[[1]] <- vdlist[[2]] <- Vdelta
             v2list[[1]] <- v2list[[2]] <- V2
         }
-        for (step in 2:maxsteps) {
+        for (step in 1:maxsteps) {
             cproj <- obj$cumprojs[[step]]
             zlist[[step+1]] <- cproj %*% Z
             if (type == "TC") {
@@ -435,31 +435,48 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
             if (AICs[step] >= AICs[step+1]) {
                 sp <- step
                 s <- step+1
+                peng <- 1
+                penh <- penlist[[s]]
             } else {
                 sp <- step+1
                 s <- step
+                peng <- penlist[[sp]]
+                penh <- 1
             }
 
             if (type == "TC") {
                 Ug <- ulist[[s]]
                 Uh <- ulist[[sp]]
-                                  # Check this: known sigma has *additive* pen terms
-                peng <- 1
-                penh <- penlist[sp]
-                                  ####################################
+                    # Fix this: known sigma has *additive* pen terms
+                    ####################################
                 coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh)
                 intstep <- quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol = 1e-15)
             } else {
+                # g indexes the lower AIC
                 Ug <- ulist[[s]]
                 Uh <- ulist[[sp]]
-                peng <- 1 #penlist[[s]]
-                penh <- penlist[[sp]]
                 Vdg <- vdlist[[s]]
                 Vdh <- vdlist[[sp]]
                 V2g <- v2list[[s]]
                 V2h <- v2list[[sp]]
                 Zg <- zlist[[s]]
                 Zh <- zlist[[sp]]
+
+                g1 <- function(t) sqrt(C*t/(1+C*t))
+                g2 <- function(t) 1/sqrt(1+C*t)
+                Yg <- Zg + R*(g1(TF)*Vdg + g2(TF)*V2g)
+                UYg <- t(Ug) %*% Yg
+                sse <- (sum(Yg^2) - sum(UYg^2))
+                AICg <- n*log(sse/n) + n*log(2*pi) + k * (1 + n + 5)
+                Yh <- Zh + R*(g1(TF)*Vdh + g2(TF)*V2h)
+                UYh <- t(Uh) %*% Yh
+                sse <- (sum(Yh^2) - sum(UYh^2))
+                AICh <- n*log(sse/n) + n*log(2*pi) + k * (1 + n + 6)
+                # This does reproduce the correct AIC values
+                # AIC(g) < AIC(h)
+                # <-> log(sseG) + (k/n) * ncol(Ug) < log(sseH)
+
+                # Infeasible constraint if penh = 1, why?
                 coeffs <- TF_coefficients(R, Ug, Uh, peng, penh, Zg, Zh, Vdg, Vdh, V2g, V2h)
                 intstep <- TF_roots(R, C, coeffs)
             }

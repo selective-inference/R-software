@@ -20,8 +20,9 @@ instance <- function(n, p, G, sparsity, snr, rho, maxsteps, aicstop) {
     simd <- randomGaussianFixedP(n, p, G, sparsity, snr, sigma = 1, rho)
     x <- simd$x
     y <- simd$y
+    y <- y - mean(y)
     index <- simd$index
-    fit <- groupfs(x, y, index, maxsteps, k = log(n), aicstop = aicstop)
+    fit <- groupfs(x, y, index, maxsteps, intercept = F, k = log(n), aicstop = aicstop, verbose = T)
     pvals <- groupfsInf(fit, verbose=T)
     return(list(variable = fit$action, pvals = pvals$pv, stopped = attr(fit, "stopped")))
 }
