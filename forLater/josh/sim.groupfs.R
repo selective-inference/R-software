@@ -1,26 +1,31 @@
 library(intervals)
 source("funs.sims.R")
-source("selectiveInference/R/cv.R")
+#source("selectiveInference/R/cv.R")
 source("../../selectiveInference/R/funs.groupfs.R")
 source("../../selectiveInference/R/funs.quadratic.R")
 source("../../selectiveInference/R/funs.common.R")
 
 set.seed(1)
-niters <- 200
-n <- 100
-p <- 400
-G <- 200
-maxsteps <- 5
-sparsity <- 3
+known <- TRUE
+niters <- 300
+n <- 50
+p <- 150
+G <- 75
+maxsteps <- 8
+sparsity <- 4
 snr <- 2
-rho <- .1
+rho <- 0
 
 instance <- function(n, p, G, sparsity, snr, rho, maxsteps) {
     simd <- randomGaussianFixedP(n, p, G, sparsity, snr, sigma = 1, rho)
     x <- simd$x
     y <- simd$y
     index <- simd$index
-    fit <- groupfs(x, y, index, maxsteps, k = log(n))
+    if (known) {
+        fit <- groupfs(x, y, index, maxsteps, sigma = 1, k = log(n))
+    } else {
+        fit <- groupfs(x, y, index, maxsteps, k = log(n))
+    }
     pvals <- groupfsInf(fit, verbose=T)
     return(list(variable = fit$action, pvals = pvals$pv))
 }
@@ -35,8 +40,12 @@ vars <- do.call(c, list(output[1,]))
 save(pvals, vars, file = paste0(
                       "results_n", n,
                       "_p", p,
+                      "_g", G,
+                      "_rho", gsub(pattern = ".", replacement = "", x = rho, fixed = T),
+                      "_maxsteps", maxsteps,
                       "_sparsity", sparsity,
-                      "_snr", snr,
-                      "_F.RData"))
+                      "_snr", round(snr),
+                      "_known", known,
+                      ".RData"))
 
 print(time)
