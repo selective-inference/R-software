@@ -32,6 +32,30 @@ np = pvals[nulls,-(1:2)]
 mean(np[!is.na(np)] < 0.1)
 
 #####
+library(selectiveInference)
+library(MASS)
+library(scalreg)
+
+S <- diag(10)
+n <- 100
+p <- 10
+pval <- matrix(1, nrow = 100, ncol = p)
+for(i in 1:100){
+    cat(i)
+  X <- mvrnorm(n = n, mu = rep(0, p), Sigma = S)
+  Y <- X[, 1] + X[, 2] + rnorm(n)
+  sig.L <- scalreg(X, Y)$hsigma
+
+  lam <- cv.glmnet(X, Y, standardize = FALSE, intercept = FALSE)$lambda.min
+  bl <- glmnet(X, Y, lambda = lam, standardize = FALSE, intercept = FALSE)$beta[, 1]
+  idx <- which(bl != 0)
+  pval[i, idx] <- fixedLassoInf(X, Y, beta = bl, lambda = lam * n, intercept = FALSE, sigma = sig.L, alpha = 0.05)$pv
+}
+
+p <- pval[, -(1:2)]
+mean(p[p < 1] < 0.05)
+
+#####
 
 a=lar(x,y)
 aa=larInf(a)
