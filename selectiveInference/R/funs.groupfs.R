@@ -376,10 +376,10 @@ groupfsInf <- function(obj, sigma = NULL, verbose = TRUE) {
                                   vdcvquad <- t(Vdelta) %*% cvquad
                                   v2cvquad <- t(V2) %*% cvquad
                                   x0 <- zcvquad %*% Z
-                                  x1 <- 2*R*zcvquad %*% Vd
+                                  x1 <- 2*R*zcvquad %*% Vdelta
                                   x2 <- 2*R*zcvquad %*% V2
                                   x12 <- 2*R*vdcvquad %*% V2
-                                  x11 <- R^2*vdcvquad %*% Vd
+                                  x11 <- R^2*vdcvquad %*% Vdelta
                                   x22 <- R^2*v2cvquad %*% V2
                                   TF_roots(R, C, coeffs = list(x0=x0, x1=x1, x2=x2, x12=x12, x11=x11, x22=x22))
                               }
@@ -754,14 +754,14 @@ coef.groupfs <- function(object, ...) {
 #' @param object Object returned by a call to \code{\link{groupfs}}.
 #' @param newx Matrix of x values at which the predictions are desired. If NULL, the x values from groupfs fitting are used.
 #' @return A vector of predictions or a vector of coefficients.
-predict.groupfs <- function(object, newx, ...) {
+predict.groupfs <- function(object, newx) {
     beta <- coef.groupfs(object)
     if (missing(newx)) {
         newx = object$x
     } else {
         newx <- scaleGroups(newx, object$index, attr(object, "center"), attr(object, "normalize"))$x
     }
-    return(newx[, index %in% object$action] %*% beta + ifelse(object$intercept, object$by, 0))
+    return(newx[, object$index %in% object$action] %*% beta + ifelse(object$intercept, object$by, 0))
 }
 
 print.groupfsInf <- function(x, ...) {
