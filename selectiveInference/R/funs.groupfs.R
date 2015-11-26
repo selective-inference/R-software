@@ -443,8 +443,8 @@ groupfsInf <- function(obj, sigma = NULL, verbose = TRUE) {
             
             if (type == "TC") {
                 penh <- 0
-                etag <- etalist[[s]]
-                etah <- etalist[[sp]]
+                etag <- etalist[[step+1]]
+                etah <- etalist[[step]]
                 coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh)
 
                 if (AICs[step] < AICs[step+1]) {
