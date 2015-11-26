@@ -6,7 +6,7 @@
 
 Make predictions or extract coefficients from a groupfs forward stepwise object.}
 \usage{
-\method{predict}{groupfs}(object, newx, ...)
+\method{predict}{groupfs}(object, newx)
 }
 \arguments{
 \item{object}{Object returned by a call to \code{\link{groupfs}}.}
