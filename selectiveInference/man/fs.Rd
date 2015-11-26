@@ -68,33 +68,35 @@ to enter along the path}
 }
 
 \examples{
-#NOT RUN
-#set.seed(43)
-#n=50
-#p=10
-#sigma=.7
-#x=matrix(rnorm(n*p),n,p)
-#x=scale(x,T,F)
-#beta=c(3,2,0,0,rep(0,p-4))
-#y=x%*%beta+sigma*rnorm(n)
-#y=y-mean(y)
 
-#fsfit=fs(x,y)
+set.seed(43)
+n=50
+p=10
+sigma=.7
+x=matrix(rnorm(n*p),n,p)
+x=scale(x,TRUE,FALSE)
+beta=c(3,2,0,0,rep(0,p-4))
+y=x\%*\%beta+sigma*rnorm(n)
+y=y-mean(y)
+# run forward stepwise
+fsfit=fs(x,y)
+# call inference function
+out=fsInf(fsfit)
 #
-#out=fsInf(x,y)
-#
+
+#NOT RUN
 # states data example: predict life expectancy
 #x=state.x77[,-4]
 #y=state.x77[,4]
-#x=scale(x,T,T)
+#x=scale(x,TRUE,TRUE)
 #n=nrow(x)
 #
 #  estimate sigma from cross-validated lasso fit
 #cvf=cv.glmnet(x,y)
-#sigmahat=estimateSigma(x,y,stand=F)$sigmahat
+#sigmahat=estimateSigma(x,y,stand=FALSE)$sigmahat
 #
 # fit forwardStepwise
-# fsfit=fs(x,y,normalize=F)
+# fsfit=fs(x,y,normalize=FALSE)
 #
 # compute p-values and confidence intervals
 #  fsInf(fsfit,sigma=sigmahat)
