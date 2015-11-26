@@ -9,7 +9,7 @@ groupfsInf(obj, sigma = NULL, verbose = TRUE)
 \arguments{
 \item{obj}{Object returned by \code{\link{groupfs}} function}
 
-\item{sigma}{Estimate of error standard deviation. If NULL (default), p-values will be computed from a selective F test.}
+\item{sigma}{Estimate of error standard deviation. Default is NULL and in this case groupfsInf uses the value of sigma specified to \code{\link{groupfs}}.}
 
 \item{verbose}{Print out progress along the way? Default is TRUE.}
 }
@@ -20,12 +20,12 @@ An object of class "groupfsInf" containing selective p-values for the fitted mod
   \item{vars}{Labels of the active groups in the order they were included.}
   \item{pv}{Selective p-values computed from appropriate truncated distributions.}
   \item{sigma}{Estimate of error variance used in computing p-values.}
-  \item{TC}{Observed value of truncated chi.}
+  \item{TC or TF}{Observed value of truncated \eqn{\chi} or \eqn{F}.}
   \item{df}{Rank of group of variables when it was added to the model.}
-  \item{support}{List of intervals defining the truncation region of the truncated chi.}
+  \item{support}{List of intervals defining the truncation region of the corresponding statistic.}
 }
 }
 \description{
-Computes p-values for each group of variables in a model fitted by \code{\link{groupfs}}. These p-values adjust for selection by truncating the usual \eqn{\chi^2} statistics to the regions implied by the model selection event. Details are provided in a forthcoming work.
+Computes p-values for each group of variables in a model fitted by \code{\link{groupfs}}. These p-values adjust for selection by truncating the usual \eqn{\chi^2} statistics to the regions implied by the model selection event. If the \code{sigma} to \code{\link{groupfs}} was NULL then groupfsInf uses truncated \eqn{F} statistics instead of truncated \eqn{\chi}. The \code{sigma} argument to groupfsInf allows users to override and use \eqn{\chi}, but this is not recommended unless \eqn{\sigma} can be estimated well (i.e. \eqn{n > p}).
 }
 

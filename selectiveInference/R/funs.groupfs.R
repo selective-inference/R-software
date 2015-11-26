@@ -4,11 +4,11 @@
 #'
 #' @param x Matrix of predictors (n by p).
 #' @param y Vector of outcomes (length n).
-#' @param index Group membership indicator of length p.
+#' @param index Group membership indicator of length p. Check that \code{sort(unique(index)) = 1:G} where \code{G} is the number of distinct groups.
 #' @param maxsteps Maximum number of steps for forward stepwise.
-#' @param sigma Estimate of error standard deviation for use in AIC criterion. This determines the relative scale between RSS and the degrees of freedom penalty. Default is NULL corresponding to unknown sigma. See \code{\link[stats]{extractAIC}} for details.
-#' @param k Multiplier of model size penalty, the default is \code{k = 2} for AIC. Use \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.
-#' @param intercept Should an intercept be included in the model? Default is TRUE.
+#' @param sigma Estimate of error standard deviation for use in AIC criterion. This determines the relative scale between RSS and the degrees of freedom penalty. Default is NULL corresponding to unknown sigma. When NULL, \code{link{groupfsInf}} performs truncated F inference instead of truncated \eqn{\chi}. See \code{\link[stats]{extractAIC}} for details on the AIC criterion.
+#' @param k Multiplier of model size penalty, the default is \code{k = 2} for AIC. Use \code{k = log(n)} for BIC, or \code{k = 2log(p)} for RIC (best for high dimensions, when \eqn{p > n}). If \eqn{G < p} then RIC may be too restrictive and it would be better to use \code{log(G) < k < 2log(p)}.
+#' @param intercept Should an intercept be included in the model? Default is TRUE. Does not count as a step.
 #' @param center Should the columns of the design matrix be centered? Default is TRUE.
 #' @param normalize Should the design matrix be normalized? Default is TRUE.
 #' @param aicstop Early stopping if AIC increases. Default is 0 corresponding to no early stopping. Positive integer values specify the number of times the AIC is allowed to increase in a row, e.g. with \code{aicstop = 2} the algorithm will stop if the AIC criterion increases for 2 steps in a row. The default of \code{\link[stats]{step}} corresponds to \code{aicstop = 1}.
@@ -235,10 +235,10 @@ add1.groupfs <- function(xr, yr, index, labels, inactive, k, sigma = NULL) {
 
 #' Compute selective p-values for a model fitted by \code{groupfs}.
 #'
-#' Computes p-values for each group of variables in a model fitted by \code{\link{groupfs}}. These p-values adjust for selection by truncating the usual \eqn{\chi^2} statistics to the regions implied by the model selection event. Details are provided in a forthcoming work.
+#' Computes p-values for each group of variables in a model fitted by \code{\link{groupfs}}. These p-values adjust for selection by truncating the usual \eqn{\chi^2} statistics to the regions implied by the model selection event. If the \code{sigma} to \code{\link{groupfs}} was NULL then groupfsInf uses truncated \eqn{F} statistics instead of truncated \eqn{\chi}. The \code{sigma} argument to groupfsInf allows users to override and use \eqn{\chi}, but this is not recommended unless \eqn{\sigma} can be estimated well (i.e. \eqn{n > p}).
 #'
 #' @param obj Object returned by \code{\link{groupfs}} function
-#' @param sigma Estimate of error standard deviation. If NULL (default), p-values will be computed from a selective F test.
+#' @param sigma Estimate of error standard deviation. Default is NULL and in this case groupfsInf uses the value of sigma specified to \code{\link{groupfs}}.
 #' @param verbose Print out progress along the way? Default is TRUE.
 #' @return An object of class "groupfsInf" containing selective p-values for the fitted model \code{obj}. For comparison with \code{\link{fsInf}}, note that the option \code{type = "active"} is not available.
 #'
@@ -246,9 +246,9 @@ add1.groupfs <- function(xr, yr, index, labels, inactive, k, sigma = NULL) {
 #'   \item{vars}{Labels of the active groups in the order they were included.}
 #'   \item{pv}{Selective p-values computed from appropriate truncated distributions.}
 #'   \item{sigma}{Estimate of error variance used in computing p-values.}
-#'   \item{TC}{Observed value of truncated chi.}
+#'   \item{TC or TF}{Observed value of truncated \eqn{\chi} or \eqn{F}.}
 #'   \item{df}{Rank of group of variables when it was added to the model.}
-#'   \item{support}{List of intervals defining the truncation region of the truncated chi.}
+#'   \item{support}{List of intervals defining the truncation region of the corresponding statistic.}
 #' }
 groupfsInf <- function(obj, sigma = NULL, verbose = TRUE) {
 
@@ -282,12 +282,6 @@ groupfsInf <- function(obj, sigma = NULL, verbose = TRUE) {
           dffull <- ncol(Pf)
           df2 <- n - dffull - obj$intercept - 1
           Pfull <- Pf %*% t(Pf)
-          ## if (n >= 2*p) {
-          ##     sigma <- sqrt(sum(lsfit(obj$x, obj$y, intercept = obj$intercept)$res^2)/(n-p-obj$intercept))
-          ## } else {
-          ##     sigma = sqrt(obj$log$RSS[length(obj$log$RSS)]/(n-Ep-obj$intercept))
-          ##     warning(paste(sprintf("p > n/2, and sigmahat = %0.3f used as an estimate of sigma;",sigma), "you may want to use the estimateSigma function"))
-          ## }
       } else {
           type <- "TC"
           sigma <- obj$sigma
@@ -381,7 +375,6 @@ groupfsInf <- function(obj, sigma = NULL, verbose = TRUE) {
                                   zcvquad <- t(Z) %*% cvquad
                                   vdcvquad <- t(Vdelta) %*% cvquad
                                   v2cvquad <- t(V2) %*% cvquad
-                                  # (r*(vd*g1 + v2*g2) + z)^T cvquad (r*(vd*g1 + v2*g2) + z)
                                   x0 <- zcvquad %*% Z
                                   x1 <- 2*R*zcvquad %*% Vd
                                   x2 <- 2*R*zcvquad %*% V2
@@ -630,7 +623,6 @@ TF_interval <- function(lower, upper, df1, df2) {
 }
 
 num_int_F <- function(a, b, df1, df2, nsamp = 10000) {
-    print("numerical!")
   grid <- seq(from=a, to=b, length.out=nsamp)
   integrand <- df(grid, df1, df2)
   return((b-a)*mean(integrand))
@@ -767,7 +759,7 @@ predict.groupfs <- function(object, newx, ...) {
     if (missing(newx)) {
         newx = object$x
     } else {
-        newx <- scaleGroups(newx, object$index, attr(object, "center"), attr(object, "normalize"))
+        newx <- scaleGroups(newx, object$index, attr(object, "center"), attr(object, "normalize"))$x
     }
     return(newx[, index %in% object$action] %*% beta + ifelse(object$intercept, object$by, 0))
 }
