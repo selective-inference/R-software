@@ -184,15 +184,15 @@ print.fixedLassoInf <- function(x, tailarea=TRUE, ...) {
   invisible()
 }
 
-estimateLambda <- function(x, sigma, nsamp=1000){
-  checkargs.xy(x,rep(0,nrow(x)))
-  if(nsamp < 10) stop("More Monte Carlo samples required for estimation")
-  if (length(sigma)!=1) stop("sigma should be a number > 0")
-  if (sigma<=0) stop("sigma should be a number > 0")
+#estimateLambda <- function(x, sigma, nsamp=1000){
+#  checkargs.xy(x,rep(0,nrow(x)))
+#  if(nsamp < 10) stop("More Monte Carlo samples required for estimation")
+#  if (length(sigma)!=1) stop("sigma should be a number > 0")
+ # if (sigma<=0) stop("sigma should be a number > 0")
                                       
-  n = nrow(x)
-  eps = sigma*matrix(rnorm(nsamp*n),n,nsamp)
-  lambda = 2*mean(apply(t(x)%*%eps,2,max))
-  return(lambda)
-}
+ # n = nrow(x)
+ # eps = sigma*matrix(rnorm(nsamp*n),n,nsamp)
+ # lambda = 2*mean(apply(t(x)%*%eps,2,max))
+ # return(lambda)
+#}
     
