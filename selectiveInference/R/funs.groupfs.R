@@ -433,53 +433,38 @@ groupfsInf <- function(obj, sigma = NULL, verbose = TRUE) {
 
         for (step in 1:maxsteps) {
             # Compare AIC at s+1 to AIC at s
-            # sp indexes step with larger AIC
-            if (AICs[step] >= AICs[step+1]) {
-                sp <- step
-                s <- step+1
-                peng <- 1
-                penh <- penlist[[s]]
-            } else {
-                sp <- step+1
-                s <- step
-                peng <- 1
-                penh <- penlist[[sp]]
-            }
-
+            # roots() functions assume g indexes smaller AIC
+            # this is step+1 until the last step
+            peng <- penlist[[step+1]]
+            Ug <- ulist[[step+1]]
+            Uh <- ulist[[step]]
+            Zg <- zlist[[step+1]]
+            Zh <- zlist[[step]]
+            
             if (type == "TC") {
-                Ug <- ulist[[s]]
-                Uh <- ulist[[sp]]
-                    # Fix this: known sigma has *additive* pen terms
-                    ####################################
+                penh <- 0
+                etag <- etalist[[s]]
+                etah <- etalist[[sp]]
                 coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh)
+
+                if (AICs[step] < AICs[step+1]) {
+                    coeffs <- lapply(coeffs, function(coeff) -coeff)
+                }
+                
                 intstep <- quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol = 1e-15)
+                
             } else {
-                # g indexes the lower AIC
-                Ug <- ulist[[s]]
-                Uh <- ulist[[sp]]
-                Vdg <- vdlist[[s]]
-                Vdh <- vdlist[[sp]]
-                V2g <- v2list[[s]]
-                V2h <- v2list[[sp]]
-                Zg <- zlist[[s]]
-                Zh <- zlist[[sp]]
-
-                g1 <- function(t) sqrt(C*t/(1+C*t))
-                g2 <- function(t) 1/sqrt(1+C*t)
-                Yg <- Zg + R*(g1(TF)*Vdg + g2(TF)*V2g)
-                UYg <- t(Ug) %*% Yg
-                sse <- (sum(Yg^2) - sum(UYg^2))
-                AICg <- n*log(sse/n) + n*log(2*pi) + k * (2 + n + 6)
-                Yh <- Zh + R*(g1(TF)*Vdh + g2(TF)*V2h)
-                UYh <- t(Uh) %*% Yh
-                sse <- (sum(Yh^2) - sum(UYh^2))
-                AICh <- n*log(sse/n) + n*log(2*pi) + k * (2 + n + 7)
-                # This does reproduce the correct AIC values
-                # AIC(g) < AIC(h)
-                # <-> log(sseG) + (k/n) * ncol(Ug) < log(sseH)
-
-                # Infeasible constraint if penh = 1, why?
+                penh <- 1
+                Vdg <- vdlist[[step+1]]
+                Vdh <- vdlist[[step]]
+                V2g <- v2list[[step+1]]
+                V2h <- v2list[[step]]
                 coeffs <- TF_coefficients(R, Ug, Uh, peng, penh, Zg, Zh, Vdg, Vdh, V2g, V2h)
+
+                if (AICs[step] < AICs[step+1]) {
+                    coeffs <- lapply(coeffs, function(coeff) -coeff)
+                }
+                
                 intstep <- TF_roots(R, C, coeffs)
             }
 
