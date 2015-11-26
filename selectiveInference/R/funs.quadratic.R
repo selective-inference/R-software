@@ -49,26 +49,8 @@ truncationRegion <- function(obj, ydecomp, type, tol = 1e-15) {
               coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etas, etas, Zs, Zs)
               quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol)
           } else {
-
-             # Debugging
-              ## Q <- peng * (diag(rep(1,n)) - Ug %*% t(Ug)) - penh * (diag(rep(1,n)) - Uh %*% t(Uh))
-              ##  g1 <- function(t) sqrt(C*t/(1+C*t))
-              ##  g2 <- function(t) 1/sqrt(1+C*t)
-              ##  Y <- function(t) {
-              ##      Zs + R * (Vds*g1(t) + V2s*g2(t))
-              ##  }
-
               coeffs <- TF_coefficients(R, Ug, Uh, peng, penh, Zs, Zs, Vds, Vds, V2s, V2s)
               roots <- TF_roots(R, C, coeffs)
-
-              if (is.null(roots)) print(c(s,l))
-              ## print(do.call(rbind, lapply(roots, function(r) {
-              ##     c(r,
-              ##       t(Y(r-0.000001)) %*% Q %*% Y(r-0.000001),
-              ##       t(Y(r)) %*% Q %*% Y(r),
-              ##       t(Y(r+0.000001)) %*% Q %*% Y(r+0.000001))
-              ## })))
-
               return(roots)
           }
       })
@@ -100,8 +82,6 @@ quadratic_coefficients <- function(sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh
 }
 
 quadratic_roots <- function(A, B, C, tol) {
-
-    print("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC")
     disc <- B^2 - 4*A*C
     b2a <- -B/(2*A)
 
@@ -206,17 +186,6 @@ TF_roots <- function(R, C, coeffs, tol = 1e-8, tol2 = 1e-6) {
     x2 <- coeffs$x2
     x0 <- coeffs$x0
 
-##     # Handle some special cases
-##     if ((x11 == 0) && (max(abs(c(x22, x12, x1, x2))) < tol2)) {
-## #        print("Special case 1")
-##         return(Intervals(c(-Inf, 0)))
-##     }
-
-##     if ((x22 == 0) && (max(abs(c(x2, x12))) < tol2)) {
-##         x2 <- 0
-##         x12 <- 0
-##     }
-
     g1 <- function(t) sqrt(C*t/(1+C*t))
     g2 <- function(t) 1/sqrt(1+C*t)
     I <- function(t) x11*g1(t)^2 + x12*g1(t)*g2(t) + x22*g2(t)^2 + x1*g1(t) + x2*g2(t) + x0
@@ -278,4 +247,3 @@ TF_roots <- function(R, C, coeffs, tol = 1e-8, tol2 = 1e-6) {
     if (I(0) < 0) stop("Infeasible constraint!")
     return(Intervals(c(-Inf,0)))
 }
-

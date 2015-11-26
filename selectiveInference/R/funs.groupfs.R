@@ -4,11 +4,11 @@
 #'
 #' @param x Matrix of predictors (n by p).
 #' @param y Vector of outcomes (length n).
-#' @param index Group membership indicator of length p.
+#' @param index Group membership indicator of length p. Check that \code{sort(unique(index)) = 1:G} where \code{G} is the number of distinct groups.
 #' @param maxsteps Maximum number of steps for forward stepwise.
-#' @param sigma Estimate of error standard deviation for use in AIC criterion. This determines the relative scale between RSS and the degrees of freedom penalty. Default is NULL corresponding to unknown sigma. See \code{\link[stats]{extractAIC}} for details.
-#' @param k Multiplier of model size penalty, the default is \code{k = 2} for AIC. Use \code{k = log(n)} for BIC, or \code{k = log(p)} for RIC.
-#' @param intercept Should an intercept be included in the model? Default is TRUE.
+#' @param sigma Estimate of error standard deviation for use in AIC criterion. This determines the relative scale between RSS and the degrees of freedom penalty. Default is NULL corresponding to unknown sigma. When NULL, \code{link{groupfsInf}} performs truncated F inference instead of truncated \eqn{\chi}. See \code{\link[stats]{extractAIC}} for details on the AIC criterion.
+#' @param k Multiplier of model size penalty, the default is \code{k = 2} for AIC. Use \code{k = log(n)} for BIC, or \code{k = 2log(p)} for RIC (best for high dimensions, when \eqn{p > n}). If \eqn{G < p} then RIC may be too restrictive and it would be better to use \code{log(G) < k < 2log(p)}.
+#' @param intercept Should an intercept be included in the model? Default is TRUE. Does not count as a step.
 #' @param center Should the columns of the design matrix be centered? Default is TRUE.
 #' @param normalize Should the design matrix be normalized? Default is TRUE.
 #' @param aicstop Early stopping if AIC increases. Default is 0 corresponding to no early stopping. Positive integer values specify the number of times the AIC is allowed to increase in a row, e.g. with \code{aicstop = 2} the algorithm will stop if the AIC criterion increases for 2 steps in a row. The default of \code{\link[stats]{step}} corresponds to \code{aicstop = 1}.
@@ -68,7 +68,7 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
   modelrank <- as.numeric(intercept)
   if (is.null(sigma)) {
       modelrank <- modelrank + 1
-      aic.begin <- aic.last <- n*(log(2*pi) + log(mean(y.update^2)) + 1) + k * modelrank # fixed... again
+      aic.begin <- aic.last <- n*(log(2*pi) + log(mean(y.update^2))) + k * (n + modelrank)
   } else {
       aic.begin <- aic.last <- sum(y.update^2)/sigma^2 - n + k * modelrank
   }
@@ -101,7 +101,7 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
 
     # Compute AIC
     if (is.null(sigma)) {
-        added$AIC <- n * log(added$maxterm/n) - k * added$df + n + n*log(2*pi) + k * modelrank
+        added$AIC <- n * log(added$maxterm/n) - k * added$df + n*log(2*pi) + k * (n + modelrank)
     } else {
         added$AIC <- sum(y.update^2)/sigma^2 - n + k * modelrank
     }
@@ -235,22 +235,22 @@ add1.groupfs <- function(xr, yr, index, labels, inactive, k, sigma = NULL) {
 
 #' Compute selective p-values for a model fitted by \code{groupfs}.
 #'
-#' Computes p-values for each group of variables in a model fitted by \code{\link{groupfs}}. These p-values adjust for selection by truncating the usual \eqn{\chi^2} statistics to the regions implied by the model selection event. Details are provided in a forthcoming work.
+#' Computes p-values for each group of variables in a model fitted by \code{\link{groupfs}}. These p-values adjust for selection by truncating the usual \eqn{\chi^2} statistics to the regions implied by the model selection event. If the \code{sigma} to \code{\link{groupfs}} was NULL then groupfsInf uses truncated \eqn{F} statistics instead of truncated \eqn{\chi}. The \code{sigma} argument to groupfsInf allows users to override and use \eqn{\chi}, but this is not recommended unless \eqn{\sigma} can be estimated well (i.e. \eqn{n > p}).
 #'
 #' @param obj Object returned by \code{\link{groupfs}} function
-#' @param sigma Estimate of error standard deviation. If NULL (default), this is estimated using the mean squared residual of the full least squares fit when n >= 2p, and the mean squared residual of the selected model when n < 2p. In the latter case, the user should use \code{\link{estimateSigma}} function for a more accurate estimate.
-#' @param verbose Print out progress along the way? Default is FALSE.
+#' @param sigma Estimate of error standard deviation. Default is NULL and in this case groupfsInf uses the value of sigma specified to \code{\link{groupfs}}.
+#' @param verbose Print out progress along the way? Default is TRUE.
 #' @return An object of class "groupfsInf" containing selective p-values for the fitted model \code{obj}. For comparison with \code{\link{fsInf}}, note that the option \code{type = "active"} is not available.
 #'
 #' \describe{
 #'   \item{vars}{Labels of the active groups in the order they were included.}
 #'   \item{pv}{Selective p-values computed from appropriate truncated distributions.}
 #'   \item{sigma}{Estimate of error variance used in computing p-values.}
-#'   \item{TC}{Observed value of truncated chi.}
+#'   \item{TC or TF}{Observed value of truncated \eqn{\chi} or \eqn{F}.}
 #'   \item{df}{Rank of group of variables when it was added to the model.}
-#'   \item{support}{List of intervals defining the truncation region of the truncated chi.}
+#'   \item{support}{List of intervals defining the truncation region of the corresponding statistic.}
 #' }
-groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
+groupfsInf <- function(obj, sigma = NULL, verbose = TRUE) {
 
   if (!is.null(obj$cvobj) && attr(obj, "stopped")) {
       stop("Cross-validation and early stopping cannot be used simultaneously.")
@@ -282,12 +282,6 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
           dffull <- ncol(Pf)
           df2 <- n - dffull - obj$intercept - 1
           Pfull <- Pf %*% t(Pf)
-          ## if (n >= 2*p) {
-          ##     sigma <- sqrt(sum(lsfit(obj$x, obj$y, intercept = obj$intercept)$res^2)/(n-p-obj$intercept))
-          ## } else {
-          ##     sigma = sqrt(obj$log$RSS[length(obj$log$RSS)]/(n-Ep-obj$intercept))
-          ##     warning(paste(sprintf("p > n/2, and sigmahat = %0.3f used as an estimate of sigma;",sigma), "you may want to use the estimateSigma function"))
-          ## }
       } else {
           type <- "TC"
           sigma <- obj$sigma
@@ -334,7 +328,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
             Z <- Psub %*% t(Psub) %*% obj$y
             df1 <- dffull - ncol(Psub)
         } else {
-            Z <- 0
+            Z <- rep(0, n)
             df1 <- dffull + obj$intercept + 1
         }
 
@@ -381,12 +375,11 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
                                   zcvquad <- t(Z) %*% cvquad
                                   vdcvquad <- t(Vdelta) %*% cvquad
                                   v2cvquad <- t(V2) %*% cvquad
-                                  # (r*(vd*g1 + v2*g2) + z)^T cvquad (r*(vd*g1 + v2*g2) + z)
                                   x0 <- zcvquad %*% Z
-                                  x1 <- 2*R*zcvquad %*% Vd
+                                  x1 <- 2*R*zcvquad %*% Vdelta
                                   x2 <- 2*R*zcvquad %*% V2
                                   x12 <- 2*R*vdcvquad %*% V2
-                                  x11 <- R^2*vdcvquad %*% Vd
+                                  x11 <- R^2*vdcvquad %*% Vdelta
                                   x22 <- R^2*v2cvquad %*% V2
                                   TF_roots(R, C, coeffs = list(x0=x0, x1=x1, x2=x2, x12=x12, x11=x11, x22=x22))
                               }
@@ -402,7 +395,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
             aic.begin <- aic.last <- sum(obj$y^2)/sigma^2 - n + k * obj$intercept
         } else {
             pen0 <- exp(k * (1+obj$intercept)/n)
-            aic.begin <- aic.last <- n*(log(2*pi) + log(mean(obj$y^2)) + 1) + k * (1 + obj$intercept)
+            aic.begin <- n*(log(2*pi) + log(mean(obj$y^2))) + k * (1 + n + obj$intercept)
         }
         AICs <- c(aic.begin, obj$AIC)
 
@@ -418,49 +411,53 @@ groupfsInf <- function(obj, sigma = NULL, verbose = FALSE) {
             vdlist[[1]] <- vdlist[[2]] <- Vdelta
             v2list[[1]] <- v2list[[2]] <- V2
         }
-        for (step in 2:maxsteps) {
-            cproj <- obj$cumprojs[[step]]
-            zlist[[step+1]] <- cproj %*% Z
-            if (type == "TC") {
-                etalist[[step+1]] <- cproj %*% eta
-            } else {
-                vdlist[[step+1]] <- cproj %*% Vdelta
-                v2list[[step+1]] <- cproj %*% V2
+        if (maxsteps > 1) {
+            for (step in 1:(maxsteps-1)) {
+                cproj <- obj$cumprojs[[step]]
+                zlist[[step+2]] <- cproj %*% Z
+                if (type == "TC") {
+                    etalist[[step+2]] <- cproj %*% eta
+                } else {
+                    vdlist[[step+2]] <- cproj %*% Vdelta
+                    v2list[[step+2]] <- cproj %*% V2
+                }
             }
         }
 
         for (step in 1:maxsteps) {
             # Compare AIC at s+1 to AIC at s
-            # sp indexes step with larger AIC
-            if (AICs[step] >= AICs[step+1]) {
-                sp <- step
-                s <- step+1
-            } else {
-                sp <- step+1
-                s <- step
-            }
-
+            # roots() functions assume g indexes smaller AIC
+            # this is step+1 until the last step
+            peng <- penlist[[step+1]]
+            Ug <- ulist[[step+1]]
+            Uh <- ulist[[step]]
+            Zg <- zlist[[step+1]]
+            Zh <- zlist[[step]]
+            
             if (type == "TC") {
-                Ug <- ulist[[s]]
-                Uh <- ulist[[sp]]
-                                  # Check this: known sigma has *additive* pen terms
-                peng <- 1
-                penh <- penlist[sp]
-                                  ####################################
+                penh <- 0
+                etag <- etalist[[step+1]]
+                etah <- etalist[[step]]
                 coeffs <- quadratic_coefficients(obj$sigma, Ug, Uh, peng, penh, etag, etah, Zg, Zh)
+
+                if (AICs[step] < AICs[step+1]) {
+                    coeffs <- lapply(coeffs, function(coeff) -coeff)
+                }
+                
                 intstep <- quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol = 1e-15)
+                
             } else {
-                Ug <- ulist[[s]]
-                Uh <- ulist[[sp]]
-                peng <- 1 #penlist[[s]]
-                penh <- penlist[[sp]]
-                Vdg <- vdlist[[s]]
-                Vdh <- vdlist[[sp]]
-                V2g <- v2list[[s]]
-                V2h <- v2list[[sp]]
-                Zg <- zlist[[s]]
-                Zh <- zlist[[sp]]
+                penh <- 1
+                Vdg <- vdlist[[step+1]]
+                Vdh <- vdlist[[step]]
+                V2g <- v2list[[step+1]]
+                V2h <- v2list[[step]]
                 coeffs <- TF_coefficients(R, Ug, Uh, peng, penh, Zg, Zh, Vdg, Vdh, V2g, V2h)
+
+                if (AICs[step] < AICs[step+1]) {
+                    coeffs <- lapply(coeffs, function(coeff) -coeff)
+                }
+                
                 intstep <- TF_roots(R, C, coeffs)
             }
 
@@ -626,7 +623,6 @@ TF_interval <- function(lower, upper, df1, df2) {
 }
 
 num_int_F <- function(a, b, df1, df2, nsamp = 10000) {
-    print("numerical!")
   grid <- seq(from=a, to=b, length.out=nsamp)
   integrand <- df(grid, df1, df2)
   return((b-a)*mean(integrand))
@@ -758,14 +754,14 @@ coef.groupfs <- function(object, ...) {
 #' @param object Object returned by a call to \code{\link{groupfs}}.
 #' @param newx Matrix of x values at which the predictions are desired. If NULL, the x values from groupfs fitting are used.
 #' @return A vector of predictions or a vector of coefficients.
-predict.groupfs <- function(object, newx, ...) {
+predict.groupfs <- function(object, newx) {
     beta <- coef.groupfs(object)
     if (missing(newx)) {
         newx = object$x
     } else {
-        newx <- scaleGroups(newx, object$index, attr(object, "center"), attr(object, "normalize"))
+        newx <- scaleGroups(newx, object$index, attr(object, "center"), attr(object, "normalize"))$x
     }
-    return(newx[, index %in% object$action] %*% beta + ifelse(object$intercept, object$by, 0))
+    return(newx[, object$index %in% object$action] %*% beta + ifelse(object$intercept, object$by, 0))
 }
 
 print.groupfsInf <- function(x, ...) {
