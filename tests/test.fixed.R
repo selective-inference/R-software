@@ -1,5 +1,5 @@
-library(selectiveInference)
-#library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+#library(selectiveInference)
+library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
 #options(error=dump.frames)
 #attach("/Users/tibs/dropbox/PAPERS/lasso/lasso3/.RData")
@@ -315,3 +315,28 @@ sint = fixedLassoInf(X,y,coef,lam,sigma=sigma,alpha=alpha,type="partial")
 load("params_for_Rob.rdata") #variables: X, y, coef, lam, sigma, alpha
 
 sint = fixedLassoInf(X,y,coef,lam,sigma=sigma,alpha=alpha,type="partial")
+
+
+#### bug from Sen at UW
+
+library(MASS)
+library(scalreg)
+
+S <- diag(10)
+n <- 100
+p <- 10
+pval <- matrix(1, nrow = 100, ncol = p)
+for(i in 1:100){
+    cat(i)
+  X <- mvrnorm(n = n, mu = rep(0, p), Sigma = S)
+  Y <- X[, 1] + X[, 2] + rnorm(n)
+  sig.L <- scalreg(X, Y)$hsigma
+
+  lam <- cv.glmnet(X, Y, standardize = FALSE, intercept = FALSE)$lambda.min
+  bl <- glmnet(X, Y, lambda = lam, standardize = FALSE, intercept = FALSE)$beta[, 1]
+  idx <- which(bl != 0)
+  pval[i, idx] <- fixedLassoInf(X, Y, beta = bl, lambda = lam * n, intercept = FALSE, sigma = sig.L, alpha = 0.05)$pv
+}
+
+p <- pval[, -(1:2)]
+mean(p[p < 1] < 0.05)
