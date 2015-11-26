@@ -52,11 +52,11 @@ arXiv:1405.3340.
 
 \examples{
 
-#NOT RUN
-#set.seed(12345)
-#n = 100 # sample size
-#signal = 3 # signal size
-#mu = c(rep(signal, floor (n/5)), rep(0, n-floor(n/5))) # 20% of elements get the signal; rest 0
-#y = mu + rnorm (n, 0, 1)
-#mmObj = manyMeans(y, bh.q=0.1)
+
+set.seed(12345)
+n = 100 # sample size
+signal = 3 # signal size
+mu = c(rep(signal, floor (n/5)), rep(0, n-floor(n/5))) # 20% of elements get the signal; rest 0
+y = mu + rnorm (n, 0, 1)
+out  = manyMeans(y, bh.q=0.1)
 }

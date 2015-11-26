@@ -114,34 +114,35 @@ Exact post-selection inference for sequential regression procedures. arXiv:1401.
 
 \examples{
 
-#NOT RUN
-#set.seed(43)
-#n=50
-#p=10
-#sigma=.7
-#x=matrix(rnorm(n*p),n,p)
-#x=scale(x,T,T)/sqrt(n-1)
-#beta=c(3,2,0,0,rep(0,p-4))
-#y=x%*%beta+sigma*rnorm(n)
-#y=y-mean(y)
+#generate data
+set.seed(43)
+n=50
+p=10
+sigma=.7
+x=matrix(rnorm(n*p),n,p)
+x=scale(x,TRUE,TRUE)/sqrt(n-1)
+beta=c(3,2,0,0,rep(0,p-4))
+y=x\%*\%beta+sigma*rnorm(n)
+y=y-mean(y)
 #first run lar
-# larfit=lar(x,y)
+ larfit=lar(x,y)
 #
 #lar inference for each successive entry of a predictor; sigma estimated
 #  from mean squared residual from least squares fit
-# aa=larInf(larfit)
+ out=larInf(larfit)
 #
+#NOT RUN
 # states data example: predict life expectancy
 #x=state.x77[,-4]
 #y=state.x77[,4]
-#x=scale(x,T,T)
+#x=scale(x,TRUE,TRUE)
 #n=nrow(x)
 #  estimate sigma from cross-validated lasso fit
 #cvf=cv.glmnet(x,y)
-#sigmahat=estimateSigma(x,y,stand=F)$sigmahat
+#sigmahat=estimateSigma(x,y,stand=FALSE)$sigmahat
 #
 # run LAR
-#larfit=lar(x,y,normalize=F)
+#larfit=lar(x,y,normalize=FALSE)
 #
 # compute p-values and confidence intervals
 # larInf(larfit,sigma=sigmahat)

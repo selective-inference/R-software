@@ -76,17 +76,17 @@ Jerome Friedman (2002, 2009). Elements of Statistical Learning.
 }
 
 \examples{
-#NOT RUN
-#set.seed(33)
-#n=20
-#p=10
-#sigma=1
-#x=matrix(rnorm(n*p),n,p)
+
+set.seed(33)
+n=20
+p=10
+sigma=1
+x=matrix(rnorm(n*p),n,p)
 #generate data
-#beta=c(3,3,rep(0,p-2))
-#y=x%*%beta+sigma*rnorm(n)
-#y=y-mean(y)
-#run lar
-#larfit=lar(x,y,verbose=TRUE)
-#plot(larfit)                                      
+beta=c(3,3,rep(0,p-2))
+y=x\%*\%beta+sigma*rnorm(n)
+y=y-mean(y)
+#run lar and plot results
+larfit=lar(x,y,verbose=TRUE)
+plot(larfit)                                      
 }

@@ -34,20 +34,20 @@ To appear in Journal of the Royal Statistical Society: Series B.
 \author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
 \examples{
-#NOT RUN
-#set.seed(433)
-#n=50
-#p=10
-#sigma=.7
-#x=matrix(rnorm(n*p),n,p)
-
-#x=scale(x,T,T)/sqrt(n-1)
-#beta=c(4,2,0,0,rep(0,p-4))
-#y=x%*%beta+sigma*rnorm(n)
-#y=y-mean(y)
+set.seed(433)
+n=50
+p=10
+sigma=.7
+x=matrix(rnorm(n*p),n,p)
+x=scale(x,TRUE,TRUE)/sqrt(n-1)
+beta=c(4,2,0,0,rep(0,p-4))
+y=x\%*\%beta+sigma*rnorm(n)
+y=y-mean(y)
 #first run forward stepwise
-# fsfit=fs(x,y)
+ fsfit=fs(x,y)
 #
-# aa=fsInf(fsfit)
-# forwardStop(aa, alpha=.10)
+# run inference function 
+ out=fsInf(fsfit)
+# estimate optimal stopping point
+ forwardStop(out$pv, alpha=.10)
 }
