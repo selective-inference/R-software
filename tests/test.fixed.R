@@ -1,5 +1,5 @@
-#library(selectiveInference)
-library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
+library(selectiveInference)
+#library(selectiveInference),lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
 #options(error=dump.frames)
 #attach("/Users/tibs/dropbox/PAPERS/lasso/lasso3/.RData")
@@ -153,7 +153,6 @@ ch=function(bhat,tol.beta=1e-5,tol.kkt=0.1){
     oo=abs(bhatt)>tol.beta
     cat(c(max(abs(g[oo]))>tol.kkt,min(gg[!oo])< -1-tol.kkt,max(gg[!oo])>1 +tol.kkt),fill=T)
 }
-
 
 #
 x=read.table("/Users/tibs/dropbox/PAPERS/FourOfUs/data64.txt")
