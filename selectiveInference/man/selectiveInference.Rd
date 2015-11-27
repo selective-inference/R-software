@@ -70,28 +70,29 @@ arXiv:1405.3340.
 }
 
 \examples{
-#NOT RUN
 # forward stepwise:
 #
 #generate some data
-#set.seed(43)
-#n=50
-#p=10
-#sigma=.7
-#x=matrix(rnorm(n*p),n,p)
-#x=scale(x,T,T)/sqrt(n-1)
-#beta=c(4,2,0,0,rep(0,p-4))
-#y=x%*%beta+sigma*rnorm(n)
-#y=y-mean(y)
+set.seed(43)
+n=50
+p=10
+sigma=.7
+x=matrix(rnorm(n*p),n,p)
+x=scale(x,TRUE,TRUE)/sqrt(n-1)
+beta=c(4,2,0,0,rep(0,p-4))
+y=x\%*\%beta+sigma*rnorm(n)
+y=y-mean(y)
 #
 #first run forward stepwise
-# fsfit=fs(x,y)
+ fsfit=fs(x,y)
 #
 # forward stepwise inference for each successive entry of a predictor; 
 #   sigma estimated from mean squared residual
 #   
-# aa=fsInf(fsfit)
+out=fsInf(fsfit)
+
 ##
+#NOT RUN
 #  lasso with fixed lambda
 #
 #set.seed(43)
@@ -99,13 +100,13 @@ arXiv:1405.3340.
 #p=10
 #sigma=.7
 #x=matrix(rnorm(n*p),n,p)
-#x=scale(x,T,T)/sqrt(n-1)
+#x=scale(x,TRUE,TRUE)/sqrt(n-1)
 #beta=c(4,2,0,0,rep(0,p-4))
 #y=x%*%beta+sigma*rnorm(n)
 #y=y-mean(y)
 #
 # first run  glmnet
-#gfit=glmnet(x,y,standardize=F)
+#gfit=glmnet(x,y,standardize=FALSE)
 #lam = .1
 #extract coef for a given lam; Note the 1/n factor in s!
 #bhat = coef(gfit, s=lam/n, exact=TRUE)[-1]
@@ -119,7 +120,7 @@ arXiv:1405.3340.
 #p=10
 #sigma=.7
 #x=matrix(rnorm(n*p),n,p)
-#x=scale(x,T,T)/sqrt(n-1)
+#x=scale(x,TRUE,TRUE)/sqrt(n-1)
 #beta=c(3,2,0,0,rep(0,p-4))
 #y=x%*%beta+sigma*rnorm(n)
 #y=y-mean(y)
@@ -165,7 +166,7 @@ arXiv:1405.3340.
 #p=10
 #sigma=.7
 #x=matrix(rnorm(n*p),n,p)
-#x=scale(x,T,F)
+#x=scale(x,TRUE,FALSE)
 #beta=c(3,2,0,0,rep(0,p-4))
 #y=x%*%beta+sigma*rnorm(n)
 #y=y-mean(y)

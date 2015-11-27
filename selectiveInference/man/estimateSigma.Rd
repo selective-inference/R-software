@@ -42,20 +42,19 @@ A study of error variance estimation in lasso regression. arXiv:1311.5274.
 \author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
 \examples{
-#NOT RUN
-#set.seed(43)
-#n=50
-#p=10
-#sigma=.7
-#x=matrix(rnorm(n*p),n,p)
-#x=scale(x,T,F)
-#beta=c(3,2,0,0,rep(0,p-4))
-#y=x%*%beta+sigma*rnorm(n)
-#y=y-mean(y)
+set.seed(43)
+n=50
+p=10
+sigma=.7
+x=matrix(rnorm(n*p),n,p)
+x=scale(x,TRUE,FALSE)
+beta=c(3,2,0,0,rep(0,p-4))
+y=x\%*\%beta+sigma*rnorm(n)
+y=y-mean(y)
 
-#out=estimateSigma(x,y)
-#a=fs(x,y)
-#out2=fsInf(a,sigma=out$sigmahat)
+out=estimateSigma(x,y)
+fit=fs(x,y)
+out2=fsInf(fit,sigma=out$sigmahat)
 
 }
 

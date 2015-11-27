@@ -115,27 +115,28 @@ Exact post-selection inference, with application to the lasso. arXiv:1311.6238.
 
 \examples{
 
-#NOT RUN
-#set.seed(43)
-#n=50
-#p=10
-#sigma=.7
-#x=matrix(rnorm(n*p),n,p)
-#x=scale(x,T,T)/sqrt(n-1)
-#beta=c(3,2,0,0,rep(0,p-4))
-#y=x%*%beta+sigma*rnorm(n)
-#y=y-mean(y)
+#generate data
+set.seed(43)
+n=50
+p=10
+sigma=.7
+x=matrix(rnorm(n*p),n,p)
+x=scale(x,TRUE,TRUE)/sqrt(n-1)
+beta=c(3,2,0,0,rep(0,p-4))
+y=x\%*\%beta+sigma*rnorm(n)
+y=y-mean(y)
 # first run  glmnet
-#gfit=glmnet(x,y,standardize=F)
-#lambda = .1
+gfit=glmnet(x,y,standardize=FALSE)
+lambda = .1
 #extract coef for a given lambda; Note the 1/n factor!
-#beta = coef(gfit, s=lambda/n, exact=TRUE)[-1]
+beta = coef(gfit, s=lambda/n, exact=TRUE)[-1]
 
 # compute fixed lambda p-values and selection intervals
-#aa=fixedLassoInf(x,y,beta,lambda,sigma=sigma)
+out=fixedLassoInf(x,y,beta,lambda,sigma=sigma)
 #
+#NOT RUN
 # as above, but use lar function instead to get initial lasso fit (should get same result)
-# fit=lar(x,y,normalize=F)
+# fit=lar(x,y,normalize=FALSE)
 # beta=coef(fit,s=lambda,mode="lambda")
 # fixedLassoInf(x,y,beta,lambda,sigma=sigma)
 
@@ -144,15 +145,15 @@ Exact post-selection inference, with application to the lasso. arXiv:1311.6238.
 # states data example: predict life expectancy
 #x=state.x77[,-4]
 #y=state.x77[,4]
-#x=scale(x,T,T)
+#x=scale(x,TRUE,TRUE)
 #n=nrow(x)
 #  estimate sigma from cross-validated lasso fit
 #  cvf=cv.glmnet(x,y)
-# sigmahat=estimateSigma(x,y,stand=F)$sigmahat
+# sigmahat=estimateSigma(x,y,stand=FALSE)$sigmahat
 #
 # fit lasso
 # lambda=n*cvf$lambda.min
-# gfit=glmnet(x,y,standardize=F)
+# gfit=glmnet(x,y,standardize=FALSE)
 # bhat=coef(gfit, s=lambda/n, exact=TRUE)[-1]
 #
 # compute p-values and confidence intervals

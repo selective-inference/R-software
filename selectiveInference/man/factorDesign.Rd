@@ -23,7 +23,7 @@ When using \code{\link{groupfs}} with factor variables call this function first 
 \dontrun{
 fd = factorDesign(warpbreaks)
 y = rnorm(nrow(fd$x))
-fit = groupfs(fd$x, y, fd$index, maxsteps=2, intercept=F)
+fit = groupfs(fd$x, y, fd$index, maxsteps=2, intercept=FALSE)
 pvals = groupfsInf(fit)
 }
 }
