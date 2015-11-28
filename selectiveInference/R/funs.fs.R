@@ -459,7 +459,7 @@ plot.fs <- function(x, breaks=TRUE, omit.zeros=TRUE, var.labels=TRUE, ...) {
        xlab=xlab,ylab="Coefficients",main="Forward stepwise path",...)
   abline(h=0,lwd=2)
   matplot(xx,t(beta),type="l",lty=1,add=TRUE)
-  if (breaks) abline(v=x,lty=2)
+  if (breaks) abline(v=xx,lty=2)
   if (var.labels) axis(4,at=beta[,k],labels=1:p,cex=0.8,adj=0) 
   invisible()
 }
