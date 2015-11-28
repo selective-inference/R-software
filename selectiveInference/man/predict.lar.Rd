@@ -48,7 +48,6 @@ x=scale(x,TRUE,TRUE)/sqrt(n-1)
 beta=c(3,-2,rep(0,p-2))
 beta=c(rep(3,10),rep(0,p-10))
 y=x\%*\%beta+sigma*rnorm(n)
-y=y-mean(y)
 larfit=lar(x,y)
-fit=predict.lar(larfit,x,type="fit")
+fit=predict.lar(larfit,x,s=3.5,type="fit")
 }

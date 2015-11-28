@@ -77,7 +77,6 @@ x=matrix(rnorm(n*p),n,p)
 x=scale(x,TRUE,FALSE)
 beta=c(3,2,0,0,rep(0,p-4))
 y=x\%*\%beta+sigma*rnorm(n)
-y=y-mean(y)
 # run forward stepwise
 fsfit=fs(x,y)
 # call inference function

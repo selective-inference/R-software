@@ -123,7 +123,6 @@ x=matrix(rnorm(n*p),n,p)
 x=scale(x,TRUE,TRUE)/sqrt(n-1)
 beta=c(3,2,0,0,rep(0,p-4))
 y=x\%*\%beta+sigma*rnorm(n)
-y=y-mean(y)
 #first run lar
  larfit=lar(x,y)
 #

@@ -81,7 +81,6 @@ x=matrix(rnorm(n*p),n,p)
 x=scale(x,TRUE,TRUE)/sqrt(n-1)
 beta=c(4,2,0,0,rep(0,p-4))
 y=x\%*\%beta+sigma*rnorm(n)
-y=y-mean(y)
 #
 #first run forward stepwise
  fsfit=fs(x,y)
@@ -123,7 +122,6 @@ out=fsInf(fsfit)
 #x=scale(x,TRUE,TRUE)/sqrt(n-1)
 #beta=c(3,2,0,0,rep(0,p-4))
 #y=x%*%beta+sigma*rnorm(n)
-#y=y-mean(y)
 #first run lar
 # larfit=lar(x,y)
 #
@@ -169,7 +167,6 @@ out=fsInf(fsfit)
 #x=scale(x,TRUE,FALSE)
 #beta=c(3,2,0,0,rep(0,p-4))
 #y=x%*%beta+sigma*rnorm(n)
-#y=y-mean(y)
 
 #out=estimateSigma(x,y)
 
@@ -182,7 +179,6 @@ set.seed(43)
 #x=scale(x,T,F)
 #beta=c(3,2,0,0,rep(0,p-4))
 #y=x%*%beta+sigma*rnorm(n)
-#y=y-mean(y)
 #
 #estimate lambda using the  known value of sigma
 #lamhat=estimateLambda(x,sigma=.7)

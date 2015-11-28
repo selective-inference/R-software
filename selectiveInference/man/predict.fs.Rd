@@ -48,5 +48,5 @@ y=x\%*\%beta+sigma*rnorm(n)
 y=y-mean(y)
 # run forward stepwise and predict functions
 obj=fs(x,y)
-fit=predict.fs(obj,x)
+fit=predict.fs(obj,x,s=3)
 }
