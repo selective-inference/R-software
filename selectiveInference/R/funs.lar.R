@@ -652,7 +652,7 @@ plot.lar <- function(x, xvar=c("norm","step","lambda"), breaks=TRUE,
   }
 
   plot(c(),c(),xlim=range(xx,na.rm=T),ylim=range(beta,na.rm=T),
-       xlab=xlab,ylab="Coefficients",main="LAR path",...)
+       xlab=xlab,ylab="Coefficients",main="Least angle regression path",...)
   abline(h=0,lwd=2)
   matplot(xx,t(beta),type="l",lty=1,add=TRUE)
   if (breaks) abline(v=xx,lty=2)

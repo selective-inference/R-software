@@ -109,47 +109,26 @@ model selection. arXiv:1405.3920.
 \seealso{\code{\link{fs}}}
 
 \examples{
-set.seed(433)
-
-n=50
-p=10
-sigma=.7
-x=matrix(rnorm(n*p),n,p)
-
-x=scale(x,TRUE,TRUE)/sqrt(n-1)
-beta=c(4,2,0,0,rep(0,p-4))
-y=x\%*\%beta+sigma*rnorm(n)
-y=y-mean(y)
-#first run forward stepwise
- fsfit=fs(x,y)
-#
-# forward stepwise inference for each successive entry of a predictor; 
-#
-#  sigma estimated from mean squared residual
-#  
- aa=fsInf(fsfit)
-
-#NOT RUN
-# forward stepwise inference for fixed model of size 4, testing deletion of each predictor; 
-# known value of sigma used
-# aa2=fsInf(fsfit,sigma=sigma,type="all",k=4)
-
-# forward stepwise inference for  model chosen by AIC, testing deletion of each predictor; 
-# known value of sigma used
-# aa3=fsInf(fsfit,sigma=sigma,type="aic")
-#
-# states data example: predict life expectancy
-#x=state.x77[,-4]
-#y=state.x77[,4]
-#x=scale(x,TRUE,TRUE)
-#n=nrow(x)
-#  estimate sigma from cross-validated lasso fit
-#cvf=cv.glmnet(x,y)
-#sigmahat=estimateSigma(x,y,stand=FALSE)$sigmahat
-#
+set.seed(33)
+n = 50
+p = 10
+sigma = 1
+x = matrix(rnorm(n*p),n,p)
+beta = c(3,2,rep(0,p-2))
+y = x\%*\%beta + sigma*rnorm(n)
 # run forward stepwise
-#fsfit=fs(x,y,normalize=FALSE)
-#
-# compute p-values and confidence intervals
-# fsInf(fsfit,sigma=sigmahat)
+fsfit = fs(x,y)
+
+# compute sequential p-values and confidence intervals
+# (sigma estimated from full model)
+out.seq = fsInf(fsfit)
+out.seq
+
+# compute p-values and confidence intervals after AIC stopping
+out.aic = fsInf(fsfit,type="aic")
+out.aic
+
+# compute p-values and confidence intervals after 5 fixed steps
+out.fix = fsInf(fsfit,type="all",k=5)
+out.fix
 }
