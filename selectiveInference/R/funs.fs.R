@@ -446,12 +446,13 @@ plot.fs <- function(x, breaks=TRUE, omit.zeros=TRUE, var.labels=TRUE, ...) {
   xx = 1:k
   xlab = "Step"
   
-  if (omit.zeros) {
-    inds = matrix(FALSE,p,k)
-    for (i in 1:k) {
-      inds[i,] = beta[i,]!=0 | c(diff(beta[i,]!=0),F) | c(F,diff(beta[i,]!=0))
-    }
-    beta[!inds] = NA
+ if (omit.zeros) {
+   good.inds = matrix(FALSE,p,k)
+   good.inds[beta!=0] = TRUE
+   changes = t(apply(beta,1,diff))!=0
+   good.inds[cbind(changes,rep(F,p))] = TRUE
+   good.inds[cbind(rep(F,p),changes)] = TRUE
+   beta[!good.inds] = NA
   }
 
   plot(c(),c(),xlim=range(xx,na.rm=T),ylim=range(beta,na.rm=T),
