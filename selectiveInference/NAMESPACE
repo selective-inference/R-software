@@ -31,7 +31,7 @@ S3method("print", "groupfsInf")
 useDynLib("selectiveInference")
 import(glmnet)
 import(intervals)
-importFrom("graphics", "abline", "axis", "matplot")
-importFrom("stats", "dnorm", "lsfit", "pexp", "pnorm", "predict",
-           "qnorm", "rnorm", "sd", "uniroot", "dchisq", "model.matrix", "pchisq")
+importFrom("graphics", abline, axis, matplot)
+importFrom("stats", dnorm, lsfit, pexp, pnorm, predict,
+           qnorm, rnorm, sd, uniroot, dchisq, model.matrix, pchisq)
 
