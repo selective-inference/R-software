@@ -85,7 +85,6 @@ x=matrix(rnorm(n*p),n,p)
 #generate data
 beta=c(3,3,rep(0,p-2))
 y=x\%*\%beta+sigma*rnorm(n)
-y=y-mean(y)
 #run lar and plot results
 larfit=lar(x,y,verbose=TRUE)
 plot(larfit)                                      
