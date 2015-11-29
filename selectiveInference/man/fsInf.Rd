@@ -97,7 +97,7 @@ value chosen by the modified AIC scheme}
 }
 
 \references{
-Ryan Tibshirani, Jonathan Taylor, Richard Lockhart, Rob Tibshirani (2014).
+Ryan Tibshirani, Jonathan Taylor, Richard Lockhart, and Rob Tibshirani (2014).
 Exact post-selection inference for sequential regression procedures. arXiv:1401.3889.
 
 Joshua Loftus and Jonathan Taylor (2014). A significance test for forward stepwise
@@ -116,6 +116,7 @@ sigma = 1
 x = matrix(rnorm(n*p),n,p)
 beta = c(3,2,rep(0,p-2))
 y = x\%*\%beta + sigma*rnorm(n)
+
 # run forward stepwise
 fsfit = fs(x,y)
 

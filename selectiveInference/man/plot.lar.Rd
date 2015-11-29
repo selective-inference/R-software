@@ -32,20 +32,15 @@ Default is TRUE}
 \author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
 \examples{
-#generate data
-set.seed(33)
-n=200
-p=20
-sigma=1
-x=matrix(rnorm(n*p),n,p)
-beta=c(3,-2,rep(0,p-2))
-beta=c(rep(3,10),rep(0,p-10))
-y=x\%*\%beta+sigma*rnorm(n)
-y=y-mean(y)
-#
-#run lar
-larfit=lar(x,y)
-#
-#plot results
+set.seed(43)
+n = 50
+p = 10
+sigma = 1
+x = matrix(rnorm(n*p),n,p)
+beta = c(3,2,rep(0,p-2))
+y = x\%*\%beta + sigma*rnorm(n)
+
+# run LAR, plot results
+larfit = lar(x,y)
 plot(larfit)
 }

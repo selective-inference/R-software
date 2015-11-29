@@ -58,132 +58,93 @@ Maintainer: Rob Tibshirani <tibs@stanford.edu>
 }
 
 \references{
-Ryan Tibshirani, Jonathan Taylor, Richard Lockhart, Rob Tibshirani (2014).
+Ryan Tibshirani, Jonathan Taylor, Richard Lockhart, and Rob Tibshirani (2014).
 Exact post-selection inference for sequential regression procedures. arXiv:1401.3889.
 
-Jason Lee, Dennis Sun, Yuekai Sun, Jonathan Taylor (2013). 
+Jason Lee, Dennis Sun, Yuekai Sun, and Jonathan Taylor (2013). 
 Exact post-selection inference, with application to the lasso. arXiv:1311.6238.
 
-Stephen Reid, Jonathan Taylor, Rob Tibshirani (2014).
+Stephen Reid, Jonathan Taylor, and Rob Tibshirani (2014).
 Post-selection point and interval estimation of signal sizes in Gaussian samples.
 arXiv:1405.3340.
 }
 
 \examples{
-# forward stepwise:
-#
-#generate some data
-set.seed(43)
-n=50
-p=10
-sigma=.7
-x=matrix(rnorm(n*p),n,p)
-beta=c(4,2,0,0,rep(0,p-4))
-y=x\%*\%beta+sigma*rnorm(n)
-#
-#first run forward stepwise
-fsfit=fs(x,y)
-#
-# forward stepwise inference for each successive entry of a predictor; 
-#   sigma estimated from mean squared residual
-#   
-out=fsInf(fsfit)
-out
+set.seed(33)
+n = 50
+p = 10
+sigma = 1
+x = matrix(rnorm(n*p),n,p)
+beta = c(3,2,rep(0,p-2))
+y = x\%*\%beta + sigma*rnorm(n)
 
-##
-#NOT RUN
-#  lasso with fixed lambda
-#
-#set.seed(43)
-#n=50
-#p=10
-#sigma=.7
-#x=matrix(rnorm(n*p),n,p)
-#beta=c(4,2,0,0,rep(0,p-4))
-#y=x%*%beta+sigma*rnorm(n)
-#
-# first run  glmnet
-#gfit=glmnet(x,y,standardize=FALSE)
-#lam = .1
-#extract coef for a given lam; Note the 1/n factor in s!
-#bhat = coef(gfit, s=lam/n, exact=TRUE)[-1]
+# run forward stepwise
+fsfit = fs(x,y)
 
-# compute fixed lambda p-values and selection intervals
-#aa=fixedLassoInf(x,y,bhat,lam,sigma=sigma)
-#
-##least angle regression from mean squared residual
-#set.seed(43)
-#n=50
-#p=10
-#sigma=.7
-#x=matrix(rnorm(n*p),n,p)
-#beta=c(3,2,0,0,rep(0,p-4))
-#y=x%*%beta+sigma*rnorm(n)
-#first run lar
-# larfit=lar(x,y)
-# larfit
-#
-#lar inference for each successive entry of a predictor; sigma estimated
-#  from mean squared residual from least squares fit
-# aa=larInf(larfit)
+# compute sequential p-values and confidence intervals
+# (sigma estimated from full model)
+out.seq = fsInf(fsfit)
+out.seq
 
-##
-##many normal means
+# compute p-values and confidence intervals after AIC stopping
+out.aic = fsInf(fsfit,type="aic")
+out.aic
 
-#set.seed(12345)
-#n = 100 # sample size
-#signal = 3 # signal size
-#mu = c(rep(signal, floor (n/5)), rep(0, n-floor(n/5))) # 20% of elements get the signal; rest 0
-#y = mu + rnorm (n, 0, 1)
-#mmObj = manyMeans(y, bh.q=0.1)
-#
-#
-# Forward stepwise with grouped variables
-#set.seed(1)
-#n <- 40
-#p <- 20
-#index <- sort(rep(1:(p/2), 2))
-#steps <- 10
-#sparsity <- 5
-#snr <- 3
-#   x <- matrix(rnorm(n*p), nrow=n)
-#      beta <- rep(0, p)
-#      beta[which(index %in% 1:sparsity)] <- snr
-#      y <-  x %*% beta+rnorm(n)
-#fit <- groupfs(x, y, index=1:p, maxsteps = steps)
-#out<- groupfsInf(fit)
+# compute p-values and confidence intervals after 5 fixed steps
+out.fix = fsInf(fsfit,type="all",k=5)
+out.fix
 
+## NOT RUN---lasso at fixed lambda
+## first run glmnet
+# gfit = glmnet(x,y)
 
+## extract coef for a given lambda; note the 1/n factor!
+## (and we don't save the intercept term)
+# lambda = .1
+# beta = coef(gfit, s=lambda/n, exact=TRUE)[-1]
 
-##estimation of sigma for use in fsInf or larInf or fixedLassoInf
-#
-#set.seed(43)
-#n=50
-#p=10
-#sigma=.7
-#x=matrix(rnorm(n*p),n,p)
-#x=scale(x,TRUE,FALSE)
-#beta=c(3,2,0,0,rep(0,p-4))
-#y=x%*%beta+sigma*rnorm(n)
+## compute fixed lambda p-values and selection intervals
+# out = fixedLassoInf(x,y,beta,lambda,sigma=sigma)
+# out
 
-#out=estimateSigma(x,y)
+## NOT RUN---many normal means
+# set.seed(12345)
+# n = 100 
+# mu = c(rep(3,floor(n/5)), rep(0,n-floor(n/5))) 
+# y = mu + rnorm(n)
+# out = manyMeans(y, bh.q=0.1)
+# out
 
-##estimation of lambda  for use in fixedLassoInf
-set.seed(43)
-#n=50
-#p=10
-#sigma=.7
-#x=matrix(rnorm(n*p),n,p)
-#beta=c(3,2,0,0,rep(0,p-4))
-#y=x%*%beta+sigma*rnorm(n)
-#
-#estimate lambda using the  known value of sigma
-#lamhat=estimateLambda(x,sigma=.7)
-#first estimate  sigma
-#sigmahat=estimateSigma(x,y)$sigmahat
-#lamhat=estimateLambda(x,sigma=sigmahat)
-#
+## NOT RUN---forward stepwise with groups
+# set.seed(1)
+# n = 20
+# p = 40
+# x = matrix(rnorm(n*p), nrow=n)
+# index = sort(rep(1:(p/2), 2))
+# y = rnorm(n) + 2 * x[,1] - x[,4]
+# fit = groupfs(x, y, index, maxsteps = 5)
+# out = groupfsInf(fit)
+# out
 
+## NOT RUN---estimation of sigma for use in fsInf
+## (or larInf or fixedLassoInf)
+# set.seed(33)
+# n = 50
+# p = 10
+# sigma = 1
+# x = matrix(rnorm(n*p),n,p)
+# beta = c(3,2,rep(0,p-2))
+# y = x\%*\%beta + sigma*rnorm(n)
+
+## run forward stepwise
+# fsfit = fs(x,y)
+
+## estimate sigma
+# sigmahat = estimateSigma(x,y)$sigmahat
+
+## run sequential inference with estimated sigma
+# out = fsInf(fit,sigma=sigmahat)
+# out
 }
 \keyword{ package }
 

@@ -29,12 +29,14 @@ Default is TRUE}
 
 \examples{
 set.seed(33)
-n = 200
-p = 20
+n = 50
+p = 10
 sigma = 1
 x = matrix(rnorm(n*p),n,p)
-beta = c(rep(3,10),rep(0,p-10))
+beta = c(3,2,rep(0,p-2))
 y = x\%*\%beta + sigma*rnorm(n)
+
+# run forward stepwise, plot results
 fsfit = fs(x,y)
 plot(fsfit)
 }

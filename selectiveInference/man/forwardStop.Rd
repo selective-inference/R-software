@@ -27,28 +27,29 @@ Guarantees FDR control at the level alpha, for independent p-values.
 Step number for sequential stop.
 }
 \references{
-Max Grazier G'Sell, Stefan Wager, Alexandra Chouldechova, Rob Tibshirani (2014).
+Max Grazier G'Sell, Stefan Wager, Alexandra Chouldechova, and Rob Tibshirani (2014).
 Sequential selection procedures and Fflse Discovery Rate Control. arXiv:1309.5352.
 To appear in Journal of the Royal Statistical Society: Series B.
 }
 \author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
 \examples{
-set.seed(433)
-n=50
-p=10
-sigma=.7
-x=matrix(rnorm(n*p),n,p)
-beta=c(4,2,0,0,rep(0,p-4))
-y=x\%*\%beta+sigma*rnorm(n)
-y=y-mean(y)
-#
-#first run forward stepwise
- fsfit=fs(x,y)
-#
-# run inference function 
- out=fsInf(fsfit)
-#
+set.seed(33)
+n = 50
+p = 10
+sigma = 1
+x = matrix(rnorm(n*p),n,p)
+beta = c(3,2,rep(0,p-2))
+y = x\%*\%beta + sigma*rnorm(n)
+
+# run forward stepwise
+fsfit = fs(x,y)
+
+# compute sequential p-values and confidence intervals
+# (sigma estimated from full model)
+out = fsInf(fsfit)
+out
+
 # estimate optimal stopping point
- forwardStop(out$pv, alpha=.10)
+forwardStop(out$pv, alpha=.10)
 }

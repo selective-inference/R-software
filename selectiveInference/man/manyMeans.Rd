@@ -43,7 +43,7 @@ were selected by the procedure (either BH(q) or top-K). Labelled "Selind" in out
 }
 
 \references{
-Stephen Reid, Jonathan Taylor, Rob Tibshirani (2014).
+Stephen Reid, Jonathan Taylor, and Rob Tibshirani (2014).
 Post-selection point and interval estimation of signal sizes in Gaussian samples.
 arXiv:1405.3340.
 }
@@ -51,12 +51,10 @@ arXiv:1405.3340.
 \author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
 \examples{
-
-
 set.seed(12345)
-n = 100 # sample size
-signal = 3 # signal size
-mu = c(rep(signal, floor (n/5)), rep(0, n-floor(n/5))) # 20% of elements get the signal; rest 0
-y = mu + rnorm (n, 0, 1)
-out  = manyMeans(y, bh.q=0.1)
+n = 100 
+mu = c(rep(3,floor(n/5)), rep(0,n-floor(n/5))) 
+y = mu + rnorm(n)
+out = manyMeans(y, bh.q=0.1)
+out
 }

@@ -62,10 +62,10 @@ to enter along the path}
 }
 
 \references{
-Brad Efron, Trevor Hastie, Iain Johnstone and Rob Tibshirani (2002).
+Brad Efron, Trevor Hastie, Iain Johnstone, and Rob Tibshirani (2002).
 Least angle regression. Annals of Statistics (with discussion).
 
-See also the descriptions in Trevor Hastie, Rob Tibshirani and 
+See also the descriptions in Trevor Hastie, Rob Tibshirani, and 
 Jerome Friedman (2002, 2009). Elements of Statistical Learning.
 }
 
@@ -76,17 +76,20 @@ Jerome Friedman (2002, 2009). Elements of Statistical Learning.
 }
 
 \examples{
+set.seed(43)
+n = 50
+p = 10
+sigma = 1
+x = matrix(rnorm(n*p),n,p)
+beta = c(3,2,rep(0,p-2))
+y = x\%*\%beta + sigma*rnorm(n)
 
-#generate data
-set.seed(33)
-n=20
-p=10
-sigma=1
-x=matrix(rnorm(n*p),n,p)
-beta=c(3,3,rep(0,p-2))
-y=x\%*\%beta+sigma*rnorm(n)
-#
-#run lar and plot results
-larfit=lar(x,y,verbose=TRUE)
-plot(larfit)                                      
+# run LAR, plot results
+larfit = lar(x,y)
+plot(larfit)
+
+# compute sequential p-values and confidence intervals
+# (sigma estimated from full model)
+out = larInf(larfit)
+out                                    
 }
