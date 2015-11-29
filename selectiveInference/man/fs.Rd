@@ -32,12 +32,14 @@ the interface for the \code{lar} function)
 
 \details{
 This function implements forward stepwise regression, adding the predictor at each 
-step that maximizes the absolute correlation between the predictors-- orthogonalized wrt the current model--  and the residual. This entry
+step that maximizes the absolute correlation between the predictors---once 
+orthogonalized with respect to the current model---and the residual. This entry
 criterion is standard, and is equivalent to choosing the variable that achieves 
 the biggest drop in RSS at each step; it is used, e.g., by the \code{step} function
-in R. Note that, for example,  the \code{lars} package implements a stepwise option (with type="step"), but
-uses a (mildly) different entry criterion, based on maximal absolute correlation between the original (non-orthogonalized)
-predictors and the residual. 
+in R. Note that, for example, the \code{lars} package implements a stepwise option 
+(with type="step"), but uses a (mildly) different entry criterion, based on maximal
+absolute correlation between the original (non-orthogonalized) predictors and the 
+residual. 
 }
 \value{
 \item{action}{Vector of predictors in order of entry}
@@ -75,8 +77,10 @@ sigma = 1
 x = matrix(rnorm(n*p),n,p)
 beta = c(3,2,rep(0,p-2))
 y = x\%*\%beta + sigma*rnorm(n)
-# run forward stepwise
+
+# run forward stepwise, plot results
 fsfit = fs(x,y)
+plot(fsfit)
 
 # compute sequential p-values and confidence intervals
 # (sigma estimated from full model)

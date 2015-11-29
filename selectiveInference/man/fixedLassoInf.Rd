@@ -108,55 +108,37 @@ to alpha/2, and can be used for error-checking purposes.
 }
 
 \references{
-Jason Lee, Dennis Sun, Yuekai Sun, Jonathan Taylor (2013). 
+Jason Lee, Dennis Sun, Yuekai Sun, and Jonathan Taylor (2013). 
 Exact post-selection inference, with application to the lasso. arXiv:1311.6238.
 }
 \author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
 \examples{
-
-#generate data
 set.seed(43)
-n=50
-p=10
-sigma=.7
-x=matrix(rnorm(n*p),n,p)
-beta=c(3,2,0,0,rep(0,p-4))
-y=x\%*\%beta+sigma*rnorm(n)
-y=y-mean(y)
-#
-# first run  glmnet
-gfit=glmnet(x,y)
+n = 50
+p = 10
+sigma = 1
+x = matrix(rnorm(n*p),n,p)
+beta = c(3,2,rep(0,p-2))
+y = x\%*\%beta + sigma*rnorm(n)
+
+# first run glmnet
+gfit = glmnet(x,y)
+
+# extract coef for a given lambda; note the 1/n factor!
+# (and we don't save the intercept term)
 lambda = .1
-#extract coef for a given lambda; Note the 1/n factor!
 beta = coef(gfit, s=lambda/n, exact=TRUE)[-1]
 
 # compute fixed lambda p-values and selection intervals
-out=fixedLassoInf(x,y,beta,lambda,sigma=sigma)
+out = fixedLassoInf(x,y,beta,lambda,sigma=sigma)
 out
-#
-#NOT RUN
-# as above, but use lar function instead to get initial lasso fit (should get same result)
-# fit=lar(x,y)
-# beta=coef(fit,s=lambda,mode="lambda")
-# fixedLassoInf(x,y,beta,lambda,sigma=sigma)
 
-
-##
-# states data example: predict life expectancy
-#x=state.x77[,-4]
-#y=state.x77[,4]
-#x=scale(x,TRUE,TRUE)
-#n=nrow(x)
-#  estimate sigma from cross-validated lasso fit
-#  cvf=cv.glmnet(x,y)
-# sigmahat=estimateSigma(x,y,stand=FALSE)$sigmahat
-#
-# fit lasso
-# lambda=n*cvf$lambda.min
-# gfit=glmnet(x,y,standardize=FALSE)
-# bhat=coef(gfit, s=lambda/n, exact=TRUE)[-1]
-#
-# compute p-values and confidence intervals
-# fixedLassoInf(x,y,bhat,lambda,sigma=sigmahat)
+## NOT RUN
+## as above, but use lar function instead to get initial 
+## lasso fit (should get same results)
+# lfit = lar(x,y)
+# beta = coef(lfit,s=lambda,mode="lambda")
+# out2 = fixedLassoInf(x,y,beta,lambda,sigma=sigma)
+# out2
 }

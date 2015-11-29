@@ -26,41 +26,39 @@ This function estimates the standard deviation of the noise, in a linear regresi
 A lasso regression is fit, using cross-validation to estimate the tuning parameter lambda.
 With sample size n, yhat equal to the predicted values and df being the number of nonzero 
 coefficients from the lasso fit, the estimate of sigma is \code{sqrt(sum((y-yhat)^2) / (n-df-1))}.
-Important: if you are using glmnet to compute the lasso estimate, be sure to use the same values
-for the intercept and standardized argument in glmnet and estimateSigma. Same applies to  fs or lar,
-where the argument for standardization is called "normalize"
+Important: if you are using glmnet to compute the lasso estimate, be sure to use the settings
+for the "intercept" and "standardize" arguments in glmnet and estimateSigma. Same applies to fs 
+or lar, where the argument for standardization is called "normalize".
 }
 \value{
 \item{sigmahat}{The estimate of sigma}
 \item{df}{The degrees of freedom of lasso fit used}
 }
 \references{
-Stephen Reid, Jerome Friedman and Rob Tibshirani (2014). 
+Stephen Reid, Jerome Friedman, and Rob Tibshirani (2014). 
 A study of error variance estimation in lasso regression. arXiv:1311.5274.
 }
 
 \author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
 \examples{
-# generate data
-#
-set.seed(43)
-n=50
-p=10
-sigma=.7
-x=matrix(rnorm(n*p),n,p)
-beta=c(3,2,0,0,rep(0,p-4))
-y=x\%*\%beta+sigma*rnorm(n)
-y=y-mean(y)
-#
-# Estimate sigma
-out=estimateSigma(x,y)
-# #run forwrad stepwise
-fit=fs(x,y)
-#
-# run inference functions
-out2=fsInf(fit,sigma=out$sigmahat)
-out2
+set.seed(33)
+n = 50
+p = 10
+sigma = 1
+x = matrix(rnorm(n*p),n,p)
+beta = c(3,2,rep(0,p-2))
+y = x\%*\%beta + sigma*rnorm(n)
+
+# run forward stepwise
+fsfit = fs(x,y)
+
+# estimate sigma
+sigmahat = estimateSigma(x,y)$sigmahat
+
+# run sequential inference with estimated sigma
+out = fsInf(fsfit,sigma=sigmahat)
+out
 }
 
 

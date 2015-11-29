@@ -19,7 +19,8 @@
 #' index = sort(rep(1:20, 2))
 #' y = rnorm(20) + 2 * x[,1] - x[,4]
 #' fit = groupfs(x, y, index, maxsteps = 5)
-#' pvals = groupfsInf(fit)
+#' out = groupfsInf(fit)
+#' out
 #' @seealso \code{\link{groupfsInf}}, \code{\link{factorDesign}}.
 groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE, center = TRUE, normalize = TRUE, aicstop = 0, verbose = FALSE) {
 

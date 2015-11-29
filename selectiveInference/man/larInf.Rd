@@ -102,7 +102,7 @@ value chosen by the modified AIC scheme}
 }
 
 \references{
-Ryan Tibshirani, Jonathan Taylor, Richard Lockhart, Rob Tibshirani (2014).
+Ryan Tibshirani, Jonathan Taylor, Richard Lockhart, and Rob Tibshirani (2014).
 Exact post-selection inference for sequential regression procedures. arXiv:1401.3889.
 }
 
@@ -113,37 +113,28 @@ Exact post-selection inference for sequential regression procedures. arXiv:1401.
 }
 
 \examples{
-
-#generate data
 set.seed(43)
-n=50
-p=10
-sigma=.7
-x=matrix(rnorm(n*p),n,p)
-beta=c(3,2,0,0,rep(0,p-4))
-y=x\%*\%beta+sigma*rnorm(n)
-#first run lar
-larfit=lar(x,y)
-larfit
-#
-#lar inference for each successive entry of a predictor; sigma estimated
-#  from mean squared residual from least squares fit
-out=larInf(larfit)
-out
-#
-#NOT RUN
-# states data example: predict life expectancy
-#x=state.x77[,-4]
-#y=state.x77[,4]
-#n=nrow(x)
-#  estimate sigma from cross-validated lasso fit
-#cvf=cv.glmnet(x,y)
-#sigmahat=estimateSigma(x,y)$sigmahat
-#
+n = 50
+p = 10
+sigma = 1
+x = matrix(rnorm(n*p),n,p)
+beta = c(3,2,rep(0,p-2))
+y = x\%*\%beta + sigma*rnorm(n)
+
 # run LAR
-#larfit=lar(x,y)
-#
-# compute p-values and confidence intervals
-# larInf(larfit,sigma=sigmahat)
+larfit = lar(x,y)
+
+# compute sequential p-values and confidence intervals
+# (sigma estimated from full model)
+out.seq = larInf(larfit)
+out.seq
+
+# compute p-values and confidence intervals after AIC stopping
+out.aic = larInf(larfit,type="aic")
+out.aic
+
+# compute p-values and confidence intervals after 5 fixed steps
+out.fix = larInf(larfit,type="all",k=5)
+out.fix
 }
 
