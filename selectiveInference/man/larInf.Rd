@@ -120,28 +120,28 @@ n=50
 p=10
 sigma=.7
 x=matrix(rnorm(n*p),n,p)
-x=scale(x,TRUE,TRUE)/sqrt(n-1)
 beta=c(3,2,0,0,rep(0,p-4))
 y=x\%*\%beta+sigma*rnorm(n)
 #first run lar
- larfit=lar(x,y)
+larfit=lar(x,y)
+larfit
 #
 #lar inference for each successive entry of a predictor; sigma estimated
 #  from mean squared residual from least squares fit
- out=larInf(larfit)
+out=larInf(larfit)
+out
 #
 #NOT RUN
 # states data example: predict life expectancy
 #x=state.x77[,-4]
 #y=state.x77[,4]
-#x=scale(x,TRUE,TRUE)
 #n=nrow(x)
 #  estimate sigma from cross-validated lasso fit
 #cvf=cv.glmnet(x,y)
-#sigmahat=estimateSigma(x,y,stand=FALSE)$sigmahat
+#sigmahat=estimateSigma(x,y)$sigmahat
 #
 # run LAR
-#larfit=lar(x,y,normalize=FALSE)
+#larfit=lar(x,y)
 #
 # compute p-values and confidence intervals
 # larInf(larfit,sigma=sigmahat)

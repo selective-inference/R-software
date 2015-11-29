@@ -39,15 +39,16 @@ n=50
 p=10
 sigma=.7
 x=matrix(rnorm(n*p),n,p)
-x=scale(x,TRUE,TRUE)/sqrt(n-1)
 beta=c(4,2,0,0,rep(0,p-4))
 y=x\%*\%beta+sigma*rnorm(n)
 y=y-mean(y)
+#
 #first run forward stepwise
  fsfit=fs(x,y)
 #
 # run inference function 
  out=fsInf(fsfit)
+#
 # estimate optimal stopping point
  forwardStop(out$pv, alpha=.10)
 }
