@@ -38,16 +38,20 @@ Either a vector/matrix of predictions, or a vector/matrix of coefficients.
 \author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
 \examples{
+#generate data
 set.seed(33)
 n=200
 p=20
 sigma=1
 x=matrix(rnorm(n*p),n,p)
-x=scale(x,TRUE,TRUE)/sqrt(n-1)
-#generate y
+
 beta=c(3,-2,rep(0,p-2))
 beta=c(rep(3,10),rep(0,p-10))
 y=x\%*\%beta+sigma*rnorm(n)
+#run lar
 larfit=lar(x,y)
+# predict from lar fit
 fit=predict.lar(larfit,x,s=3.5,type="fit")
+fit
+
 }

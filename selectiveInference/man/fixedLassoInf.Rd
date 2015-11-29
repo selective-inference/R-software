@@ -121,22 +121,23 @@ n=50
 p=10
 sigma=.7
 x=matrix(rnorm(n*p),n,p)
-x=scale(x,TRUE,TRUE)/sqrt(n-1)
 beta=c(3,2,0,0,rep(0,p-4))
 y=x\%*\%beta+sigma*rnorm(n)
 y=y-mean(y)
+#
 # first run  glmnet
-gfit=glmnet(x,y,standardize=FALSE)
+gfit=glmnet(x,y)
 lambda = .1
 #extract coef for a given lambda; Note the 1/n factor!
 beta = coef(gfit, s=lambda/n, exact=TRUE)[-1]
 
 # compute fixed lambda p-values and selection intervals
 out=fixedLassoInf(x,y,beta,lambda,sigma=sigma)
+out
 #
 #NOT RUN
 # as above, but use lar function instead to get initial lasso fit (should get same result)
-# fit=lar(x,y,normalize=FALSE)
+# fit=lar(x,y)
 # beta=coef(fit,s=lambda,mode="lambda")
 # fixedLassoInf(x,y,beta,lambda,sigma=sigma)
 

@@ -78,17 +78,17 @@ n=50
 p=10
 sigma=.7
 x=matrix(rnorm(n*p),n,p)
-x=scale(x,TRUE,TRUE)/sqrt(n-1)
 beta=c(4,2,0,0,rep(0,p-4))
 y=x\%*\%beta+sigma*rnorm(n)
 #
 #first run forward stepwise
- fsfit=fs(x,y)
+fsfit=fs(x,y)
 #
 # forward stepwise inference for each successive entry of a predictor; 
 #   sigma estimated from mean squared residual
 #   
 out=fsInf(fsfit)
+out
 
 ##
 #NOT RUN
@@ -99,7 +99,6 @@ out=fsInf(fsfit)
 #p=10
 #sigma=.7
 #x=matrix(rnorm(n*p),n,p)
-#x=scale(x,TRUE,TRUE)/sqrt(n-1)
 #beta=c(4,2,0,0,rep(0,p-4))
 #y=x%*%beta+sigma*rnorm(n)
 #
@@ -118,11 +117,11 @@ out=fsInf(fsfit)
 #p=10
 #sigma=.7
 #x=matrix(rnorm(n*p),n,p)
-#x=scale(x,TRUE,TRUE)/sqrt(n-1)
 #beta=c(3,2,0,0,rep(0,p-4))
 #y=x%*%beta+sigma*rnorm(n)
 #first run lar
 # larfit=lar(x,y)
+# larfit
 #
 #lar inference for each successive entry of a predictor; sigma estimated
 #  from mean squared residual from least squares fit
@@ -175,7 +174,6 @@ set.seed(43)
 #p=10
 #sigma=.7
 #x=matrix(rnorm(n*p),n,p)
-#x=scale(x,T,F)
 #beta=c(3,2,0,0,rep(0,p-4))
 #y=x%*%beta+sigma*rnorm(n)
 #
