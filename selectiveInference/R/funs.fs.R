@@ -30,7 +30,8 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   working_x = scale(x,center=F,scale=sqrt(colSums(x^2)))
   score = t(working_x)%*%y
   i_hit = which.max(abs(score))   # Hitting coordinate
-  sign_hit = Sign(score[i_hit])          # Sign
+  sign_hit = Sign(score[i_hit])   # Sign
+  signs = sign_hit                # later signs will be appended to `signs`
 
   if (verbose) {
     cat(sprintf("1. Adding variable %i, |A|=%i...",i_hit,1))
@@ -56,15 +57,15 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   gi = 0                     # index into rows of Gamma matrix
 
   Gamma = matrix(0,gbuf,n)
-  Gamma[gi+Seq(1,p-1),] = t(s*working_x[,i_hit]+working_x[,-i_hit]); gi = gi+p-1
-  Gamma[gi+Seq(1,p-1),] = t(s*working_x[,i_hit]-working_x[,-i_hit]); gi = gi+p-1
-  Gamma[gi+1,] = t(s*working_x[,i_hit]); gi = gi+1
+  Gamma[gi+Seq(1,p-1),] = t(sign_hit*working_x[,i_hit]+working_x[,-i_hit]); gi = gi+p-1
+  Gamma[gi+Seq(1,p-1),] = t(sign_hit*working_x[,i_hit]-working_x[,-i_hit]); gi = gi+p-1
+  Gamma[gi+1,] = t(sign_hit*working_x[,i_hit]); gi = gi+1
 
   # nconstraint
   nconstraint = numeric(buf)
   vreg = matrix(0,buf,n)
   nconstraint[1] = gi
-  vreg[1,] = s*x[,i_hit] / sum(x[,i_hit]^2)
+  vreg[1,] = sign_hit*x[,i_hit] / sum(x[,i_hit]^2)
 
   # Other things to keep track of, but not return
   r = 1                      # Size of active set
@@ -118,7 +119,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
       sign_score = Sign(score)
       abs_score = sign_score * score
       i_hit = which.max(abs_score)
-      shit = sign_score[i_hit]
+      sign_hit = sign_score[i_hit]
     }
     
     # Record the solution
@@ -137,13 +138,13 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
 
     # nconstraint, regression contrast
     nconstraint[k] = gi
-    vreg[k,] = shit*X_inactive_resid[,i_hit] / sum(X_inactive_resid[,i_hit]^2)
+    vreg[k,] = sign_hit*X_inactive_resid[,i_hit] / sum(X_inactive_resid[,i_hit]^2)
 
     # Update all of the variables
     r = r+1
     A = c(A,I[i_hit])
     I = I[-i_hit]
-    s = c(s,shit)
+    signs = c(signs,sign_hit)
     X_active = cbind(X_active,X_inactive[,i_hit])
     X_inactive = X_inactive[,-i_hit,drop=FALSE]
 
@@ -201,7 +202,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   # Assign column names
   colnames(beta) = as.character(Seq(1,k-1))
 
-  out = list(action=action,sign=s,df=df,beta=beta,
+  out = list(action=action,sign=signs,df=df,beta=beta,
     completepath=completepath,bls=bls,
     Gamma=Gamma,nconstraint=nconstraint,vreg=vreg,x=x,y=y,bx=bx,by=by,sx=sx,
     intercept=intercept,normalize=normalize,call=this.call) 
