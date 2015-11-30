@@ -27,61 +27,70 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
 
   #####
   # Find the first variable to enter and its sign
-  xx = scale(x,center=F,scale=sqrt(colSums(x^2)))
-  uhat = t(xx)%*%y
-  ihit = which.max(abs(uhat))   # Hitting coordinate
-  s = Sign(uhat[ihit])          # Sign
+  working_x = scale(x,center=F,scale=sqrt(colSums(x^2)))
+  score = t(working_x)%*%y
+  i_hit = which.max(abs(score))   # Hitting coordinate
+  sign_hit = Sign(score[i_hit])   # Sign
+  signs = sign_hit                # later signs will be appended to `signs`
 
   if (verbose) {
-    cat(sprintf("1. Adding variable %i, |A|=%i...",ihit,1))
+    cat(sprintf("1. Adding variable %i, |A|=%i...",i_hit,1))
   }
   
   # Now iteratively find the new FS estimates
 
   # Things to keep track of, and return at the end
+  # JT: I guess the "buf" just saves us from making huge
+  # matrices we don't need?
+
   buf = min(maxsteps,500)
   action = numeric(buf)      # Actions taken
   df = numeric(buf)          # Degrees of freedom
   beta = matrix(0,p,buf)     # FS estimates
   
-  action[1] = ihit
+  action[1] = i_hit
   df[1] = 0
   beta[,1] = 0
 
   # Gamma matrix!
   gbuf = max(2*p*3,2000)     # Space for 3 steps, at least
-  gi = 0
-  Gamma = matrix(0,gbuf,n)
-  Gamma[gi+Seq(1,p-1),] = t(s*xx[,ihit]+xx[,-ihit]); gi = gi+p-1
-  Gamma[gi+Seq(1,p-1),] = t(s*xx[,ihit]-xx[,-ihit]); gi = gi+p-1
-  Gamma[gi+1,] = t(s*xx[,ihit]); gi = gi+1
+  gi = 0                     # index into rows of Gamma matrix
 
-  # nk
-  nk = numeric(buf)
+  Gamma = matrix(0,gbuf,n)
+  Gamma[gi+Seq(1,p-1),] = t(sign_hit*working_x[,i_hit]+working_x[,-i_hit]); gi = gi+p-1
+  Gamma[gi+Seq(1,p-1),] = t(sign_hit*working_x[,i_hit]-working_x[,-i_hit]); gi = gi+p-1
+  Gamma[gi+1,] = t(sign_hit*working_x[,i_hit]); gi = gi+1
+
+  # nconstraint
+  nconstraint = numeric(buf)
   vreg = matrix(0,buf,n)
-  nk[1] = gi
-  vreg[1,] = s*x[,ihit] / sum(x[,ihit]^2)
+  nconstraint[1] = gi
+  vreg[1,] = sign_hit*x[,i_hit] / sum(x[,i_hit]^2)
 
   # Other things to keep track of, but not return
   r = 1                      # Size of active set
-  A = ihit                   # Active set
-  I = Seq(1,p)[-ihit]        # Inactive set
-  X1 = x[,ihit,drop=FALSE]   # Matrix X[,A]
-  X2 = x[,-ihit,drop=FALSE]  # Matrix X[,I]
+  A = i_hit                  # Active set -- JT: isn't this basically the same as action?
+  I = Seq(1,p)[-i_hit]       # Inactive set
+  X_active = x[,i_hit,drop=FALSE]   # Matrix X[,A]
+  X_inactive = x[,-i_hit,drop=FALSE]  # Matrix X[,I]
   k = 2                      # What step are we at?
+                             # JT Why keep track of r and k instead of just saying k=r+1?
 
-  # Compute a skinny QR decomposition of X1
-  obj = qr(X1)
-  Q = qr.Q(obj,complete=TRUE)
-  Q1 = Q[,1,drop=FALSE];
-  Q2 = Q[,-1,drop=FALSE]
-  R = qr.R(obj)
+  # Compute a skinny QR decomposition of X_active
+  # JT: obs was used as variable name above -- this is something different, no?
+  # changed it to qr_X
+
+  qr_X = qr(X_active)
+  Q = qr.Q(qr_X,complete=TRUE)
+  Q_active = Q[,1,drop=FALSE];
+  Q_inactive = Q[,-1,drop=FALSE]
+  R = qr.R(qr_X)
   
   # Throughout the algorithm, we will maintain
-  # the decomposition X1 = Q1*R. Dimenisons:
-  # X1: n x r
-  # Q1: n x r
-  # Q2: n x (n-r)
+  # the decomposition X_active = Q_active*R. Dimensions:
+  # X_active: n x r
+  # Q_active: n x r
+  # Q_inactive: n x (n-r)
   # R:  r x r
     
   while (k<=maxsteps) {
@@ -92,56 +101,60 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
       action = c(action,numeric(buf))
       df = c(df,numeric(buf))
       beta = cbind(beta,matrix(0,p,buf))
-      nk = c(nk,numeric(buf))
+      nconstraint = c(nconstraint,numeric(buf))
       vreg = rbind(vreg,matrix(0,buf,n))
     }
 
     # Key quantities for the next entry
-    a = backsolve(R,t(Q1)%*%y)
-    X2perp = X2 - X1 %*% backsolve(R,t(Q1)%*%X2)
-    xx = scale(X2perp,center=F,scale=sqrt(colSums(X2perp^2)))
-    aa = as.numeric(t(xx)%*%y)
+
+    X_inactive_resid = X_inactive - X_active %*% backsolve(R,t(Q_active)%*%X_inactive)
+    working_x = scale(X_inactive_resid,center=F,scale=sqrt(colSums(X_inactive_resid^2)))
+    score = as.numeric(t(working_x)%*%y)
     
     # If the inactive set is empty, nothing will hit
     if (r==min(n-intercept,p)) break
 
     # Otherwise find the next hitting time
     else {
-      shits = Sign(aa)
-      hits = shits * aa
-      ihit = which.max(hits)
-      shit = shits[ihit]
+      sign_score = Sign(score)
+      abs_score = sign_score * score
+      i_hit = which.max(abs_score)
+      sign_hit = sign_score[i_hit]
     }
     
     # Record the solution
-    action[k] = I[ihit]
+    # what is the difference between "action" and "A"?
+
+    action[k] = I[i_hit] 
     df[k] = r
-    beta[A,k] = a
+    beta[A,k] = backsolve(R,t(Q_active)%*%y)
         
     # Gamma matrix!
     if (gi + 2*p > nrow(Gamma)) Gamma = rbind(Gamma,matrix(0,2*p+gbuf,n))
-    xx = t(shits*t(xx))
-    Gamma[gi+Seq(1,p-r),] = t(xx); gi = gi+p-r
-    Gamma[gi+Seq(1,p-r-1),] = t(xx[,ihit]-xx[,-ihit]); gi = gi+p-r-1
-    Gamma[gi+1,] = t(xx[,ihit]); gi = gi+1
+    working_x = t(sign_score*t(working_x))
+    Gamma[gi+Seq(1,p-r),] = t(working_x); gi = gi+p-r
+    Gamma[gi+Seq(1,p-r-1),] = t(working_x[,i_hit]-working_x[,-i_hit]); gi = gi+p-r-1
+    Gamma[gi+1,] = t(working_x[,i_hit]); gi = gi+1
 
-    # nk, regression contrast
-    nk[k] = gi
-    vreg[k,] = shit*X2perp[,ihit] / sum(X2perp[,ihit]^2)
+    # nconstraint, regression contrast
+    nconstraint[k] = gi
+    vreg[k,] = sign_hit*X_inactive_resid[,i_hit] / sum(X_inactive_resid[,i_hit]^2)
 
     # Update all of the variables
     r = r+1
-    A = c(A,I[ihit])
-    I = I[-ihit]
-    s = c(s,shit)
-    X1 = cbind(X1,X2[,ihit])
-    X2 = X2[,-ihit,drop=FALSE]
+    A = c(A,I[i_hit])
+    I = I[-i_hit]
+    signs = c(signs,sign_hit)
+    X_active = cbind(X_active,X_inactive[,i_hit])
+    X_inactive = X_inactive[,-i_hit,drop=FALSE]
 
     # Update the QR decomposition
-    obj = updateQR(Q1,Q2,R,X1[,r])
-    Q1 = obj$Q1
-    Q2 = obj$Q2
-    R = obj$R
+    updated_qr = updateQR(Q_active,Q_inactive,R,X_active[,r])
+    Q_active = updated_qr$Q1
+
+    # JT: why do we store Q_inactive? Doesn't seem to be used.
+    Q_inactive = updated_qr$Q2
+    R = updated_qr$R
      
     if (verbose) {
       cat(sprintf("\n%i. Adding variable %i, |A|=%i...",k,A[r],r))
@@ -156,7 +169,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   df = df[Seq(1,k-1),drop=FALSE]
   beta = beta[,Seq(1,k-1),drop=FALSE]
   Gamma = Gamma[Seq(1,gi),,drop=FALSE]
-  nk = nk[Seq(1,k-1)]
+  nconstraint = nconstraint[Seq(1,k-1)]
   vreg = vreg[Seq(1,k-1),,drop=FALSE]
   
   # If we reached the maximum number of steps
@@ -189,9 +202,9 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   # Assign column names
   colnames(beta) = as.character(Seq(1,k-1))
 
-  out = list(action=action,sign=s,df=df,beta=beta,
+  out = list(action=action,sign=signs,df=df,beta=beta,
     completepath=completepath,bls=bls,
-    Gamma=Gamma,nk=nk,vreg=vreg,x=x,y=y,bx=bx,by=by,sx=sx,
+    Gamma=Gamma,nconstraint=nconstraint,vreg=vreg,x=x,y=y,bx=bx,by=by,sx=sx,
     intercept=intercept,normalize=normalize,call=this.call) 
   class(out) = "fs"
   return(out)
@@ -250,7 +263,7 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
   p = ncol(x)
   n = nrow(x)
   G = obj$Gamma
-  nk = obj$nk
+  nconstraint = obj$nconstraint
   sx = obj$sx
 
   if (is.null(sigma)) {
@@ -278,8 +291,8 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
     for (j in 1:k) {
       if (verbose) cat(sprintf("Inference for variable %i ...\n",vars[j]))
 
-      Gj = G[1:nk[j],]
-      uj = rep(0,nk[j])
+      Gj = G[1:nconstraint[j],]
+      uj = rep(0,nconstraint[j])
       vj = vreg[j,]
       mj = sqrt(sum(vj^2)) 
       vj = vj / mj              # Standardize (divide by norm of vj)
@@ -304,13 +317,13 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
       out = aicStop(x,y,obj$action[1:k],obj$df[1:k],sigma,mult,ntimes)
       khat = out$khat
       m = out$stopped * ntimes
-      G = rbind(out$G,G[1:nk[khat+m],])  # Take ntimes more steps past khat
-      u = c(out$u,rep(0,nk[khat+m]))     # (if we need to)
+      G = rbind(out$G,G[1:nconstraint[khat+m],])  # Take ntimes more steps past khat
+      u = c(out$u,rep(0,nconstraint[khat+m]))     # (if we need to)
       kk = khat
     }
     else {
-      G = G[1:nk[k],]
-      u = rep(0,nk[k])
+      G = G[1:nconstraint[k],]
+      u = rep(0,nconstraint[k])
       kk = k
     }
     
@@ -347,6 +360,8 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
     }
   }
   
+  # JT: why do we output vup, vlo? Are they used somewhere else?
+
   out = list(type=type,k=k,khat=khat,pv=pv,ci=ci,
     tailarea=tailarea,vlo=vlo,vup=vup,vmat=vmat,y=y,
     vars=vars,sign=sign,sigma=sigma,alpha=alpha,
