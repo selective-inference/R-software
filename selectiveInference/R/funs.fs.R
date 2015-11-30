@@ -111,6 +111,10 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
     working_x = scale(X_inactive_resid,center=F,scale=sqrt(colSums(X_inactive_resid^2)))
     score = as.numeric(t(working_x)%*%y)
     
+    beta_cur = backsolve(R,t(Q_active)%*%y) # must be computed before the break
+                                            # so we have it if we have 
+                                            # completed the path
+
     # If the inactive set is empty, nothing will hit
     if (r==min(n-intercept,p)) break
 
@@ -125,7 +129,6 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
     # Record the solution
     # what is the difference between "action" and "A"?
 
-    beta_cur = backsolve(R,t(Q_active)%*%y)
     action[k] = I[i_hit] 
     df[k] = r
     beta[A,k] = beta_cur 
