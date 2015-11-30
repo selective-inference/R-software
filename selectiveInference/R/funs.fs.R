@@ -27,8 +27,8 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
 
   #####
   # Find the first variable to enter and its sign
-  xx = scale(x,center=F,scale=sqrt(colSums(x^2)))
-  uhat = t(xx)%*%y
+  working_x = scale(x,center=F,scale=sqrt(colSums(x^2)))
+  uhat = t(working_x)%*%y
   ihit = which.max(abs(uhat))   # Hitting coordinate
   s = Sign(uhat[ihit])          # Sign
 
@@ -50,16 +50,17 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
 
   # Gamma matrix!
   gbuf = max(2*p*3,2000)     # Space for 3 steps, at least
-  gi = 0
-  Gamma = matrix(0,gbuf,n)
-  Gamma[gi+Seq(1,p-1),] = t(s*xx[,ihit]+xx[,-ihit]); gi = gi+p-1
-  Gamma[gi+Seq(1,p-1),] = t(s*xx[,ihit]-xx[,-ihit]); gi = gi+p-1
-  Gamma[gi+1,] = t(s*xx[,ihit]); gi = gi+1
+  gi = 0 # index into rows of Gamma matrix
 
-  # nk
-  nk = numeric(buf)
+  Gamma = matrix(0,gbuf,n)
+  Gamma[gi+Seq(1,p-1),] = t(s*working_x[,ihit]+working_x[,-ihit]); gi = gi+p-1
+  Gamma[gi+Seq(1,p-1),] = t(s*working_x[,ihit]-working_x[,-ihit]); gi = gi+p-1
+  Gamma[gi+1,] = t(s*working_x[,ihit]); gi = gi+1
+
+  # nconstraint
+  nconstraint = numeric(buf)
   vreg = matrix(0,buf,n)
-  nk[1] = gi
+  nconstraint[1] = gi
   vreg[1,] = s*x[,ihit] / sum(x[,ihit]^2)
 
   # Other things to keep track of, but not return
@@ -92,41 +93,43 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
       action = c(action,numeric(buf))
       df = c(df,numeric(buf))
       beta = cbind(beta,matrix(0,p,buf))
-      nk = c(nk,numeric(buf))
+      nconstraint = c(nconstraint,numeric(buf))
       vreg = rbind(vreg,matrix(0,buf,n))
     }
 
     # Key quantities for the next entry
     a = backsolve(R,t(Q1)%*%y)
     X2perp = X2 - X1 %*% backsolve(R,t(Q1)%*%X2)
-    xx = scale(X2perp,center=F,scale=sqrt(colSums(X2perp^2)))
-    aa = as.numeric(t(xx)%*%y)
+    working_x = scale(X2perp,center=F,scale=sqrt(colSums(X2perp^2)))
+    score = as.numeric(t(working_x)%*%y)
     
     # If the inactive set is empty, nothing will hit
     if (r==min(n-intercept,p)) break
 
     # Otherwise find the next hitting time
     else {
-      shits = Sign(aa)
-      hits = shits * aa
-      ihit = which.max(hits)
-      shit = shits[ihit]
+      sign_score = Sign(score)
+      abs_score = sign_score * score
+      ihit = which.max(abs_score)
+      shit = sign_score[ihit]
     }
     
     # Record the solution
-    action[k] = I[ihit]
+    # what is the difference between "action" and "A"?
+
+    action[k] = I[ihit] 
     df[k] = r
     beta[A,k] = a
         
     # Gamma matrix!
     if (gi + 2*p > nrow(Gamma)) Gamma = rbind(Gamma,matrix(0,2*p+gbuf,n))
-    xx = t(shits*t(xx))
-    Gamma[gi+Seq(1,p-r),] = t(xx); gi = gi+p-r
-    Gamma[gi+Seq(1,p-r-1),] = t(xx[,ihit]-xx[,-ihit]); gi = gi+p-r-1
-    Gamma[gi+1,] = t(xx[,ihit]); gi = gi+1
+    working_x = t(sign_score*t(working_x))
+    Gamma[gi+Seq(1,p-r),] = t(working_x); gi = gi+p-r
+    Gamma[gi+Seq(1,p-r-1),] = t(working_x[,ihit]-working_x[,-ihit]); gi = gi+p-r-1
+    Gamma[gi+1,] = t(working_x[,ihit]); gi = gi+1
 
-    # nk, regression contrast
-    nk[k] = gi
+    # nconstraint, regression contrast
+    nconstraint[k] = gi
     vreg[k,] = shit*X2perp[,ihit] / sum(X2perp[,ihit]^2)
 
     # Update all of the variables
@@ -156,7 +159,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   df = df[Seq(1,k-1),drop=FALSE]
   beta = beta[,Seq(1,k-1),drop=FALSE]
   Gamma = Gamma[Seq(1,gi),,drop=FALSE]
-  nk = nk[Seq(1,k-1)]
+  nconstraint = nconstraint[Seq(1,k-1)]
   vreg = vreg[Seq(1,k-1),,drop=FALSE]
   
   # If we reached the maximum number of steps
@@ -191,7 +194,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
 
   out = list(action=action,sign=s,df=df,beta=beta,
     completepath=completepath,bls=bls,
-    Gamma=Gamma,nk=nk,vreg=vreg,x=x,y=y,bx=bx,by=by,sx=sx,
+    Gamma=Gamma,nconstraint=nconstraint,vreg=vreg,x=x,y=y,bx=bx,by=by,sx=sx,
     intercept=intercept,normalize=normalize,call=this.call) 
   class(out) = "fs"
   return(out)
@@ -250,7 +253,7 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
   p = ncol(x)
   n = nrow(x)
   G = obj$Gamma
-  nk = obj$nk
+  nconstraint = obj$nconstraint
   sx = obj$sx
 
   if (is.null(sigma)) {
@@ -278,8 +281,8 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
     for (j in 1:k) {
       if (verbose) cat(sprintf("Inference for variable %i ...\n",vars[j]))
 
-      Gj = G[1:nk[j],]
-      uj = rep(0,nk[j])
+      Gj = G[1:nconstraint[j],]
+      uj = rep(0,nconstraint[j])
       vj = vreg[j,]
       mj = sqrt(sum(vj^2)) 
       vj = vj / mj              # Standardize (divide by norm of vj)
@@ -304,13 +307,13 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
       out = aicStop(x,y,obj$action[1:k],obj$df[1:k],sigma,mult,ntimes)
       khat = out$khat
       m = out$stopped * ntimes
-      G = rbind(out$G,G[1:nk[khat+m],])  # Take ntimes more steps past khat
-      u = c(out$u,rep(0,nk[khat+m]))     # (if we need to)
+      G = rbind(out$G,G[1:nconstraint[khat+m],])  # Take ntimes more steps past khat
+      u = c(out$u,rep(0,nconstraint[khat+m]))     # (if we need to)
       kk = khat
     }
     else {
-      G = G[1:nk[k],]
-      u = rep(0,nk[k])
+      G = G[1:nconstraint[k],]
+      u = rep(0,nconstraint[k])
       kk = k
     }
     
