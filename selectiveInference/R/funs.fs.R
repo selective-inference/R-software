@@ -106,7 +106,6 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
 
     # Key quantities for the next entry
 
-    a = backsolve(R,t(Q_active)%*%y)
     X_inactive_resid = X_inactive - X_active %*% backsolve(R,t(Q_active)%*%X_inactive)
     working_x = scale(X_inactive_resid,center=F,scale=sqrt(colSums(X_inactive_resid^2)))
     score = as.numeric(t(working_x)%*%y)
@@ -127,7 +126,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
 
     action[k] = I[i_hit] 
     df[k] = r
-    beta[A,k] = a
+    beta[A,k] = backsolve(R,t(Q_active)%*%y)
         
     # Gamma matrix!
     if (gi + 2*p > nrow(Gamma)) Gamma = rbind(Gamma,matrix(0,2*p+gbuf,n))
@@ -360,6 +359,8 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
     }
   }
   
+  # JT: why do we output vup, vlo? Are they used somewhere else?
+
   out = list(type=type,k=k,khat=khat,pv=pv,ci=ci,
     tailarea=tailarea,vlo=vlo,vup=vup,vmat=vmat,y=y,
     vars=vars,sign=sign,sigma=sigma,alpha=alpha,
