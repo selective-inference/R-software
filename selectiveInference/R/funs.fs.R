@@ -125,9 +125,10 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
     # Record the solution
     # what is the difference between "action" and "A"?
 
+    beta_cur = backsolve(R,t(Q_active)%*%y)
     action[k] = I[i_hit] 
     df[k] = r
-    beta[A,k] = backsolve(R,t(Q_active)%*%y)
+    beta[A,k] = beta_cur 
         
     # Gamma matrix!
     if (gi + 2*p > nrow(Gamma)) Gamma = rbind(Gamma,matrix(0,2*p+gbuf,n))
@@ -189,7 +190,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
     # Record the least squares solution. Note that
     # we have already computed this
     bls = rep(0,p)
-    bls[A] = a
+    bls[A] = beta_cur
   }
 
   if (verbose) cat("\n")
