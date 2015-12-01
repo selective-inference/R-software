@@ -54,6 +54,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   offset_pos_maxZ = matrix(Inf, p, buf) # upper bounds for selective maxZ
   offset_neg_maxZ = matrix(Inf, p, buf) # lower bounds for selective maxZ
   scale_maxZ = matrix(0, p, buf) # lower bounds for selective maxZ
+  realized_maxZ = matrix(0, p, buf) # lower bounds for selective maxZ
 
   action[1] = i_hit
   df[1] = 0
@@ -63,7 +64,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   # Variables needed to compute truncation limits for
   # selective maxZ test
 
-  realized_maxZ = c(sign_hit * score[i_hit])
+  realized_maxZ[1] = c(sign_hit * score[i_hit])
   offset_pos_maxZ[,1] = Inf
   offset_neg_maxZ[,1] = Inf
   scale_maxZ[,1] = working_scale
@@ -131,6 +132,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
       offset_pos_maxZ = cbind(offset_pos_maxZ, matrix(0, p, buf))
       offset_neg_maxZ = cbind(offset_neg_maxZ, matrix(0, p, buf))
       scale_maxZ = cbind(scale_maxZ, matrix(0, p, buf))
+      realized_maxZ = cbind(realized_maxZ, matrix(0, p, buf))
     }
 
     # Key quantities for the next entry
@@ -157,7 +159,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
       # keep track of necessary quantities for selective maxZ
 
       offset_shift = t(X_inactive) %*% (y - working_resid_maxZ)
-      realized_Z_scaled = realized_maxZ * prev_scale
+      realized_Z_scaled = realized_maxZ[k-1] * prev_scale
       offset_pos_maxZ[I,k] = realized_Z_scaled + offset_shift
       offset_neg_maxZ[I,k] = realized_Z_scaled - offset_shift
       scale_maxZ[I,k] = working_scale
@@ -178,7 +180,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
     Gamma_maxZ[zi+Seq(1,p-r),] = t(X_inactive_resid); zi = zi+p-r
 
     # update maxZ variable
-    realized_maxZ = sign_hit * working_score[i_hit]
+    realized_maxZ[k] = sign_hit * working_score[i_hit]
 
     # Gamma matrix!
 
@@ -264,7 +266,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
     Gamma=Gamma,nconstraint=nconstraint,vreg=vreg,x=x,y=y,bx=bx,by=by,sx=sx,
     intercept=intercept,normalize=normalize,call=this.call,
     offset_pos_maxZ=offset_pos_maxZ,offset_neg_maxZ=offset_neg_maxZ,
-    scale_maxZ=scale_maxZ,Gamma_maxZ=Gamma_maxZ) 
+    scale_maxZ=scale_maxZ,Gamma_maxZ=Gamma_maxZ,realized_maxZ=realized_maxZ) 
   class(out) = "fs"
   return(out)
 }
@@ -435,7 +437,8 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
 
 # selected maxZ tests
 
-fsInf_maxZ <- function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL) {
+fsInf_maxZ <- function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
+                       ndraw=8000, burnin=2000) {
   
   this.call = match.call()
 
@@ -492,7 +495,7 @@ fsInf_maxZ <- function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL) {
       # cur_X is used to enforce conditioning on
       # the ever_active sufficient_statistics
 
-      cur_X = obj$x[,inactive]
+      cur_X = obj$x[,inactive,drop=FALSE]
 
       # now we condition on solution up to now
       # this is equivalent to finding vector of 
@@ -502,11 +505,11 @@ fsInf_maxZ <- function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL) {
       if (j > 1) {
           cur_fitted = predict(obj, s=j)
 	  cur_fitted = cur_fitted - mean(cur_fitted)
-	  cur_offset = t(cur_X) %*% cur_fitted
+	  cur_offset = as.numeric(t(cur_X) %*% cur_fitted)
       }
       else {
           cur_fitted = 0
-          cur_offset = 0
+          cur_offset = rep(0, length(inactive))
       }
 
       final_upper = collapsed_pos - cur_offset
@@ -526,7 +529,46 @@ fsInf_maxZ <- function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL) {
 
       # IMPORTANT: after sampling Y_star, we have to add back cur_fitted
 
-      pv = c(pv, runif(1))
+      # if n > p, we actually just draw cur_adjusted_X %*% Y_star
+      # because this has a simple box constraint
+      # with a generically non-degenerate covariance
+
+
+      if (n > p) { 
+          library(tmvtnorm)
+ 
+          if (length(inactive) > 1) {
+              cov = (cur_adjusted_X %*% t(cur_adjusted_X))
+              cov = cov * rep(sigma^2, nrow(cov), ncol(cov))
+          } else {
+              cov = sigma^2 * sum(cur_adjusted_X^2)
+          }
+
+          truncated_noise = rtmvnorm(n=ndraw, 
+                                     mean=cur_offset,
+                                     sigma=cov, 
+                                     lower=-collapsed_neg,
+                                     upper=collapsed_pos,
+                                     algorithm="gibbs",
+                 			 burn.in.samples=burnin)
+
+          if (length(inactive) > 1) {				 
+             sample_maxZ = apply(abs(1. / cur_scale * truncated_noise), 1, max)
+          }
+          else {
+             sample_maxZ = truncated_noise / cur_scale
+          }
+      } else {
+          # RUBBISH for now!!!!
+	  sample_maxZ = abs(rnorm(ndraw))         
+      }
+      
+      observed_maxZ = obj$realized_maxZ[j]
+
+      pval = sum(sample_maxZ > observed_maxZ) / ndraw
+      pval = 2 * min(pval, 1 - pval)
+
+      pv = c(pv, pval)
   }
 
   khat = forwardStop(pv,alpha)
