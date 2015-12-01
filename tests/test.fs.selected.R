@@ -16,6 +16,5 @@ mu=x%*%beta
 y=mu+Y
 fsfit=fs(x,y,norm=TRUE, intercept=TRUE)
 out = fsInf_maxZ(fsfit,sigma=sigma)
-print(out$pos)
-print(-out$neg)
+
 
