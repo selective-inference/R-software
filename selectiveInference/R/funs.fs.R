@@ -80,7 +80,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   Gamma[gi+1,] = t(sign_hit*working_x[,i_hit]); gi = gi+1
 
   # Gamma_maxZ is the rbind 
-  # of residualized X_{inactive \cup i_hit}
+  # of residualized X_inactive's
 
   Gamma_maxZ = matrix(0,gbuf,n)
   Gamma_maxZ[zi+Seq(1,p),] = t(x); zi = zi+p
@@ -435,18 +435,13 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
 
 # selected maxZ tests
 
-fsInf_maxZ <- function(obj, sigma=NULL, alpha=0.1, k=NULL, 
-	               gridrange=c(-100,100), bits=NULL, mult=2, ntimes=2, verbose=FALSE) {
+fsInf_maxZ <- function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL) {
   
   this.call = match.call()
 
-  checkargs.misc(sigma=sigma,alpha=alpha,k=k,
-                 gridrange=gridrange,mult=mult,ntimes=ntimes)
+  checkargs.misc(sigma=sigma,alpha=alpha,k=k)
+
   if (class(obj) != "fs") stop("obj must be an object of class fs")
-  if (!is.null(bits) && !requireNamespace("Rmpfr",quietly=TRUE)) {
-    warning("Package Rmpfr is not installed, reverting to standard precision")
-    bits = NULL
-  }
   
   k = min(k,length(obj$action)) # Round to last step
   x = obj$x
@@ -487,13 +482,18 @@ fsInf_maxZ <- function(obj, sigma=NULL, alpha=0.1, k=NULL,
       } else {
           inactive = 1:p
       }
+
       collapsed_pos = apply(obj$offset_pos_maxZ[inactive,1:j,drop=FALSE], 1, min)
       collapsed_neg = apply(obj$offset_neg_maxZ[inactive,1:j,drop=FALSE], 1, min)
       cur_scale = obj$scale_maxZ[,j][inactive]
+
       cur_adjusted_X = obj$Gamma_maxZ[zi + Seq(1,p-j+1),]; zi = zi+p-j+1
       cur_X = obj$x[,inactive]
 
-      # next, condition on solution up to now
+      # now we condition on solution up to now
+      # this is equivalent to finding vector of 
+      # fitted values up to now and appropriately
+      # adjusting the box limits
 
       if (j > 1) {
           cur_fitted = predict(obj, s=j)
@@ -505,28 +505,13 @@ fsInf_maxZ <- function(obj, sigma=NULL, alpha=0.1, k=NULL,
           cur_offset = 0
       }
 
-      print('pos')
-      print(collapsed_pos)
-      print('neg')
-      print(collapsed_neg)
-
-      print('fitted')
-      print(cur_fitted[1:10])
-      collapsed_pos = collapsed_pos - cur_offset
-      collapsed_neg = collapsed_neg + cur_offset
-
-      print("cur_offset")
-      print(cur_offset)
-
-      print('pos_adj')
-      print(collapsed_pos)
-      print('neg_adj')
-      print(collapsed_neg)
+      final_upper = collapsed_pos - cur_offset
+      final_lower = -(collapsed_neg + cur_offset)
 
       # now, we sample from Y_star, a centered Gaussian with covariance sigma^2 I
       # subject to the constraint
-      # t(cur_adjusted_X) %*% Y_star < collapsed_pos
-      # -t(cur_adjusted_X) %*% Y_star < collapsed_neg
+      # t(cur_adjusted_X) %*% Y_star < final_upper
+      # -t(cur_adjusted_X) %*% Y_star < -final_lower
 
       # really, we want the covariance of Y_star to be \sigma^2 (I - cur_P)
       # where P is projection on the j-1 previous variables
@@ -535,20 +520,16 @@ fsInf_maxZ <- function(obj, sigma=NULL, alpha=0.1, k=NULL,
       # expressible in terms of (I - cur_P) Y_star because
       # we have adjusted X
 
-      print('pos')
-      print(collapsed_pos)
-      print('neg')
-      print(collapsed_neg)
-
       # IMPORTANT: after sampling Y_star, we have to add back cur_fitted
+
+      pv = c(pv, runif(1))
   }
 
-  out = list(pos=collapsed_pos, neg=collapsed_neg)
-  #out = list(k=k,khat=khat,pv=pv,ci=ci,
-  #  tailarea=tailarea,vmat=vmat,y=y,
-  #  vars=vars,sign=sign,sigma=sigma,alpha=alpha,
-  #  call=this.call)
-  class(out) = "fsInf"
+  khat = forwardStop(pv,alpha)
+
+  out = list(pv=pv,khat=khat,
+	     call=this.call)
+  class(out) = "fsInf_Zmax"
   return(out)
 }
 
