@@ -448,12 +448,9 @@ fsInf_maxZ <- function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL) {
   y = obj$y
   p = ncol(x)
   n = nrow(x)
-  G = obj$Gamma
-  nconstraint = obj$nconstraint
-  sx = obj$sx
 
   if (is.null(sigma)) {
-    # TODO we should probably sample uniform
+    # TODO we need a sampler on a unit sphere
     if (n >= 2*p) {
       oo = obj$intercept
       sigma = sqrt(sum(lsfit(x,y,intercept=oo)$res^2)/(n-p-oo))
@@ -487,7 +484,14 @@ fsInf_maxZ <- function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL) {
       collapsed_neg = apply(obj$offset_neg_maxZ[inactive,1:j,drop=FALSE], 1, min)
       cur_scale = obj$scale_maxZ[,j][inactive]
 
+      # the matrix cur_adjusted_X is used to compute
+      # the maxZ or maxT for the sampled variables
+
       cur_adjusted_X = obj$Gamma_maxZ[zi + Seq(1,p-j+1),]; zi = zi+p-j+1
+
+      # cur_X is used to enforce conditioning on
+      # the ever_active sufficient_statistics
+
       cur_X = obj$x[,inactive]
 
       # now we condition on solution up to now
