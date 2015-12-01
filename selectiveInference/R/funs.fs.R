@@ -49,8 +49,11 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   df = numeric(buf)          # Degrees of freedom
   beta = matrix(0,p,buf)     # FS estimates
   
-  offset_pos = matrix(Inf, p, buf) # upper bounds for selective maxZ
-  offset_neg = matrix(Inf, p, buf) # lower bounds for selective maxZ
+  # Buffered objects for selective maxZ test
+
+  offset_pos_maxZ = matrix(Inf, p, buf) # upper bounds for selective maxZ
+  offset_neg_maxZ = matrix(Inf, p, buf) # lower bounds for selective maxZ
+  scale_maxZ = matrix(0, p, buf) # lower bounds for selective maxZ
 
   action[1] = i_hit
   df[1] = 0
@@ -60,19 +63,27 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   # Variables needed to compute truncation limits for
   # selective maxZ test
 
-  realized_Z_max = c(sign_hit * score[i_hit])
-  offset_pos[,1] = Inf
-  offset_neg[,1] = Inf
-  working_resid = y - x %*% beta[,1]
+  realized_maxZ = c(sign_hit * score[i_hit])
+  offset_pos_maxZ[,1] = Inf
+  offset_neg_maxZ[,1] = Inf
+  scale_maxZ[,1] = working_scale
+  working_resid_maxZ = y - x %*% beta[,1]
 
   # Gamma matrix!
   gbuf = max(2*p*3,2000)     # Space for 3 steps, at least
   gi = 0                     # index into rows of Gamma matrix
+  zi = 0                     # index into rows of Gamma_maxZ matrix
 
   Gamma = matrix(0,gbuf,n)
   Gamma[gi+Seq(1,p-1),] = t(sign_hit*working_x[,i_hit]+working_x[,-i_hit]); gi = gi+p-1
   Gamma[gi+Seq(1,p-1),] = t(sign_hit*working_x[,i_hit]-working_x[,-i_hit]); gi = gi+p-1
   Gamma[gi+1,] = t(sign_hit*working_x[,i_hit]); gi = gi+1
+
+  # Gamma_maxZ is the rbind 
+  # of residualized X_{inactive \cup i_hit}
+
+  Gamma_maxZ = matrix(0,gbuf,n)
+  Gamma_maxZ[zi+Seq(1,p),] = t(x); zi = zi+p
 
   # nconstraint
   nconstraint = numeric(buf)
@@ -117,8 +128,9 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
       nconstraint = c(nconstraint,numeric(buf))
       vreg = rbind(vreg,matrix(0,buf,n))
 
-      offset_pos = cbind(offset_pos, matrix(0, p, buf))
-      offset_neg = cbind(offset_neg, matrix(0, p, buf))
+      offset_pos_maxZ = cbind(offset_pos_maxZ, matrix(0, p, buf))
+      offset_neg_maxZ = cbind(offset_neg_maxZ, matrix(0, p, buf))
+      scale_maxZ = cbind(scale_maxZ, matrix(0, p, buf))
     }
 
     # Key quantities for the next entry
@@ -144,12 +156,13 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
       sign_hit = sign_score[i_hit]
       # keep track of necessary quantities for selective maxZ
 
-      offset_shift = t(X_inactive) %*% (y - working_resid)
-      realized_Z_scaled = realized_Z_max * prev_scale
-      offset_pos[I,k] = realized_Z_scaled + offset_shift
-      offset_neg[I,k] = realized_Z_scaled - offset_shift
+      offset_shift = t(X_inactive) %*% (y - working_resid_maxZ)
+      realized_Z_scaled = realized_maxZ * prev_scale
+      offset_pos_maxZ[I,k] = realized_Z_scaled + offset_shift
+      offset_neg_maxZ[I,k] = realized_Z_scaled - offset_shift
+      scale_maxZ[I,k] = working_scale
 
-      working_resid = y - X_active %*% beta_cur
+      working_resid_maxZ = y - X_active %*% beta_cur
     }
     
     # Record the solution
@@ -159,7 +172,16 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
     df[k] = r
     beta[A,k] = beta_cur 
         
+    # store the X_inactive_resid in Gamma_maxZ
+
+    if (gi + p-r > nrow(Gamma_maxZ)) Gamma_maxZ = rbind(Gamma_maxZ,matrix(0,p-r,n))
+    Gamma_maxZ[zi+Seq(1,p-r),] = t(X_inactive_resid); zi = zi+p-r
+
+    # update maxZ variable
+    realized_maxZ = sign_hit * working_score[i_hit]
+
     # Gamma matrix!
+
     if (gi + 2*p > nrow(Gamma)) Gamma = rbind(Gamma,matrix(0,2*p+gbuf,n))
     working_x = t(sign_score*t(working_x))
     Gamma[gi+Seq(1,p-r),] = t(working_x); gi = gi+p-r
@@ -177,8 +199,6 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
     signs = c(signs,sign_hit)
     X_active = cbind(X_active,X_inactive[,i_hit])
     X_inactive = X_inactive[,-i_hit,drop=FALSE]
-
-    realized_Z_max = sign_hit * working_score[i_hit]
 
     # Update the QR decomposition
     updated_qr = updateQR(Q_active,Q_inactive,R,X_active[,r])
@@ -204,8 +224,10 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   nconstraint = nconstraint[Seq(1,k-1)]
   vreg = vreg[Seq(1,k-1),,drop=FALSE]
   
-  offset_pos = offset_pos[,Seq(1,k-1),drop=FALSE]
-  offset_neg = offset_neg[,Seq(1,k-1),drop=FALSE]
+  offset_pos_maxZ = offset_pos_maxZ[,Seq(1,k-1),drop=FALSE]
+  offset_neg_maxZ = offset_neg_maxZ[,Seq(1,k-1),drop=FALSE]
+  scale_maxZ = offset_pos_maxZ[,Seq(1,k-1),drop=FALSE]
+  Gamma_maxZ = Gamma_maxZ[Seq(1,zi),,drop=FALSE]
 
   # If we reached the maximum number of steps
   if (k>maxsteps) {
@@ -241,7 +263,8 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
     completepath=completepath,bls=bls,
     Gamma=Gamma,nconstraint=nconstraint,vreg=vreg,x=x,y=y,bx=bx,by=by,sx=sx,
     intercept=intercept,normalize=normalize,call=this.call,
-    offset_pos=offset_pos,offset_neg=offset_neg) 
+    offset_pos_maxZ=offset_pos_maxZ,offset_neg_maxZ=offset_neg_maxZ,
+    scale_maxZ=scale_maxZ,Gamma_maxZ=Gamma_maxZ) 
   class(out) = "fs"
   return(out)
 }
@@ -410,9 +433,9 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
 
 ##############################
 
-# selected Zmax tests
+# selected maxZ tests
 
-fsInf_Zmax <- function(obj, sigma=NULL, alpha=0.1, k=NULL, 
+fsInf_maxZ <- function(obj, sigma=NULL, alpha=0.1, k=NULL, 
 	               gridrange=c(-100,100), bits=NULL, mult=2, ntimes=2, verbose=FALSE) {
   
   this.call = match.call()
@@ -450,24 +473,81 @@ fsInf_Zmax <- function(obj, sigma=NULL, alpha=0.1, k=NULL,
   khat = NULL
   
   vars = obj$action[1:k]
+  zi = 0
   for (j in 1:k) {
          
+      # the inactive set here does not
+      # include the variable at the j-th step
+      # so, at j==1, the inactive set is every variable
+      # at j==2, the inactive set is everything but the first one
+
       if (j > 1) {
           active = vars[1:(j-1)]
 	  inactive = (1:p)[-active]
       } else {
           inactive = 1:p
       }
-      collapsed_pos = apply(obj$offset_pos[inactive,1:j,drop=FALSE], 1, min)
-      collapsed_neg = apply(obj$offset_neg[inactive,1:j,drop=FALSE], 1, min)
+      collapsed_pos = apply(obj$offset_pos_maxZ[inactive,1:j,drop=FALSE], 1, min)
+      collapsed_neg = apply(obj$offset_neg_maxZ[inactive,1:j,drop=FALSE], 1, min)
+      cur_scale = obj$scale_maxZ[,j][inactive]
+      cur_adjusted_X = obj$Gamma_maxZ[zi + Seq(1,p-j+1),]; zi = zi+p-j+1
+      cur_X = obj$x[,inactive]
 
       # next, condition on solution up to now
+
+      if (j > 1) {
+          cur_fitted = predict(obj, s=j)
+	  cur_fitted = cur_fitted - mean(cur_fitted)
+	  cur_offset = t(cur_X) %*% cur_fitted
+      }
+      else {
+          cur_fitted = 0
+          cur_offset = 0
+      }
+
+      print('pos')
+      print(collapsed_pos)
+      print('neg')
+      print(collapsed_neg)
+
+      print('fitted')
+      print(cur_fitted[1:10])
+      collapsed_pos = collapsed_pos - cur_offset
+      collapsed_neg = collapsed_neg + cur_offset
+
+      print("cur_offset")
+      print(cur_offset)
+
+      print('pos_adj')
+      print(collapsed_pos)
+      print('neg_adj')
+      print(collapsed_neg)
+
+      # now, we sample from Y_star, a centered Gaussian with covariance sigma^2 I
+      # subject to the constraint
+      # t(cur_adjusted_X) %*% Y_star < collapsed_pos
+      # -t(cur_adjusted_X) %*% Y_star < collapsed_neg
+
+      # really, we want the covariance of Y_star to be \sigma^2 (I - cur_P)
+      # where P is projection on the j-1 previous variables
+      # but this doesn't matter as everything we do with the samples
+      # will be a function of (I - cur_P) Y_star and the constraints are
+      # expressible in terms of (I - cur_P) Y_star because
+      # we have adjusted X
+
+      print('pos')
+      print(collapsed_pos)
+      print('neg')
+      print(collapsed_neg)
+
+      # IMPORTANT: after sampling Y_star, we have to add back cur_fitted
   }
 
-  out = list(k=k,khat=khat,pv=pv,ci=ci,
-    tailarea=tailarea,vmat=vmat,y=y,
-    vars=vars,sign=sign,sigma=sigma,alpha=alpha,
-    call=this.call)
+  out = list(pos=collapsed_pos, neg=collapsed_neg)
+  #out = list(k=k,khat=khat,pv=pv,ci=ci,
+  #  tailarea=tailarea,vmat=vmat,y=y,
+  #  vars=vars,sign=sign,sigma=sigma,alpha=alpha,
+  #  call=this.call)
   class(out) = "fsInf"
   return(out)
 }
