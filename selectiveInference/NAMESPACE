@@ -1,5 +1,5 @@
 export(lar,fs,
-       larInf,fsInf,
+       larInf,fsInf,fsInf_maxZ,
        coef.lar,coef.fs,
        predict.lar,predict.fs,
        print.lar,print.fs,
