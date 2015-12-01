@@ -27,7 +27,8 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
 
   #####
   # Find the first variable to enter and its sign
-  working_x = scale(x,center=F,scale=sqrt(colSums(x^2)))
+  working_scale = sqrt(colSums(x^2))
+  working_x = scale(x,center=F,scale=working_scale)
   score = t(working_x)%*%y
   i_hit = which.max(abs(score))   # Hitting coordinate
   sign_hit = Sign(score[i_hit])   # Sign
@@ -48,9 +49,21 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   df = numeric(buf)          # Degrees of freedom
   beta = matrix(0,p,buf)     # FS estimates
   
+  offset_pos = matrix(Inf, p, buf) # upper bounds for selective maxZ
+  offset_neg = matrix(Inf, p, buf) # lower bounds for selective maxZ
+
   action[1] = i_hit
   df[1] = 0
   beta[,1] = 0
+
+  #####
+  # Variables needed to compute truncation limits for
+  # selective maxZ test
+
+  realized_Z_max = c(sign_hit * score[i_hit])
+  offset_pos[,1] = Inf
+  offset_neg[,1] = Inf
+  working_resid = y - x %*% beta[,1]
 
   # Gamma matrix!
   gbuf = max(2*p*3,2000)     # Space for 3 steps, at least
@@ -103,13 +116,18 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
       beta = cbind(beta,matrix(0,p,buf))
       nconstraint = c(nconstraint,numeric(buf))
       vreg = rbind(vreg,matrix(0,buf,n))
+
+      offset_pos = cbind(offset_pos, matrix(0, p, buf))
+      offset_neg = cbind(offset_neg, matrix(0, p, buf))
     }
 
     # Key quantities for the next entry
 
+    prev_scale = working_scale[-i_hit]
     X_inactive_resid = X_inactive - X_active %*% backsolve(R,t(Q_active)%*%X_inactive)
-    working_x = scale(X_inactive_resid,center=F,scale=sqrt(colSums(X_inactive_resid^2)))
-    score = as.numeric(t(working_x)%*%y)
+    working_scale = sqrt(colSums(X_inactive_resid^2))
+    working_x = scale(X_inactive_resid,center=F,scale=working_scale)
+    working_score = as.numeric(t(working_x)%*%y)
     
     beta_cur = backsolve(R,t(Q_active)%*%y) # must be computed before the break
                                             # so we have it if we have 
@@ -120,10 +138,18 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
 
     # Otherwise find the next hitting time
     else {
-      sign_score = Sign(score)
-      abs_score = sign_score * score
+      sign_score = Sign(working_score)
+      abs_score = sign_score * working_score
       i_hit = which.max(abs_score)
       sign_hit = sign_score[i_hit]
+      # keep track of necessary quantities for selective maxZ
+
+      offset_shift = t(X_inactive) %*% (y - working_resid)
+      realized_Z_scaled = realized_Z_max * prev_scale
+      offset_pos[I,k] = realized_Z_scaled + offset_shift
+      offset_neg[I,k] = realized_Z_scaled - offset_shift
+
+      working_resid = y - X_active %*% beta_cur
     }
     
     # Record the solution
@@ -152,6 +178,8 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
     X_active = cbind(X_active,X_inactive[,i_hit])
     X_inactive = X_inactive[,-i_hit,drop=FALSE]
 
+    realized_Z_max = sign_hit * working_score[i_hit]
+
     # Update the QR decomposition
     updated_qr = updateQR(Q_active,Q_inactive,R,X_active[,r])
     Q_active = updated_qr$Q1
@@ -176,6 +204,9 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   nconstraint = nconstraint[Seq(1,k-1)]
   vreg = vreg[Seq(1,k-1),,drop=FALSE]
   
+  offset_pos = offset_pos[,Seq(1,k-1),drop=FALSE]
+  offset_neg = offset_neg[,Seq(1,k-1),drop=FALSE]
+
   # If we reached the maximum number of steps
   if (k>maxsteps) {
     if (verbose) {
@@ -209,7 +240,8 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   out = list(action=action,sign=signs,df=df,beta=beta,
     completepath=completepath,bls=bls,
     Gamma=Gamma,nconstraint=nconstraint,vreg=vreg,x=x,y=y,bx=bx,by=by,sx=sx,
-    intercept=intercept,normalize=normalize,call=this.call) 
+    intercept=intercept,normalize=normalize,call=this.call,
+    offset_pos=offset_pos,offset_neg=offset_neg) 
   class(out) = "fs"
   return(out)
 }
@@ -368,6 +400,72 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
 
   out = list(type=type,k=k,khat=khat,pv=pv,ci=ci,
     tailarea=tailarea,vlo=vlo,vup=vup,vmat=vmat,y=y,
+    vars=vars,sign=sign,sigma=sigma,alpha=alpha,
+    call=this.call)
+  class(out) = "fsInf"
+  return(out)
+}
+
+##############################
+
+##############################
+
+# selected Zmax tests
+
+fsInf_Zmax <- function(obj, sigma=NULL, alpha=0.1, k=NULL, 
+	               gridrange=c(-100,100), bits=NULL, mult=2, ntimes=2, verbose=FALSE) {
+  
+  this.call = match.call()
+
+  checkargs.misc(sigma=sigma,alpha=alpha,k=k,
+                 gridrange=gridrange,mult=mult,ntimes=ntimes)
+  if (class(obj) != "fs") stop("obj must be an object of class fs")
+  if (!is.null(bits) && !requireNamespace("Rmpfr",quietly=TRUE)) {
+    warning("Package Rmpfr is not installed, reverting to standard precision")
+    bits = NULL
+  }
+  
+  k = min(k,length(obj$action)) # Round to last step
+  x = obj$x
+  y = obj$y
+  p = ncol(x)
+  n = nrow(x)
+  G = obj$Gamma
+  nconstraint = obj$nconstraint
+  sx = obj$sx
+
+  if (is.null(sigma)) {
+    # TODO we should probably sample uniform
+    if (n >= 2*p) {
+      oo = obj$intercept
+      sigma = sqrt(sum(lsfit(x,y,intercept=oo)$res^2)/(n-p-oo))
+    }
+    else {
+      sigma = sd(y)
+      warning(paste(sprintf("p > n/2, and sd(y) = %0.3f used as an estimate of sigma;",sigma),
+                    "you may want to use the estimateSigma function"))
+    }
+  }
+
+  khat = NULL
+  
+  vars = obj$action[1:k]
+  for (j in 1:k) {
+         
+      if (j > 1) {
+          active = vars[1:(j-1)]
+	  inactive = (1:p)[-active]
+      } else {
+          inactive = 1:p
+      }
+      collapsed_pos = apply(obj$offset_pos[inactive,1:j,drop=FALSE], 1, min)
+      collapsed_neg = apply(obj$offset_neg[inactive,1:j,drop=FALSE], 1, min)
+
+      # next, condition on solution up to now
+  }
+
+  out = list(k=k,khat=khat,pv=pv,ci=ci,
+    tailarea=tailarea,vmat=vmat,y=y,
     vars=vars,sign=sign,sigma=sigma,alpha=alpha,
     call=this.call)
   class(out) = "fsInf"
