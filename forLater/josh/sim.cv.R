@@ -6,12 +6,12 @@ source("../../selectiveInference/R/funs.common.R")
 
 set.seed(1)
 niters <- 500
-n <- 50
-p <- 100
-maxsteps <- 10
-sparsity <- 5
-snr <- 1
-nfolds <- 5
+n <- 40
+p <- 80
+maxsteps <- 8
+sparsity <- 4
+snr <- 2
+nfolds <- 4
 
 instance <- function(n, p, sparsity, snr, maxsteps, nfolds) {
 
@@ -25,8 +25,10 @@ instance <- function(n, p, sparsity, snr, maxsteps, nfolds) {
     }
 
     fit <- cvfs(x, y, maxsteps=maxsteps, nfolds=nfolds)
-    pvals <- groupfsInf(fit, sigma = 1, verbose=T)
-    return(list(variable = fit$action, pvals = pvals$pv))
+    fit2 <- groupfs(x, y, index = 1:p, maxsteps = attr(fit, "maxsteps"))
+    pvals <- groupfsInf(fit, verbose=T)
+    pv2 <- groupfsInf(fit2, verbose=T)
+    return(list(variable = fit$action, pvals = pvals$pv, var2 = fit2$action, pvals2 = pv2$pv))
 }
 
 time <- system.time({
@@ -35,12 +37,14 @@ time <- system.time({
 
 pvals <- do.call(c, list(output[2,]))
 vars <- do.call(c, list(output[1,]))
+vars2 <- do.call(c, list(output[3,]))
+pvals2 <- do.call(c, list(output[4,]))
 
-save(pvals, vars, file = paste0(
+save(pvals, vars, vars2, pvals2, file = paste0(
                       "results_cv_n", n,
                       "_p", p,
                       "_sparsity", sparsity,
                       "_snr", snr,
-                      ".RData"))
+                      "_comparison.RData"))
 
 print(time)
