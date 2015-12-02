@@ -1,19 +1,18 @@
 library(intervals)
 source("funs.sims.R")
-#source("selectiveInference/R/cv.R")
 source("../../selectiveInference/R/funs.groupfs.R")
 source("../../selectiveInference/R/funs.quadratic.R")
 source("../../selectiveInference/R/funs.common.R")
 
 set.seed(1)
 known <- FALSE
-niters <- 200
+niters <- 500
 n <- 50
 p <- 150
 G <- 75
 maxsteps <- 10
 sparsity <- 4
-snr <- 2
+snr <- 3
 rho <- 0
 aicstop <- 1
 

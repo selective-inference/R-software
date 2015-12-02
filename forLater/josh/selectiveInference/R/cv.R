@@ -54,7 +54,7 @@ cvRSSquad <- function(x, folds, active.sets) {
     return(Q)
 }
 
-cvfs <- function(x, y, index = 1:ncol(x), maxsteps, nfolds = 10) {
+cvfs <- function(x, y, index = 1:ncol(x), maxsteps, sigma = NULL, nfolds = 10) {
 
     n <- nrow(x)
     if (maxsteps >= n*(1-1/nfolds)) {
@@ -75,7 +75,7 @@ cvfs <- function(x, y, index = 1:ncol(x), maxsteps, nfolds = 10) {
     # Flatten list or something?
     for (f in 1:nfolds) {
         fold <- folds[[f]]
-        fit <- groupfs(X[-fold,], Y[-fold], index, maxsteps=maxsteps)
+        fit <- groupfs(X[-fold,], Y[-fold], index=index, maxsteps=maxsteps, sigma=sigma)
         fit$fold <- fold
         ## projections[[f]] <- lapply(fit$projections, function(step.projs) {
         ##     lapply(step.projs, function(proj) {
@@ -103,7 +103,7 @@ cvfs <- function(x, y, index = 1:ncol(x), maxsteps, nfolds = 10) {
     RSSquads <- lapply(RSSquads, function(quad) quad - quadstar)
     RSSquads[[sstar]] <- NULL # remove the all zeroes case
 
-    fit <- groupfs(X, Y, index, maxsteps=sstar)
+    fit <- groupfs(X, Y, index=index, maxsteps=sstar, sigma=sigma)
     fit$cvobj <- cvobj
     fit$cvquad <- RSSquads
 
