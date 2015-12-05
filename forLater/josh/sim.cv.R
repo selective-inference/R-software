@@ -5,7 +5,7 @@ source("../../selectiveInference/R/funs.quadratic.R")
 source("../../selectiveInference/R/funs.common.R")
 
 set.seed(1)
-niters <- 4
+niters <- 400
 n <- 50
 p <- 100
 maxsteps <- 10
@@ -24,8 +24,8 @@ instance <- function(n, p, sparsity, snr, maxsteps, nfolds) {
       y <- y + x %*% beta
     }
 
-    fit <- cvfs(x, y, maxsteps=maxsteps, sigma=1, nfolds=nfolds)
-    fit2 <- groupfs(x, y, index = 1:p, maxsteps = attr(fit, "maxsteps"), sigma = 1)
+    fit <- cvfs(x, y, maxsteps=maxsteps, nfolds=nfolds)
+    fit2 <- groupfs(x, y, index = 1:p, maxsteps = attr(fit, "maxsteps"))
     pvals <- groupfsInf(fit, verbose=T)
     pv2 <- groupfsInf(fit2, verbose=T)
     return(list(variable = fit$action, pvals = pvals$pv, var2 = fit2$action, pvals2 = pv2$pv))

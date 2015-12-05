@@ -208,10 +208,10 @@ TF_roots <- function(R, C, coeffs, tol = 1e-8, tol2 = 1e-6) {
     checkpoints <- c()
     if (length(troots) > 0) checkpoints <- roots_to_checkpoints(troots)
     checkpoints <- sort(
-        c(checkpoints, (0, tol, tol2,
+        c(checkpoints, 0, tol, tol2,
                         seq(from = sqrt(tol2), to = 1, length.out = 50),
                         seq(from = 1.2, to=50, length.out = 20),
-                        100, 1000, 10000)))
+                        100, 1000, 10000))
     ## if (length(troots) == 0) {
     ##     # Polyroot didn't catch any roots
     ##     # ad-hoc check:
