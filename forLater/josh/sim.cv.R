@@ -5,7 +5,7 @@ source("../../selectiveInference/R/funs.quadratic.R")
 source("../../selectiveInference/R/funs.common.R")
 
 set.seed(1)
-niters <- 500
+niters <- 50
 n <- 100
 p <- 200
 maxsteps <- 10
@@ -25,30 +25,36 @@ instance <- function(n, p, sparsity, snr, maxsteps, nfolds) {
     }
 
     fit <- cvfs(x, y, maxsteps=maxsteps, sigma=1, nfolds=nfolds)
-    fit2 <- groupfs(x, y, index = 1:p, maxsteps = attr(fit, "maxsteps"), sigma = 1)
+    vars <- fit$action
+    #fit2 <- groupfs(x, y, index = 1:p, maxsteps = attr(fit, "maxsteps"), sigma = 1)
     pvals <- groupfsInf(fit, verbose=T)
-    pv2 <- groupfsInf(fit2, verbose=T)
+    fit$cvobj <- NULL
+    nocvpv <- groupfsInf(fit, verbose=T)
     Y <- y - mean(y)
-    cols <- which(1:p %in% fit$action)
-    pv3 <- summary(lm(Y~x[, cols]-1))$coefficients[,4]
-    return(list(variable = fit$action, pvals = pvals$pv, var2 = fit2$action, pvals2 = pv2$pv, pvals3 = pv3[order(fit$action)]))
+    cols <- which(1:p %in% vars)
+    noselpv <- summary(lm(Y~x[, cols]-1))$coefficients[,4]
+    names(noselpv) <- as.character(sort(vars))
+    return(list(vars = vars, pvals = pvals$pv,
+                nocvvars = vars, nocvpvals = nocvpv$pv,
+                noselvars = sort(vars), noselpvals = noselpv))
 }
 
 time <- system.time({
           output <- replicate(niters, instance(n, p, sparsity, snr, maxsteps, nfolds))
 })
 
-pvals <- do.call(c, list(output[2,]))
 vars <- do.call(c, list(output[1,]))
-vars2 <- do.call(c, list(output[3,]))
-pvals2 <- do.call(c, list(output[4,]))
-pvals3 <- do.call(c, list(output[5,]))
+pvals <- do.call(c, list(output[2,]))
+nocvvars <- do.call(c, list(output[3,]))
+nocvpvals <- do.call(c, list(output[4,]))
+noselvars <- do.call(c, list(output[5,]))
+noselpvals <- do.call(c, list(output[6,]))
 
-save(pvals, vars, vars2, pvals2, pvals3, file = paste0(
+save(vars, pvals, nocvvars, nocvpvals, noselvars, noselpvals, file = paste0(
                       "results_cv_n", n,
                       "_p", p,
                       "_sparsity", sparsity,
                       "_snr", snr,
-                      "_comparison_TC.RData"))
+                      "_comparison.RData"))
 
 print(time)
