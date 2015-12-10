@@ -7,27 +7,31 @@ source("../../selectiveInference/R/funs.common.R")
 set.seed(1)
 niters <- 50
 n <- 100
-p <- 200
+p <- 50
 maxsteps <- 10
 sparsity <- 5
-snr <- 1
+snr <- 2
+rho <- 0.1
 nfolds <- 5
 
-instance <- function(n, p, sparsity, snr, maxsteps, nfolds) {
+instance <- function(n, p, sparsity, snr, maxsteps, nfolds, rho) {
 
     x <- matrix(rnorm(n*p), nrow=n)
+    if (rho != 0) {
+        z <- matrix(rep(t(rnorm(n)), p), nrow = n)
+        x <- sqrt(1-rho)*x + sqrt(rho)*z
+    }
     y <- rnorm(n)
 
     if (sparsity > 0) {
       beta <- rep(0, p)
-      beta[1:sparsity] <- snr * sample(c(-1,1), sparsity, replace=T)
+      beta[1:sparsity] <- snr * sqrt(2*log(p)/n) * sample(c(-1,1), sparsity, replace=T)
       y <- y + x %*% beta
     }
 
-    fit <- cvfs(x, y, maxsteps=maxsteps, sigma=1, nfolds=nfolds)
+    fit <- cvfs(x, y, maxsteps=maxsteps, nfolds=nfolds)
     vars <- fit$action
-    #fit2 <- groupfs(x, y, index = 1:p, maxsteps = attr(fit, "maxsteps"), sigma = 1)
-    pvals <- groupfsInf(fit, verbose=T)
+    pvals <- groupfsInf(fit, sigma=1, verbose=T)
     fit$cvobj <- NULL
     nocvpv <- groupfsInf(fit, verbose=T)
     Y <- y - mean(y)
@@ -40,7 +44,7 @@ instance <- function(n, p, sparsity, snr, maxsteps, nfolds) {
 }
 
 time <- system.time({
-          output <- replicate(niters, instance(n, p, sparsity, snr, maxsteps, nfolds))
+          output <- replicate(niters, instance(n, p, sparsity, snr, maxsteps, nfolds, rho))
 })
 
 vars <- do.call(c, list(output[1,]))
