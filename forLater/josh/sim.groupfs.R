@@ -37,15 +37,16 @@ time <- system.time({
 pvals <- do.call(c, list(output[2,]))
 vars <- do.call(c, list(output[1,]))
 
-save(pvals, vars, file = paste0(
-                      "results_n", n,
-                      "_p", p,
-                      "_g", G,
-                      "_rho", gsub(pattern = ".", replacement = "", x = rho, fixed = T),
-                      "_maxsteps", maxsteps,
-                      "_sparsity", sparsity,
-                      "_snr", round(snr),
-                      "_known", known,
-                      ".RData"))
+save(pvals, vars,
+     file = paste0("results/",
+         ifelse(known, "TC", "TF"),
+         "_n", n,
+         "_p", p,
+         "_g", G,
+         "_rho", gsub(".", "pt", rho, fixed=T),
+         "_maxsteps", maxsteps,
+         "_sparsity", sparsity,
+         "_snr", round(snr),
+         ".RData"))
 
 print(time)

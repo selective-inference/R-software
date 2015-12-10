@@ -6,6 +6,7 @@ source("../../selectiveInference/R/funs.common.R")
 
 set.seed(1)
 niters <- 50
+known <- FALSE
 n <- 100
 p <- 50
 maxsteps <- 8
@@ -29,7 +30,11 @@ instance <- function(n, p, sparsity, snr, maxsteps, nfolds, rho) {
       y <- y + x %*% beta
     }
 
-    fit <- cvfs(x, y, maxsteps=maxsteps, nfolds=nfolds)
+    if (known) {
+        fit <- cvfs(x, y, maxsteps=maxsteps, sigma = 1, nfolds=nfolds)
+    } else {
+        fit <- cvfs(x, y, maxsteps=maxsteps, nfolds=nfolds)
+    }
     vars <- fit$action
     pvals <- groupfsInf(fit, verbose=T)
     fit$cvobj <- NULL
@@ -54,11 +59,15 @@ nocvpvals <- do.call(c, list(output[4,]))
 noselvars <- do.call(c, list(output[5,]))
 noselpvals <- do.call(c, list(output[6,]))
 
-save(vars, pvals, nocvvars, nocvpvals, noselvars, noselpvals, file = paste0(
-                      "results_cv_n", n,
-                      "_p", p,
-                      "_sparsity", sparsity,
-                      "_snr", snr,
-                      "_comparison.RData"))
+save(vars, pvals, nocvvars, nocvpvals, noselvars, noselpvals,
+     file = paste0("results/cv",
+         "_", ifelse(known, "TC", "TF"),
+         "_n", n,
+         "_p", p,
+         "_rho", gsub(".", "pt", rho, fixed=T),
+         "_sparsity", sparsity,
+         "_maxsteps", maxsteps,
+         "_snr", snr,
+         ".RData"))
 
 print(time)
