@@ -8,7 +8,7 @@ set.seed(1)
 niters <- 50
 n <- 100
 p <- 50
-maxsteps <- 10
+maxsteps <- 8
 sparsity <- 5
 snr <- 2
 rho <- 0.1
@@ -31,7 +31,7 @@ instance <- function(n, p, sparsity, snr, maxsteps, nfolds, rho) {
 
     fit <- cvfs(x, y, maxsteps=maxsteps, nfolds=nfolds)
     vars <- fit$action
-    pvals <- groupfsInf(fit, sigma=1, verbose=T)
+    pvals <- groupfsInf(fit, verbose=T)
     fit$cvobj <- NULL
     nocvpv <- groupfsInf(fit, verbose=T)
     Y <- y - mean(y)
