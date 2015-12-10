@@ -5,10 +5,10 @@ source("../../selectiveInference/R/funs.quadratic.R")
 source("../../selectiveInference/R/funs.common.R")
 
 set.seed(1)
-niters <- 500
+niters <- 400
 known <- FALSE
 n <- 100
-p <- 100
+p <- 50
 maxsteps <- 20
 sparsity <- 10
 snr <- 1
@@ -39,11 +39,11 @@ instance <- function(n, p, sparsity, snr, maxsteps, rho) {
     xte <- x[test, ]
 
     if (known) {
-        trfit <- groupfs(xtr, ytr, index, maxsteps=maxsteps, sigma=1, aicstop=1, k = 2*log(p))
-        fit <- groupfs(x, y, index, maxsteps=maxsteps, sigma=1, aicstop=1, k = 2*log(p))
+        trfit <- cvfs(xtr, ytr, maxsteps=maxsteps, sigma = 1, nfolds=nfolds)
+        fit <- cvfs(x, y, maxsteps=maxsteps, sigma = 1, nfolds=nfolds)
     } else {
-        trfit <- groupfs(xtr, ytr, index, maxsteps=maxsteps, aicstop=1, k = log(length(train)))
-        fit <- groupfs(x, y, index, maxsteps=maxsteps, aicstop=1, k = log(n))        
+        trfit <- cvfs(xtr, ytr, maxsteps=maxsteps, nfolds=nfolds)
+        fit <- cvfs(x, y, maxsteps=maxsteps, nfolds=nfolds)
     }
 
     trcols <- which(1:p %in% trfit$action)
@@ -67,7 +67,7 @@ splitpvals <- do.call(c, list(output[4,]))
 trpvals <- do.call(c, list(output[5,]))
 
 save(vars, pvals, splitvars, splitpvals, trpvals,
-     file = paste0("results/datasplit",
+     file = paste0("results/carvecv",
          "_", ifelse(known, "TC", "TF"),
          "_n", n,
          "_p", p,
@@ -75,7 +75,7 @@ save(vars, pvals, splitvars, splitpvals, trpvals,
          "_sparsity", sparsity,
          "_ratio", gsub(".", "pt", round(ratio, 2), fixed=T),
          "_snr", as.character(snr),
-         "_bic.RData"))
+         ".RData"))
 
 print(time)
 
