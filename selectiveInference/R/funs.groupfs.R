@@ -378,7 +378,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = TRUE) {
                                   x0 <- zcvquad %*% Z
                                   x1 <- 2*R*zcvquad %*% Vdelta
                                   x2 <- 2*R*zcvquad %*% V2
-                                  x12 <- 2*R*vdcvquad %*% V2
+                                  x12 <- 2*R^2*vdcvquad %*% V2
                                   x11 <- R^2*vdcvquad %*% Vdelta
                                   x22 <- R^2*v2cvquad %*% V2
                                   TF_roots(R, C, coeffs = list(x0=x0, x1=x1, x2=x2, x12=x12, x11=x11, x22=x22))
