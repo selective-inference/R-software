@@ -5,17 +5,20 @@ source("../../selectiveInference/R/funs.quadratic.R")
 source("../../selectiveInference/R/funs.common.R")
 
 set.seed(1)
-niters <- 500
+niters <- 400
 known <- FALSE
 n <- 100
 p <- 100
-maxsteps <- 20
-sparsity <- 10
+maxsteps <- 10
+sparsity <- 5
 snr <- 1
 rho <- 0.1
-ratio <- 0.75
+ratio <- 0.7
+ratio2 <- 0.85
 train <- 1:(ratio*n)
 test <- setdiff(1:n, train)
+train2 <- 1:(ratio2*n)
+test <- setdiff(1:n, train2)
 index <- 1:p
 
 instance <- function(n, p, sparsity, snr, maxsteps, rho) {
@@ -37,18 +40,26 @@ instance <- function(n, p, sparsity, snr, maxsteps, rho) {
     xtr <- x[train, ]
     yte <- y[test]
     xte <- x[test, ]
+    
+    ytr2 <- y[train2]
+    xtr2 <- x[train2, ]
+    yte2 <- y[test2]
+    xte2 <- x[test2, ]
 
     if (known) {
         trfit <- groupfs(xtr, ytr, index, maxsteps=maxsteps, sigma=1, aicstop=1, k = 2*log(p))
-        fit <- groupfs(x, y, index, maxsteps=maxsteps, sigma=1, aicstop=1, k = 2*log(p))
+        fit <- groupfs(xtr2, ytr2, index, maxsteps=maxsteps, sigma=1, aicstop=1, k = 2*log(p))
     } else {
         trfit <- groupfs(xtr, ytr, index, maxsteps=maxsteps, aicstop=1, k = log(length(train)))
-        fit <- groupfs(x, y, index, maxsteps=maxsteps, aicstop=1, k = log(n))        
+        fit <- groupfs(xtr2, ytr2, index, maxsteps=maxsteps, aicstop=1, k = log(length(train2)))
     }
 
     trcols <- which(1:p %in% trfit$action)
+    tr2cols <- which(1:p %in% fit$action)
     tepv <- summary(lm(yte~xte[, trcols]-1))$coefficients[,4]
+    tepv2 <- summary(lm(yte2~xte2[, tr2cols]-1))$coefficients[,4]
     names(tepv) <- as.character(sort(trfit$action))
+    names(tepv2) <- as.character(sort(trfit$action))
     pv <- groupfsInf(fit)
     trpv <- groupfsInf(trfit)
     return(list(vars = fit$action, pvals = pv$pv,

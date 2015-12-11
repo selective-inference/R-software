@@ -17,6 +17,7 @@ ratio <- 0.75
 train <- 1:(ratio*n)
 test <- setdiff(1:n, train)
 index <- 1:p
+nfolds <- 5
 
 instance <- function(n, p, sparsity, snr, maxsteps, rho) {
 
