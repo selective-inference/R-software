@@ -106,8 +106,8 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
     }
 
     # Key quantities for the next entry
-
-    X_inactive_resid = X_inactive - X_active %*% backsolve(R,t(Q_active)%*%X_inactive)
+    keepLs=backsolve(R,t(Q_active)%*%X_inactive)
+    X_inactive_resid = X_inactive - X_active %*% keepLs
     working_x = scale(X_inactive_resid,center=F,scale=sqrt(colSums(X_inactive_resid^2)))
     score = as.numeric(t(working_x)%*%y)
     
@@ -189,7 +189,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
     # Record the least squares solution. Note that
     # we have already computed this
     bls = rep(0,p)
-    bls[A] = a
+   if(length(keepLs)>0)  bls[A] = keepLs
   }
 
   if (verbose) cat("\n")
@@ -448,6 +448,7 @@ print.fsInf <- function(x, tailarea=TRUE, ...) {
   invisible()
 }
 
+
 plot.fs <- function(x, breaks=TRUE, omit.zeros=TRUE, var.labels=TRUE, ...) {
   if (x$completepath) {
     k = length(x$action)+1
@@ -457,10 +458,10 @@ plot.fs <- function(x, breaks=TRUE, omit.zeros=TRUE, var.labels=TRUE, ...) {
     beta = x$beta
   }
   p = nrow(beta)
-  
+
   xx = 1:k
   xlab = "Step"
-  
+
  if (omit.zeros) {
    good.inds = matrix(FALSE,p,k)
    good.inds[beta!=0] = TRUE
@@ -475,7 +476,7 @@ plot.fs <- function(x, breaks=TRUE, omit.zeros=TRUE, var.labels=TRUE, ...) {
   abline(h=0,lwd=2)
   matplot(xx,t(beta),type="l",lty=1,add=TRUE)
   if (breaks) abline(v=xx,lty=2)
-  if (var.labels) axis(4,at=beta[,k],labels=1:p,cex=0.8,adj=0) 
+  if (var.labels) axis(4,at=beta[,k],labels=1:p,cex=0.8,adj=0)
   invisible()
 }
 

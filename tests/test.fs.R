@@ -171,3 +171,17 @@ out3 = fsInf(obj,sigma=sigma,k=k,type="all")
 out3
     out4 = fsInf(obj,sigma=sigma,k=k,type="all",bits=200)
     
+##plot
+
+    
+     set.seed(33)
+     n = 50
+     p = 10
+     sigma = 1
+     x = matrix(rnorm(n*p),n,p)
+     beta = c(3,2,rep(0,p-2))
+     y = x%*%beta + sigma*rnorm(n)
+     
+     # run forward stepwise, plot results
+     fsfit = fs(x,y)
+     plot(fsfit)
