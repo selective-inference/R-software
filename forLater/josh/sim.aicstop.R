@@ -1,19 +1,18 @@
 library(intervals)
 source("funs.sims.R")
-#source("selectiveInference/R/cv.R")
 source("../../selectiveInference/R/funs.groupfs.R")
 source("../../selectiveInference/R/funs.quadratic.R")
 source("../../selectiveInference/R/funs.common.R")
 
 set.seed(1)
 known <- FALSE
-niters <- 200
+niters <- 500
 n <- 50
 p <- 150
 G <- 75
 maxsteps <- 10
 sparsity <- 4
-snr <- 2
+snr <- 3
 rho <- 0
 aicstop <- 1
 
@@ -39,15 +38,17 @@ stopped <- do.call(c, list(output[3,]))
 pvals <- do.call(c, list(output[2,]))
 vars <- do.call(c, list(output[1,]))
 
-save(pvals, vars, stopped, file = paste0(
-                      "results_aic_n", n,
-                      "_p", p,
-                      "_g", G,
-                      "_rho", gsub(pattern = ".", replacement = "", x = rho, fixed = T),
-                      "_maxsteps", maxsteps,
-                      "_sparsity", sparsity,
-                      "_snr", round(snr),
-                      "_known", known,
-                      ".RData"))
+save(pvals, vars, stopped,
+     file = paste0(
+         "results/aic", 
+         "_", ifelse(known, "TC", "TF"),
+         "_n", n,
+         "_p", p,
+         "_g", G,
+         "_rho", gsub(".", "pt", rho, fixed=T),
+         "_maxsteps", maxsteps,
+         "_sparsity", sparsity,
+         "_snr", round(snr),
+         ".RData"))
 
 print(time)

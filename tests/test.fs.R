@@ -1,5 +1,8 @@
 library(selectiveInference)
 
+options(error=dump.frames)
+
+
 library(lars)
 
 set.seed(0)
@@ -112,8 +115,8 @@ x=matrix(rnorm(n*p),n,p)
 #x=scale(x,T,T)/sqrt(n-1)    #try with and without standardization
 
 beta=c(5,4,3,2,1,rep(0,p-5))
-
-nsim=100
+beta=rep(0,p)
+nsim=500
 seeds=sample(1:9999,size=nsim)
 pv=rep(NA,nsim)
 ci=matrix(NA,nsim,2)
@@ -133,7 +136,10 @@ for(ii in 1:nsim){
      btrue[ii]=lsfit(x[,oo],mu)$coef[2]
      ci[ii,]=junk$ci[1,]
 }
-
+plot((1:nsim)/nsim,sort(pv))
+    abline(0,1)
+    
+    
 sum(ci[,1]> btrue)
 sum(ci[,2]< btrue)
 
@@ -170,3 +176,21 @@ out3 = fsInf(obj,sigma=sigma,k=k,type="all")
 out3
     out4 = fsInf(obj,sigma=sigma,k=k,type="all",bits=200)
     
+##plot
+
+    library(selectiveInference)
+
+options(error=dump.frames)
+
+
+     set.seed(33)
+     n = 50
+     p = 10
+     sigma = 1
+     x = matrix(rnorm(n*p),n,p)
+     beta = c(3,2,rep(0,p-2))
+     y = x%*%beta + sigma*rnorm(n)
+     
+     # run forward stepwise, plot results
+     fsfit = fs(x,y)
+     plot(fsfit)

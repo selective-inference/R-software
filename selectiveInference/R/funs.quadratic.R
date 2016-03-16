@@ -205,16 +205,23 @@ TF_roots <- function(R, C, coeffs, tol = 1e-8, tol2 = 1e-6) {
     roots <- unique(thetas[which(modinds & angleinds)])
     troots <- tan(roots)^2/C
 
-    if (length(troots) == 0) {
-        # Polyroot didn't catch any roots
-        # ad-hoc check:
-        checkpoints <- c(0, tol, tol2,
-                         seq(from = sqrt(tol2), to = 1, length.out = 50),
-                         seq(from = 1.2, to=50, length.out = 20),
-                         100, 1000, 10000)
-    } else {
-        checkpoints <- roots_to_checkpoints(troots)
-    }
+    checkpoints <- c()
+    if (length(troots) > 0) checkpoints <- roots_to_checkpoints(troots)
+    checkpoints <- sort(
+        c(checkpoints, 0, tol, tol2,
+                        seq(from = sqrt(tol2), to = 1, length.out = 50),
+                        seq(from = 1.2, to=50, length.out = 20),
+                        100, 1000, 10000))
+    ## if (length(troots) == 0) {
+    ##     # Polyroot didn't catch any roots
+    ##     # ad-hoc check:
+    ##     checkpoints <- c(0, tol, tol2,
+    ##                      seq(from = sqrt(tol2), to = 1, length.out = 50),
+    ##                      seq(from = 1.2, to=50, length.out = 20),
+    ##                      100, 1000, 10000)
+    ## } else {
+    ##     checkpoints <- roots_to_checkpoints(troots)
+    ## }
 
     signs <- sign(I(checkpoints))
     diffs <- c(0, diff(signs))
