@@ -54,7 +54,7 @@ cvRSSquad <- function(x, folds, active.sets) {
     return(Q)
 }
 
-cvfs <- function(x, y, index = 1:ncol(x), maxsteps, nfolds = 10) {
+cvfs <- function(x, y, index = 1:ncol(x), maxsteps, sigma = NULL, intercept = TRUE, center = TRUE, normalize = TRUE, nfolds = 5) {
 
     n <- nrow(x)
     if (maxsteps >= n*(1-1/nfolds)) {
@@ -69,13 +69,23 @@ cvfs <- function(x, y, index = 1:ncol(x), maxsteps, nfolds = 10) {
     active.sets <- list(1:nfolds)
     cvobj <- list(1:nfolds)
     cv_perm <- sample(1:n)
-    Y <- y[cv_perm] - mean(y)
+    Y <- y[cv_perm]
     X <- x[cv_perm, ]
+
+    # Initialize copies of data for loop
+    by <- mean(Y)
+    if (intercept) Y <- Y - by
+
+    # Center and scale design matrix
+    xscaled <- scaleGroups(X, index, center, normalize)
+    xm <- xscaled$xm
+    xs <- xscaled$xs
+    X <- xscaled$x
 
     # Flatten list or something?
     for (f in 1:nfolds) {
         fold <- folds[[f]]
-        fit <- groupfs(X[-fold,], Y[-fold], index, maxsteps=maxsteps)
+        fit <- groupfs(X[-fold,], Y[-fold], index=index, maxsteps=maxsteps, sigma=sigma, intercept=FALSE, center=FALSE, normalize=FALSE)
         fit$fold <- fold
         ## projections[[f]] <- lapply(fit$projections, function(step.projs) {
         ##     lapply(step.projs, function(proj) {
@@ -103,7 +113,7 @@ cvfs <- function(x, y, index = 1:ncol(x), maxsteps, nfolds = 10) {
     RSSquads <- lapply(RSSquads, function(quad) quad - quadstar)
     RSSquads[[sstar]] <- NULL # remove the all zeroes case
 
-    fit <- groupfs(X, Y, index, maxsteps=sstar)
+    fit <- groupfs(X, Y, index=index, maxsteps=sstar, sigma=sigma, intercept=intercept, center=center, normalize=normalize)
     fit$cvobj <- cvobj
     fit$cvquad <- RSSquads
 

@@ -49,10 +49,9 @@ groupfs <- function(x, y, index, maxsteps, sigma = NULL, k = 2, intercept = TRUE
   y.update <- y
   if (intercept) y.update <- y - by
   y.last <- y.update
-  x.update <- x
 
   # Center and scale design matrix
-  xscaled <- scaleGroups(x.update, index, center, normalize)
+  xscaled <- scaleGroups(x, index, center, normalize)
   xm <- xscaled$xm
   xs <- xscaled$xs
   x.update <- xscaled$x
@@ -379,7 +378,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = TRUE) {
                                   x0 <- zcvquad %*% Z
                                   x1 <- 2*R*zcvquad %*% Vdelta
                                   x2 <- 2*R*zcvquad %*% V2
-                                  x12 <- 2*R*vdcvquad %*% V2
+                                  x12 <- 2*R^2*vdcvquad %*% V2
                                   x11 <- R^2*vdcvquad %*% Vdelta
                                   x22 <- R^2*v2cvquad %*% V2
                                   TF_roots(R, C, coeffs = list(x0=x0, x1=x1, x2=x2, x12=x12, x11=x11, x22=x22))
@@ -434,7 +433,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = TRUE) {
             Uh <- ulist[[step]]
             Zg <- zlist[[step+1]]
             Zh <- zlist[[step]]
-            
+
             if (type == "TC") {
                 penh <- 0
                 etag <- etalist[[step+1]]
@@ -444,9 +443,9 @@ groupfsInf <- function(obj, sigma = NULL, verbose = TRUE) {
                 if (AICs[step] < AICs[step+1]) {
                     coeffs <- lapply(coeffs, function(coeff) -coeff)
                 }
-                
+
                 intstep <- quadratic_roots(coeffs$A, coeffs$B, coeffs$C, tol = 1e-15)
-                
+
             } else {
                 penh <- 1
                 Vdg <- vdlist[[step+1]]
@@ -458,7 +457,7 @@ groupfsInf <- function(obj, sigma = NULL, verbose = TRUE) {
                 if (AICs[step] < AICs[step+1]) {
                     coeffs <- lapply(coeffs, function(coeff) -coeff)
                 }
-                
+
                 intstep <- TF_roots(R, C, coeffs)
             }
 

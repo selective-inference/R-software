@@ -122,9 +122,11 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
   return(out)
 }
 
-##############################
+#############################
 
-fixedLasso.poly <- function(x, y, beta, lambda, a) {
+
+fixedLasso.poly=
+function(x, y, beta, lambda, a) {
   xa = x[,a,drop=F]
   xac = x[,!a,drop=F]
   xai = pinv(crossprod(xa))
@@ -134,16 +136,22 @@ fixedLasso.poly <- function(x, y, beta, lambda, a) {
   if (length(za)==1) dz = matrix(za,1,1)
 
   P = diag(1,nrow(xa)) - xa %*% xap
-  G = -rbind(1/lambda * t(xac) %*% P,
-    -1/lambda * t(xac) %*% P,
-    -dz %*% xap)
-  u = -c(1 - t(xac) %*% t(xap) %*% za,
-    1 + t(xac) %*% t(xap) %*% za,
-    -lambda * dz %*% xai %*% za)
+  #NOTE: inactive constraints not needed below!
+ 
+  G = -rbind(
+   #   1/lambda * t(xac) %*% P,
+   # -1/lambda * t(xac) %*% P,
+    -dz %*% xap
+      )
+     lambda2=lambda
+     if(length(lambda)>1) lambda2=lambda[a]
+  u = -c(
+   #   1 - t(xac) %*% t(xap) %*% za,
+   #   1 + t(xac) %*% t(xap) %*% za,
+    -lambda2 * dz %*% xai %*% za)
 
   return(list(G=G,u=u))
 }
-
 # Moore-Penrose pseudo inverse for symmetric matrices
 
 pinv <- function(A, tol=.Machine$double.eps) {

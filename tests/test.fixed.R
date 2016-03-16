@@ -208,6 +208,35 @@ fixedLassoInf(x,y,beta,lambda,sigma=sigma)
 beta=coef(fit,s=lambda,mode="lambda")
 fixedLassoInf(x,y,beta,lambda,sigma=sigma)
 
+# now try penalty factors
+  set.seed(43)
+     n = 50
+     p = 10
+     sigma = 1
+     
+     x = matrix(rnorm(n*p),n,p)
+     x=scale(x,T,T)
+     
+     beta = c(3,2,rep(0,p-2))
+     y = x%*%beta + sigma*rnorm(n)
+    
+     pf=c(rep(1,7),rep(.1,p-7))
+     pf=p*pf/sum(pf)   # penalty factors should be rescaled so they sum to p
+     xs=scale(x,F,pf) #scale cols of x
+     # first run glmnet
+     gfit = glmnet(xs,y,standardize=F)
+     
+     # extract coef for a given lambda; note the 1/n factor!
+     # (and we don't save the intercept term)
+     lambda = .8
+     beta = coef(gfit, s=lambda/n, exact=TRUE)[-1]
+     
+     # compute fixed lambda p-values and selection intervals
+     out = fixedLassoInf(xs,y,beta,lambda,sigma=sigma)
+     #rescale conf points to undo the penalty factor
+     out$ci=t(scale(t(out$ci),F,pf[out$vars]))
+
+
 ###
 x=state.x77[,-4]
 y=state.x77[,4]
@@ -364,3 +393,46 @@ for(i in 1:100){
 
 p <- pval[, -(1:2)]
 mean(p[p < 1] < 0.05)
+
+
+#test from Chong
+
+
+library(selectiveInference)
+
+library(glmnet);library(MASS);#library(grplasso);library(gvlma);library(grpreg)
+library(penalized)
+load("fooXY.RData")
+
+#d=read.csv("DesignMatrixX_and_y.csv");dim(d); head(d)
+
+#source("temp.R")
+n=length(Y)
+p=ncol(X)
+#X=scale(X,T,F)
+X=X+.01*matrix(rnorm(n*p),n,p) # I added noise to avoid collinearity
+#X=scale(X,T,T)/sqrt(n-1)
+
+Y=Y-mean(Y)
+
+#X=as.matrix(d[,1:192]); ### design matrix, no intercept
+#Y=d$y; ### Response variable Y.
+fit = glmnet(x=X, y=Y, family="gaussian",alpha = 1, thresh = 1e-9, standardize=F)
+set.seed(39)
+lam= fit$lambda[30];
+#lam= fit$lambda[15]## Try getting coefficient at this lambda
+beta = coef(fit, s=lam, exact=TRUE)[-1];length(beta);table(beta!=0)
+
+ aa=penalized(Y~X,lambda1=lam*n,model="linear",standardize=F)
+  b=coef(aa,which="all")[-1]
+
+lam2=n*lam
+
+g=t(X)%*%(Y-X%*%beta)/lam2
+
+g[beta!=0]
+
+g=t(X)%*%(Y-X%*%b)/lam2
+out = fixedLassoInf(X,Y,beta,lam*n)
+
+
