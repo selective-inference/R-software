@@ -533,7 +533,6 @@ fsInf_maxZ <- function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
       # because this has a simple box constraint
       # with a generically non-degenerate covariance
 
-
       if (n > p) { 
           library(tmvtnorm)
  
@@ -550,7 +549,7 @@ fsInf_maxZ <- function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
                                      lower=-collapsed_neg,
                                      upper=collapsed_pos,
                                      algorithm="gibbs",
-                 			 burn.in.samples=burnin)
+                    		     burn.in.samples=burnin)
 
           if (length(inactive) > 1) {				 
              sample_maxZ = apply(abs(1. / cur_scale * truncated_noise), 1, max)
