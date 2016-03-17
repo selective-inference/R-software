@@ -8,10 +8,10 @@
 #
 
 factor_covariance = function(S, rank=NA) {
-    if (!is.na(rank)) {
+    if (is.na(rank)) {
         rank = nrow(S)
     }
-    svd_X = svd(S, nu = rank, nv=rank)
+    svd_X = svd(S, nu=rank, nv=rank)
     sqrt_cov = t(sqrt(svd_X$d[1:rank]) * t(svd_X$u[,1:rank]))
     sqrt_inv = t((1. / sqrt(svd_X$d[1:rank])) * t(svd_X$u[,1:rank]))
 
@@ -32,23 +32,23 @@ whiten_constraint = function(linear_part, offset, mean, covariance) {
     sqrt_cov = factor_cov$sqrt_cov
     sqrt_inv = factor_cov$sqrt_inv
 
-    new_A = A %*% sqrt_cov
+    new_A = linear_part %*% sqrt_cov
     new_b = offset - linear_part %*% mean
 
     # rescale rows to have length 1
 
-    scaling = sqrt(apply(new_A^2, sum, 1))
+    scaling = sqrt(apply(new_A^2, 1, sum))
     new_A = new_A / scaling
     new_b = new_b / scaling
 
     # TODO: check these functions will behave when Z is a matrix.
 
     inverse_map = function(Z) {
-        return(sqrt_cov %*% Z + mu)
+        return(sqrt_cov %*% Z + mean)
     }
 
     forward_map = function(W) {
-        return(sqrt_inv %*% (W - mu))
+        return(sqrt_inv %*% (W - mean))
     }    
 
     return(list(linear_part=new_A,
@@ -64,8 +64,8 @@ whiten_constraint = function(linear_part, offset, mean, covariance) {
 
 sample_from_constraints = function(linear_part,
                                    offset,
-                                   covariance,
                                    mean,
+                                   covariance,
                                    initial_point, # point must be feasible for constraints
                                    ndraw=8000,
                                    burnin=2000,
@@ -74,8 +74,8 @@ sample_from_constraints = function(linear_part,
 
     whitened_con = whiten_constraint(linear_part,
                                      offset,
-                                     covariance,
-                                     mean)
+				     mean,
+                                     covariance)
     white_initial = whitened_con$forward_map(initial_point)
 
 #     # try 100 draws of accept reject
@@ -118,25 +118,36 @@ sample_from_constraints = function(linear_part,
         white_offset = whitened_con$offset
 
         nstate = length(white_initial)
-        directions = rbind(diag(rep(1, ndim)),
-                           matrix(rnorm(ndim^2), nstate, nstate))
-        directions = apply(directions, function(x) { x/sqrt(sum(x^2)) }, 1) # normalize rows to have length 1
-        alphas = white_linear %*% directions
-        U = white_linear %*% white_initial - white_offset
-        Z_sample = matrix(rep(NA, ndraw*ndim), nstate, ndraw)
+	nconstraint = nrow(white_linear)
 
-        .C("sample_truncnorm_white",
-           white_initial,
-           U,
-           t(directions),
-           t(alphas),
-           Z_sample,
-           nrow(white_linear),
-           nstate,
-           burnin,
-           ndraw)
-    
+        directions = rbind(diag(rep(1, nstate)),
+                           matrix(rnorm(nstate^2), nstate, nstate))
+
+        # normalize rows to have length 1
+
+        scaling = apply(directions, 1, function(x) {  return(sqrt(sum(x^2))) }) 
+	directions = directions / scaling
+	ndirection = nrow(directions)
+
+        alphas = directions %*% t(white_linear)
+        U = white_linear %*% white_initial - white_offset
+        Z_sample = matrix(rep(0, nstate * ndraw), nstate, ndraw)
+
+        result = .C("sample_truncnorm_white",
+                    as.numeric(white_initial),
+                    as.numeric(U),
+                    as.numeric(t(directions)),
+                    as.numeric(t(alphas)),
+                    output=Z_sample,
+                    as.integer(nconstraint),
+                    as.integer(ndirection),
+                    as.integer(nstate),
+                    as.integer(burnin),
+                    as.integer(ndraw),
+                    package="selectiveInference")
+        Z_sample = result$output
     }
+
     Z = t(whitened_con$inverse_map(Z_sample))
     return(Z)
 }
