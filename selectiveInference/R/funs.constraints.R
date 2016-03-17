@@ -117,35 +117,47 @@ sample_from_constraints = function(linear_part,
         white_linear = whitened_con$linear_part
         white_offset = whitened_con$offset
 
+	# Inf cannot be used in C code
+	# In theory, these rows can be dropped
+
+	rows_to_keep = white_offset < Inf
+	white_linear = white_linear[rows_to_keep,]
+	white_offset = white_offset[rows_to_keep,]
+
         nstate = length(white_initial)
-	nconstraint = nrow(white_linear)
+	if (sum(rows_to_keep) > 0) {
+            nconstraint = nrow(white_linear)
 
-        directions = rbind(diag(rep(1, nstate)),
-                           matrix(rnorm(nstate^2), nstate, nstate))
+            directions = rbind(diag(rep(1, nstate)),
+                               matrix(rnorm(nstate^2), nstate, nstate))
 
-        # normalize rows to have length 1
+            # normalize rows to have length 1
 
-        scaling = apply(directions, 1, function(x) {  return(sqrt(sum(x^2))) }) 
-	directions = directions / scaling
-	ndirection = nrow(directions)
+            scaling = apply(directions, 1, function(x) {  return(sqrt(sum(x^2))) }) 
+            directions = directions / scaling
+            ndirection = nrow(directions)
 
-        alphas = directions %*% t(white_linear)
-        U = white_linear %*% white_initial - white_offset
-        Z_sample = matrix(rep(0, nstate * ndraw), nstate, ndraw)
+            alphas = directions %*% t(white_linear)
+            U = white_linear %*% white_initial - white_offset
+            Z_sample = matrix(rep(0, nstate * ndraw), nstate, ndraw)
 
-        result = .C("sample_truncnorm_white",
-                    as.numeric(white_initial),
-                    as.numeric(U),
-                    as.numeric(t(directions)),
-                    as.numeric(t(alphas)),
-                    output=Z_sample,
-                    as.integer(nconstraint),
-                    as.integer(ndirection),
-                    as.integer(nstate),
-                    as.integer(burnin),
-                    as.integer(ndraw),
-                    package="selectiveInference")
-        Z_sample = result$output
+            result = .C("sample_truncnorm_white",
+                        as.numeric(white_initial),
+                        as.numeric(U),
+                        as.numeric(t(directions)),
+                        as.numeric(t(alphas)),
+                        output=Z_sample,
+                        as.integer(nconstraint),
+                        as.integer(ndirection),
+                        as.integer(nstate),
+                        as.integer(burnin),
+                        as.integer(ndraw),
+                        package="selectiveInference")
+            Z_sample = result$output
+       }
+       else {
+            Z_sample = matrix(rnorm(nstate * ndraw), nstate, ndraw)
+       }
     }
 
     Z = t(whitened_con$inverse_map(Z_sample))

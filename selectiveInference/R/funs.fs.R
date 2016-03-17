@@ -29,9 +29,9 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   # Find the first variable to enter and its sign
   working_scale = sqrt(colSums(x^2))
   working_x = scale(x,center=F,scale=working_scale)
-  score = t(working_x)%*%y
-  i_hit = which.max(abs(score))   # Hitting coordinate
-  sign_hit = Sign(score[i_hit])   # Sign
+  working_score = t(working_x)%*%y
+  i_hit = which.max(abs(working_score))   # Hitting coordinate
+  sign_hit = Sign(working_score[i_hit])   # Sign
   signs = sign_hit                # later signs will be appended to `signs`
 
   if (verbose) {
@@ -54,7 +54,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   offset_pos_maxZ = matrix(Inf, p, buf) # upper bounds for selective maxZ
   offset_neg_maxZ = matrix(Inf, p, buf) # lower bounds for selective maxZ
   scale_maxZ = matrix(0, p, buf) # lower bounds for selective maxZ
-  realized_maxZ = matrix(0, p, buf) # lower bounds for selective maxZ
+  realized_maxZ = numeric(buf) # lower bounds for selective maxZ
 
   action[1] = i_hit
   df[1] = 0
@@ -64,7 +64,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   # Variables needed to compute truncation limits for
   # selective maxZ test
 
-  realized_maxZ[1] = c(sign_hit * score[i_hit])
+  realized_maxZ[1] = c(sign_hit * working_score[i_hit])
   offset_pos_maxZ[,1] = Inf
   offset_neg_maxZ[,1] = Inf
   scale_maxZ[,1] = working_scale
@@ -132,15 +132,18 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
       offset_pos_maxZ = cbind(offset_pos_maxZ, matrix(0, p, buf))
       offset_neg_maxZ = cbind(offset_neg_maxZ, matrix(0, p, buf))
       scale_maxZ = cbind(scale_maxZ, matrix(0, p, buf))
-      realized_maxZ = cbind(realized_maxZ, matrix(0, p, buf))
+      realized_maxZ = c(realized_maxZ, numeric(buf))
     }
 
     # Key quantities for the next entry
 
     keepLs=backsolve(R,t(Q_active)%*%X_inactive)
+
+    prev_scale = working_scale[-i_hit] # this variable used later for maxZ
     X_inactive_resid = X_inactive - X_active %*% keepLs
-    working_x = scale(X_inactive_resid,center=F,scale=sqrt(colSums(X_inactive_resid^2)))
-    score = as.numeric(t(working_x)%*%y)
+    working_scale = sqrt(colSums(X_inactive_resid^2)) # this variable used later for maxZ
+    working_x = scale(X_inactive_resid,center=F,scale=working_scale)
+    working_score = as.numeric(t(working_x)%*%y)
     
     beta_cur = backsolve(R,t(Q_active)%*%y) # must be computed before the break
                                             # so we have it if we have 
@@ -180,7 +183,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
 
     # update maxZ variable
     realized_maxZ[k] = sign_hit * working_score[i_hit]
-
+    
     # Gamma matrix!
 
     if (gi + 2*p > nrow(Gamma)) Gamma = rbind(Gamma,matrix(0,2*p+gbuf,n))
@@ -451,6 +454,7 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
   y = obj$y
   p = ncol(x)
   n = nrow(x)
+  pv = c()
 
   if (is.null(sigma)) {
     # TODO we need a sampler on a unit sphere
@@ -487,10 +491,10 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
       collapsed_neg = apply(obj$offset_neg_maxZ[inactive,1:j,drop=FALSE], 1, min)
       cur_scale = obj$scale_maxZ[,j][inactive]
 
-      # the matrix cur_adjusted_X is used to compute
+      # the matrix cur_adjusted_Xt is used to compute (always as length(y) columns)
       # the maxZ or maxT for the sampled variables
-
-      cur_adjusted_X = obj$Gamma_maxZ[zi + Seq(1,p-j+1),]; zi = zi+p-j+1
+      # 
+      cur_adjusted_Xt = obj$Gamma_maxZ[zi + Seq(1,p-j+1),]; zi = zi+p-j+1 # Xt for transpose
 
       # cur_X is used to enforce conditioning on
       # the ever_active sufficient_statistics
@@ -517,8 +521,8 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
 
       # now, we sample from Y_star, a centered Gaussian with covariance sigma^2 I
       # subject to the constraint
-      # t(cur_adjusted_X) %*% Y_star < final_upper
-      # -t(cur_adjusted_X) %*% Y_star < -final_lower
+      # t(cur_adjusted_Xt) %*% Y_star < final_upper
+      # -t(cur_adjusted_Xt) %*% Y_star < -final_lower
 
       # really, we want the covariance of Y_star to be \sigma^2 (I - cur_P)
       # where P is projection on the j-1 previous variables
@@ -529,7 +533,7 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
 
       # IMPORTANT: after sampling Y_star, we have to add back cur_fitted
 
-      # if n > p, we actually just draw cur_adjusted_X %*% Y_star
+      # if n > p, we actually just draw cur_adjusted_Xt %*% Y_star
       # because this has a simple box constraint
       # with a generically non-degenerate covariance
 
@@ -537,10 +541,10 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
           library(tmvtnorm)
  
           if (length(inactive) > 1) {
-              cov = (cur_adjusted_X %*% t(cur_adjusted_X))
+              cov = (cur_adjusted_Xt %*% t(cur_adjusted_Xt))
               cov = cov * rep(sigma^2, nrow(cov), ncol(cov))
           } else {
-              cov = sigma^2 * sum(cur_adjusted_X^2)
+              cov = sigma^2 * sum(cur_adjusted_Xt^2)
           }
 
           truncated_noise = rtmvnorm(n=ndraw, 
@@ -559,11 +563,12 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
           }
       } else {
 
-          linear_part = rbind(t(cur_adjusted_X), -t(cur_adjusted_X))
+          linear_part = rbind(cur_adjusted_Xt, -cur_adjusted_Xt)
 	  offset = c(final_upper, -final_lower)
-	  covariance = diag(rep(sigma^2, nrow(cor_adjusted_X)))
-	  mean = rep(0, nrow(cur_adjusted_X))
+	  covariance = diag(rep(sigma^2, length(y)))
+	  mean = rep(0, length(y))
 	  initial_point = y
+
 	  truncated_y = sample_from_constraints(linear_part, 
                                                 offset, 
                                                 mean, 
@@ -572,7 +577,7 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
                                                 burnin=burnin, 
                                                 ndraw=ndraw)
 
-          truncated_noise = truncated_y %*% cur_adjusted_X
+          truncated_noise = truncated_y %*% t(cur_adjusted_Xt)
           sample_maxZ = apply(abs(1. / cur_scale * truncated_noise), 1, max)
       }
       
@@ -592,17 +597,17 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
 	     sigma=sigma,
 	     call=this.call,
 	     vars=vars,
-	     sign=sign,
+	     sign=obj$sign,
 	     alpha=alpha,
              realized_maxZ=obj$realized_maxZ)
-  class(out) = "fsInf_Zmax"
+  class(out) = "fsInf_maxZ"
   return(out)
 }
 
 ##############################
-
-Print methods
-
+#
+# Print methods
+#
 ##############################
 
 print.fs <- function(x, ...) {
@@ -618,7 +623,68 @@ print.fs <- function(x, ...) {
   invisible()
 }
 
-print.fsInf_Zmax <- function(obj) {
+print.fsInf <- function(x, tailarea=TRUE, ...) {
+  cat("\nCall:\n")
+  dput(x$call)
+
+  cat(sprintf("\nStandard deviation of noise (specified or estimated) sigma = %0.3f\n",
+              x$sigma))
+
+  if (x$type == "active") {
+    cat(sprintf("\nSequential testing results with alpha = %0.3f\n",x$alpha))
+    tab = cbind(1:length(x$pv),x$vars,
+      round(x$sign*x$vmat%*%x$y,3),
+      round(x$sign*x$vmat%*%x$y/(x$sigma*sqrt(rowSums(x$vmat^2))),3),
+      round(x$pv,3),round(x$ci,3))
+    colnames(tab) = c("Step", "Var", "Coef", "Z-score", "P-value",
+              "LowConfPt", "UpConfPt")
+    if (tailarea) {
+      tab = cbind(tab,round(x$tailarea,3))
+      colnames(tab)[(ncol(tab)-1):ncol(tab)] = c("LowTailArea","UpTailArea")
+    }
+    rownames(tab) = rep("",nrow(tab))
+    print(tab)
+
+    cat(sprintf("\nEstimated stopping point from ForwardStop rule = %i\n",x$khat))
+  }
+
+  else if (x$type == "all") {
+    cat(sprintf("\nTesting results at step = %i, with alpha = %0.3f\n",x$k,x$alpha))
+    tab = cbind(x$vars,
+      round(x$sign*x$vmat%*%x$y,3),
+      round(x$sign*x$vmat%*%x$y/(x$sigma*sqrt(rowSums(x$vmat^2))),3),
+      round(x$pv,3),round(x$ci,3))
+    colnames(tab) = c("Var", "Coef", "Z-score", "P-value", "LowConfPt", "UpConfPt")
+    if (tailarea) {
+      tab = cbind(tab,round(x$tailarea,3))
+      colnames(tab)[(ncol(tab)-1):ncol(tab)] = c("LowTailArea","UpTailArea")
+    }
+    rownames(tab) = rep("",nrow(tab))
+    print(tab)
+  }
+
+  else if (x$type == "aic") {
+    cat(sprintf("\nTesting results at step = %i, with alpha = %0.3f\n",x$khat,x$alpha))
+    tab = cbind(x$vars,
+      round(x$sign*x$vmat%*%x$y,3),
+      round(x$sign*x$vmat%*%x$y/(x$sigma*sqrt(rowSums(x$vmat^2))),3),
+      round(x$pv,3),round(x$ci,3))
+    colnames(tab) = c("Var", "Coef", "Z-score", "P-value", "LowConfPt", "UpConfPt")
+    if (tailarea) {
+      tab = cbind(tab,round(x$tailarea,3))
+      colnames(tab)[(ncol(tab)-1):ncol(tab)] = c("LowTailArea","UpTailArea")
+    }
+    rownames(tab) = rep("",nrow(tab))
+    print(tab)
+    
+    cat(sprintf("\nEstimated stopping point from AIC rule = %i\n",x$khat))
+  }
+
+  invisible()
+}
+
+
+print.fsInf_maxZ <- function(obj) {
 
   cat("\nCall:\n")
   dput(obj$call)
@@ -628,23 +694,23 @@ print.fsInf_Zmax <- function(obj) {
 
   cat(sprintf("\nSequential testing results with alpha = %0.3f\n",obj$alpha))
 
-  tab = cbind(1:length(obj$pv),obj$vars,
+  tab = cbind(1:length(obj$pv),
+              obj$vars,
               round(obj$sign*obj$realized_maxZ, 3),
               round(obj$pv,3))
-  colnames(tab) = c("Step", "Var", "Coef", "Z-score", "P-value")
+  colnames(tab) = c("Step", "Var", "Z-score", "P-value")
   rownames(tab) = rep("",nrow(tab))
   print(tab)
 
   cat(sprintf("\nEstimated stopping point from ForwardStop rule = %i\n",obj$khat))
-  }
 
   invisible()
 }
 
 ##############################
-
-Plot methods
-
+# 
+# Plot methods
+#
 ##############################
 
 plot.fs <- function(x, breaks=TRUE, omit.zeros=TRUE, var.labels=TRUE, ...) {
