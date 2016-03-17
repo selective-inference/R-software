@@ -533,53 +533,28 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
 
       # IMPORTANT: after sampling Y_star, we have to add back cur_fitted
 
-      # if n > p, we actually just draw cur_adjusted_Xt %*% Y_star
+      # if n > p, we could actually just draw cur_adjusted_Xt %*% Y_star
       # because this has a simple box constraint
       # with a generically non-degenerate covariance
 
-      if (n > p) { 
-          library(tmvtnorm)
- 
-          if (length(inactive) > 1) {
-              cov = (cur_adjusted_Xt %*% t(cur_adjusted_Xt))
-              cov = cov * rep(sigma^2, nrow(cov), ncol(cov))
-          } else {
-              cov = sigma^2 * sum(cur_adjusted_Xt^2)
-          }
+      # but `tmvtnorm` seems to give poor results for its sampler
 
-          truncated_noise = rtmvnorm(n=ndraw, 
-                                     mean=cur_offset,
-                                     sigma=cov, 
-                                     lower=-collapsed_neg,
-                                     upper=collapsed_pos,
-                                     algorithm="gibbs",
-                    		     burn.in.samples=burnin)
+      linear_part = rbind(cur_adjusted_Xt, -cur_adjusted_Xt)
+      offset = c(final_upper, -final_lower)
+      covariance = diag(rep(sigma^2, length(y)))
+      mean = rep(0, length(y))
+      initial_point = y
 
-          if (length(inactive) > 1) {				 
-             sample_maxZ = apply(abs(1. / cur_scale * truncated_noise), 1, max)
-          }
-          else {
-             sample_maxZ = truncated_noise / cur_scale
-          }
-      } else {
+      truncated_y = sample_from_constraints(linear_part, 
+                                            offset, 
+                                            mean, 
+                                            covariance, 
+                                            initial_point, 
+                                            burnin=burnin, 
+                                            ndraw=ndraw)
 
-          linear_part = rbind(cur_adjusted_Xt, -cur_adjusted_Xt)
-	  offset = c(final_upper, -final_lower)
-	  covariance = diag(rep(sigma^2, length(y)))
-	  mean = rep(0, length(y))
-	  initial_point = y
-
-	  truncated_y = sample_from_constraints(linear_part, 
-                                                offset, 
-                                                mean, 
-                                                covariance, 
-                                                initial_point, 
-                                                burnin=burnin, 
-                                                ndraw=ndraw)
-
-          truncated_noise = truncated_y %*% t(cur_adjusted_Xt)
-          sample_maxZ = apply(abs(1. / cur_scale * truncated_noise), 1, max)
-      }
+      truncated_noise = truncated_y %*% t(cur_adjusted_Xt)
+      sample_maxZ = apply(abs(1. / cur_scale * truncated_noise), 1, max)
       
       observed_maxZ = obj$realized_maxZ[j]
 
