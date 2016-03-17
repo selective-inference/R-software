@@ -558,8 +558,22 @@ fsInf_maxZ <- function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
              sample_maxZ = truncated_noise / cur_scale
           }
       } else {
-          # RUBBISH for now!!!!
-	  sample_maxZ = abs(rnorm(ndraw))         
+
+          linear_part = rbind(t(cur_adjusted_X), -t(cur_adjusted_X))
+	  offset = c(final_upper, -final_lower)
+	  covariance = diag(rep(sigma^2, nrow(cor_adjusted_X)))
+	  mean = rep(0, nrow(cur_adjusted_X))
+	  initial_point = y
+	  truncated_y = sample_from_constraints(linear_part, 
+                                                offset, 
+                                                mean, 
+                                                covariance, 
+                                                initial_point, 
+                                                burnin=burnin, 
+                                                ndraw=ndraw)
+
+          truncated_noise = truncated_y %*% cur_adjusted_X
+          sample_maxZ = apply(abs(1. / cur_scale * truncated_noise), 1, max)
       }
       
       observed_maxZ = obj$realized_maxZ[j]
