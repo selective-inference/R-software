@@ -135,7 +135,8 @@ sample_from_constraints = function(linear_part,
            nstate,
            burnin,
            ndraw)
-
+    
+    }
     Z = t(whitened_con$inverse_map(t(output)))
     return(Z)
 }
