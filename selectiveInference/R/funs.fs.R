@@ -437,8 +437,8 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
 
 # selected maxZ tests
 
-fsInf_maxZ <- function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
-                       ndraw=8000, burnin=2000) {
+fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
+                      ndraw=8000, burnin=2000) {
   
   this.call = match.call()
 
@@ -586,14 +586,22 @@ fsInf_maxZ <- function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
 
   khat = forwardStop(pv,alpha)
 
-  out = list(pv=pv,khat=khat,
-	     call=this.call)
+  out = list(pv=pv,
+             k=k,
+             khat=khat,
+	     sigma=sigma,
+	     call=this.call,
+	     vars=vars,
+	     sign=sign,
+	     alpha=alpha,
+             realized_maxZ=obj$realized_maxZ)
   class(out) = "fsInf_Zmax"
   return(out)
 }
 
 ##############################
 
+Print methods
 
 ##############################
 
@@ -610,66 +618,34 @@ print.fs <- function(x, ...) {
   invisible()
 }
 
-print.fsInf <- function(x, tailarea=TRUE, ...) {
+print.fsInf_Zmax <- function(obj) {
+
   cat("\nCall:\n")
-  dput(x$call)
+  dput(obj$call)
 
   cat(sprintf("\nStandard deviation of noise (specified or estimated) sigma = %0.3f\n",
-              x$sigma))
+              obj$sigma))
 
-  if (x$type == "active") {
-    cat(sprintf("\nSequential testing results with alpha = %0.3f\n",x$alpha))
-    tab = cbind(1:length(x$pv),x$vars,
-      round(x$sign*x$vmat%*%x$y,3),
-      round(x$sign*x$vmat%*%x$y/(x$sigma*sqrt(rowSums(x$vmat^2))),3),
-      round(x$pv,3),round(x$ci,3))
-    colnames(tab) = c("Step", "Var", "Coef", "Z-score", "P-value",
-              "LowConfPt", "UpConfPt")
-    if (tailarea) {
-      tab = cbind(tab,round(x$tailarea,3))
-      colnames(tab)[(ncol(tab)-1):ncol(tab)] = c("LowTailArea","UpTailArea")
-    }
-    rownames(tab) = rep("",nrow(tab))
-    print(tab)
+  cat(sprintf("\nSequential testing results with alpha = %0.3f\n",obj$alpha))
 
-    cat(sprintf("\nEstimated stopping point from ForwardStop rule = %i\n",x$khat))
-  }
+  tab = cbind(1:length(obj$pv),obj$vars,
+              round(obj$sign*obj$realized_maxZ, 3),
+              round(obj$pv,3))
+  colnames(tab) = c("Step", "Var", "Coef", "Z-score", "P-value")
+  rownames(tab) = rep("",nrow(tab))
+  print(tab)
 
-  else if (x$type == "all") {
-    cat(sprintf("\nTesting results at step = %i, with alpha = %0.3f\n",x$k,x$alpha))
-    tab = cbind(x$vars,
-      round(x$sign*x$vmat%*%x$y,3),
-      round(x$sign*x$vmat%*%x$y/(x$sigma*sqrt(rowSums(x$vmat^2))),3),
-      round(x$pv,3),round(x$ci,3))
-    colnames(tab) = c("Var", "Coef", "Z-score", "P-value", "LowConfPt", "UpConfPt")
-    if (tailarea) {
-      tab = cbind(tab,round(x$tailarea,3))
-      colnames(tab)[(ncol(tab)-1):ncol(tab)] = c("LowTailArea","UpTailArea")
-    }
-    rownames(tab) = rep("",nrow(tab))
-    print(tab)
-  }
-
-  else if (x$type == "aic") {
-    cat(sprintf("\nTesting results at step = %i, with alpha = %0.3f\n",x$khat,x$alpha))
-    tab = cbind(x$vars,
-      round(x$sign*x$vmat%*%x$y,3),
-      round(x$sign*x$vmat%*%x$y/(x$sigma*sqrt(rowSums(x$vmat^2))),3),
-      round(x$pv,3),round(x$ci,3))
-    colnames(tab) = c("Var", "Coef", "Z-score", "P-value", "LowConfPt", "UpConfPt")
-    if (tailarea) {
-      tab = cbind(tab,round(x$tailarea,3))
-      colnames(tab)[(ncol(tab)-1):ncol(tab)] = c("LowTailArea","UpTailArea")
-    }
-    rownames(tab) = rep("",nrow(tab))
-    print(tab)
-    
-    cat(sprintf("\nEstimated stopping point from AIC rule = %i\n",x$khat))
+  cat(sprintf("\nEstimated stopping point from ForwardStop rule = %i\n",obj$khat))
   }
 
   invisible()
 }
 
+##############################
+
+Plot methods
+
+##############################
 
 plot.fs <- function(x, breaks=TRUE, omit.zeros=TRUE, var.labels=TRUE, ...) {
   if (x$completepath) {
