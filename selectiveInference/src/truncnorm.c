@@ -45,6 +45,7 @@ void gibbs_step(double *state,     /* state has law N(0,I) constrained to polyhe
   }
 
   /* Ensure constraints are satisfied */
+
   if (lower_bound > value) {
     lower_bound = value - tol;
   }
@@ -90,25 +91,25 @@ void gibbs_step(double *state,     /* state has law N(0,I) constrained to polyhe
     tnorm = (lower_bound - log(1 - unif) / lower_bound);
   }
   else if (lower_bound < 0) {
-    cdfL = pnorm(lower_bound, 0., 1., 1, 0); /* Ryan */
-    cdfU = pnorm(upper_bound, 0., 1., 1, 0); /* Ryan */
-    unif = runif(0., 1.) * (cdfU - cdfL) + cdfL; /* Ryan */
+    cdfL = pnorm(lower_bound, 0., 1., 1, 0); 
+    cdfU = pnorm(upper_bound, 0., 1., 1, 0); 
+    unif = runif(0., 1.) * (cdfU - cdfL) + cdfL; 
     if (unif < 0.5) {
-      tnorm = qnorm(unif, 0., 1., 1, 0); /* Ryan */
+      tnorm = qnorm(unif, 0., 1., 1, 0); 
     }
     else {
-      tnorm = -qnorm(1-unif, 0., 1., 1, 0); /* Ryan */
+      tnorm = -qnorm(1-unif, 0., 1., 1, 0); 
     }
   }
   else {
-    cdfL = pnorm(-lower_bound, 0., 1., 1, 0); /* Ryan */
-    cdfU = pnorm(-upper_bound, 0., 1., 1, 0); /* Ryan */
+    cdfL = pnorm(-lower_bound, 0., 1., 1, 0); 
+    cdfU = pnorm(-upper_bound, 0., 1., 1, 0); 
     unif = runif(0., 1.) * (cdfL - cdfU) + cdfU;
     if (unif < 0.5) {
-      tnorm = -qnorm(unif, 0., 1., 1, 0); /* Ryan */
+      tnorm = -qnorm(unif, 0., 1., 1, 0); 
     }
     else {
-      tnorm = qnorm(1-unif, 0., 1., 1, 0); /* Ryan */
+      tnorm = qnorm(1-unif, 0., 1., 1, 0);
     }
   }
 
@@ -149,9 +150,9 @@ void sample_truncnorm_white(double *state,      /* state has law N(0,I) constrai
 
   for (iter_count = 0; iter_count < burnin + ndraw; iter_count++) {
   
-    which_direction = (int) floor(runif(0., 1.) * ndirection); /* Ryan */
-    direction = directions + nstate * which_direction; /* Ryan */
-    alpha = alpha + nconstraint * which_direction; /* Ryan */
+    which_direction = (int) floor(runif(0., 1.) * ndirection); 
+    direction = ((double *) directions) + nstate * which_direction; 
+    alpha = ((double *) alphas) + nconstraint * which_direction; 
 
     /* take a step, which implicitly updates `state` and `U` */
 
