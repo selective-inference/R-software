@@ -123,21 +123,21 @@ sample_from_constraints = function(linear_part,
         directions = apply(directions, function(x) { x/sqrt(sum(x^2)) }, 1) # normalize rows to have length 1
         alphas = white_linear %*% directions
         U = white_linear %*% white_initial - white_offset
-        Z_sample = matrix(rep(NA, ndraw*ndim), ndraw, nstate)
+        Z_sample = matrix(rep(NA, ndraw*ndim), nstate, ndraw)
 
         .C("sample_truncnorm_white",
            white_initial,
            U,
-           directions,
-           alphas,
-           output,
+           t(directions),
+           t(alphas),
+           Z_sample,
            nrow(white_linear),
            nstate,
            burnin,
            ndraw)
     
     }
-    Z = t(whitened_con$inverse_map(t(output)))
+    Z = t(whitened_con$inverse_map(Z_sample))
     return(Z)
 }
 
