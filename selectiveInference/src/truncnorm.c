@@ -31,6 +31,7 @@ void gibbs_step(double *state,     /* state has law N(0,I) constrained to polyhe
   int iconstraint;
 
   for (iconstraint = 0; iconstraint < nconstraint; iconstraint++) {
+
     bound_val = -U[iconstraint] / alpha[iconstraint] + value;
 
     if ((alpha[iconstraint] > tol) &&
@@ -121,7 +122,7 @@ void gibbs_step(double *state,     /* state has law N(0,I) constrained to polyhe
     state[istate] += delta * direction[istate];
   }
   for (iconstraint = 0; iconstraint < nconstraint; iconstraint++) {
-    U[iconstraint] += U[iconstraint] + delta * alpha[iconstraint] ;
+    U[iconstraint] += delta * alpha[iconstraint] ;
   }
 
   /* End of gibbs_step */
@@ -131,20 +132,29 @@ void gibbs_step(double *state,     /* state has law N(0,I) constrained to polyhe
 void sample_truncnorm_white(double *state,      /* state has law N(0,I) constrained to polyhedral set \{y:Ay \leq b\}*/ 
 			    double *U,          /* A %*% state - b */
 			    double *directions, /* possible steps for sampler to take */
-                                                /* assumed to be stored as list of vectors of dimension nstate */
+                                                /* assumed to be stored as list of columns of dimension nstate */
+			                        /* has shape (nstate, ndirection) */
 			    double *alphas,     /* The matrix A %*% directions */
+      			                        /* has shape (nconstraint, ndirection) */
 			    double *output,     /* array in which to store samples */
                                                 /* assumed will stored as list of vectors of dimension nstate */
-			    int nconstraint,    /* number of rows of A */
-			    int ndirection,     /* the possible number of directions to choose from */
+                                                /* has shape (nstate, ndraw) */  
+			    int *pnconstraint,  /* number of rows of A */
+			    int *pndirection,   /* the possible number of directions to choose from */
                                                 /* `directions` should have size nstate*ndirection */
-			    int nstate,         /* dimension of state */
-			    int burnin,         /* number of burnin steps */
-			    int ndraw)          /* total number of samples to return */
+			    int *pnstate,       /* dimension of state */
+			    int *pburnin,       /* number of burnin steps */
+			    int *pndraw)        /* total number of samples to return */
 {
 
   int iter_count;
   int which_direction;
+
+  int nconstraint = *pnconstraint;
+  int ndirection = *pndirection;
+  int nstate = *pnstate;
+  int burnin = *pburnin;
+  int ndraw = *pndraw;
 
   double *direction, *alpha;
 
@@ -156,10 +166,10 @@ void sample_truncnorm_white(double *state,      /* state has law N(0,I) constrai
 
     /* take a step, which implicitly updates `state` and `U` */
 
-    gibbs_step(state,     
-               direction, 
-	       U,         
-	       alpha,     
+    gibbs_step(state,
+               direction,
+	       U,
+	       alpha,
 	       nconstraint,
 	       nstate);
 
@@ -169,8 +179,10 @@ void sample_truncnorm_white(double *state,      /* state has law N(0,I) constrai
     if (iter_count >= burnin) {
       for (istate = 0; istate < nstate; istate++) {
 	*output = state[istate];
-        output++;
+	output++;
       }
     }
   }
+
 }
+
