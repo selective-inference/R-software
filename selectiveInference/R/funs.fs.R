@@ -553,9 +553,13 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
                                             burnin=burnin, 
                                             ndraw=ndraw)
 
-      truncated_noise = truncated_y %*% t(cur_adjusted_Xt)
-      sample_maxZ = apply(abs(1. / cur_scale * truncated_noise), 1, max)
-      
+      if (j < p) {
+          truncated_noise = truncated_y %*% t(cur_adjusted_Xt)
+          sample_maxZ = apply(abs(1. / cur_scale * truncated_noise), 1, max)
+      }
+      else {
+          sample_maxZ = abs(truncated_y %*% cur_adjusted_Xt)
+      }      
       observed_maxZ = obj$realized_maxZ[j]
 
       pval = sum(sample_maxZ > observed_maxZ) / ndraw
