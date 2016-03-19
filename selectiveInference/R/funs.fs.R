@@ -494,7 +494,7 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
       # the matrix cur_adjusted_Xt is used to compute (always as length(y) columns)
       # the maxZ or maxT for the sampled variables
       # 
-      cur_adjusted_Xt = obj$Gamma_maxZ[zi + Seq(1,p-j+1),]; zi = zi+p-j+1 # Xt for transpose
+      cur_adjusted_Xt = obj$Gamma_maxZ[zi + Seq(1,p-j+1),,drop=FALSE]; zi = zi+p-j+1 # Xt for transpose
 
       # cur_X is used to enforce conditioning on
       # the ever_active sufficient_statistics
@@ -537,8 +537,6 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
       # because this has a simple box constraint
       # with a generically non-degenerate covariance
 
-      # but `tmvtnorm` seems to give poor results for its sampler
-
       linear_part = rbind(cur_adjusted_Xt, -cur_adjusted_Xt)
       offset = c(final_upper, -final_lower)
       covariance = diag(rep(sigma^2, length(y)))
@@ -553,13 +551,9 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
                                             burnin=burnin, 
                                             ndraw=ndraw)
 
-      if (j < p) {
-          truncated_noise = truncated_y %*% t(cur_adjusted_Xt)
-          sample_maxZ = apply(abs(1. / cur_scale * truncated_noise), 1, max)
-      }
-      else {
-          sample_maxZ = abs(truncated_y %*% cur_adjusted_Xt)
-      }      
+      truncated_noise = truncated_y %*% t(cur_adjusted_Xt)
+      sample_maxZ = apply(abs(1. / cur_scale * truncated_noise), 1, max)
+
       observed_maxZ = obj$realized_maxZ[j]
 
       pval = sum(sample_maxZ > observed_maxZ) / ndraw
