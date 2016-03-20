@@ -440,8 +440,8 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
 
 # selected maxZ tests
 
-fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
-                      ndraw=8000, burnin=2000) {
+fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, k=NULL,
+                      ndraw=8000, burnin=2000, verbose=FALSE) {
   
   this.call = match.call()
 
@@ -474,7 +474,7 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
   vars = obj$action[1:k]
   zi = 0
   for (j in 1:k) {
-         
+     if(verbose) cat(c("Step=",j),fill=T)
       # the inactive set here does not
       # include the variable at the j-th step
       # so, at j==1, the inactive set is every variable
