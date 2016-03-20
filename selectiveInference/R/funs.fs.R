@@ -230,7 +230,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
   
   offset_pos_maxZ = offset_pos_maxZ[,Seq(1,k-1),drop=FALSE]
   offset_neg_maxZ = offset_neg_maxZ[,Seq(1,k-1),drop=FALSE]
-  scale_maxZ = offset_pos_maxZ[,Seq(1,k-1),drop=FALSE]
+  scale_maxZ = scale_maxZ[,Seq(1,k-1),drop=FALSE]
   Gamma_maxZ = Gamma_maxZ[Seq(1,zi),,drop=FALSE]
 
   # If we reached the maximum number of steps
@@ -552,7 +552,7 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
                                             ndraw=ndraw)
 
       truncated_noise = truncated_y %*% t(cur_adjusted_Xt)
-      sample_maxZ = apply(abs(1. / cur_scale * truncated_noise), 1, max)
+      sample_maxZ = apply(abs(t(truncated_noise) / cur_scale), 2, max)
 
       observed_maxZ = obj$realized_maxZ[j]
 
