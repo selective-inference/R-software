@@ -1,4 +1,3 @@
-
 truncationRegion <- function(obj, ydecomp, type, tol = 1e-15) {
 
   n <- nrow(obj$x)
@@ -177,6 +176,7 @@ TF_coefficients <- function(R, Ug, Uh, peng, penh, Zg, Zh, Vdg, Vdh, V2g, V2h) {
 
 # Numerically solve for roots of TF slice using
 # hybrid polyroot/uniroot approach
+
 TF_roots <- function(R, C, coeffs, tol = 1e-8, tol2 = 1e-6) {
 
     x11 <- coeffs$x11
@@ -254,3 +254,4 @@ TF_roots <- function(R, C, coeffs, tol = 1e-8, tol2 = 1e-6) {
     if (I(0) < 0) stop("Infeasible constraint!")
     return(Intervals(c(-Inf,0)))
 }
+

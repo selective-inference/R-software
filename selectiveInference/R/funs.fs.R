@@ -568,11 +568,11 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, verbose=FALSE, k=NULL,
              k=k,
              khat=khat,
 	     sigma=sigma,
-	     call=this.call,
 	     vars=vars,
 	     sign=obj$sign,
 	     alpha=alpha,
-             realized_maxZ=obj$realized_maxZ)
+             realized_maxZ=obj$realized_maxZ,
+        call=this.call)
   class(out) = "fsInf_maxZ"
   return(out)
 }
