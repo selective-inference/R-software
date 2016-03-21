@@ -554,14 +554,21 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, k=NULL,
 
           truncated_noise = truncated_y %*% t(cur_adjusted_Xt)
           sample_maxZ = apply(abs(t(truncated_noise) / cur_scale), 2, max)
-      } else if (nrow(cur_adjusted_Xt) > 1) { # sample from a smaller dimensional gaussian
-          linear_part = rbind(diag(rep(1, nrow(cur_adjusted_Xt))),
-                              diag(rep(-1, nrow(cur_adjusted_Xt))))
-          covariance = sigma^2 * (cur_adjusted_Xt %*% t(cur_adjusted_Xt))
-          offset = c(final_upper, -final_lower)
-          mean_param = cur_adjusted_Xt %*% cur_fitted # rep(0, nrow(cur_adjusted_Xt))
-          initial_point = cur_adjusted_Xt %*% y
-
+      } else {  # sample from a smaller dimensional gaussian
+          if (nrow(cur_adjusted_Xt) > 1) {
+              linear_part = rbind(diag(rep(1, nrow(cur_adjusted_Xt))),
+                                  diag(rep(-1, nrow(cur_adjusted_Xt))))
+              covariance = sigma^2 * (cur_adjusted_Xt %*% t(cur_adjusted_Xt))
+              offset = c(final_upper, -final_lower)
+              mean_param = cur_adjusted_Xt %*% cur_fitted # rep(0, nrow(cur_adjusted_Xt))
+              initial_point = cur_adjusted_Xt %*% y
+          } else {
+              mean_param = as.numeric(sum(as.numeric(cur_adjusted_Xt) * as.numeric(cur_fitted)))
+              covariance = matrix(sigma^2 * sum(cur_adjusted_Xt^2))
+              linear_part = matrix(c(1,-1), 2, 1)
+              offset = c(final_upper, -final_lower)
+              initial_point = as.numeric(sum(as.numeric(cur_adjusted_Xt) * as.numeric(y)))
+          }
           truncated_noise = sample_from_constraints(linear_part, 
                                                 offset, 
                                                 mean_param, 
@@ -571,26 +578,7 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, k=NULL,
                                                 ndraw=ndraw)
           sample_maxZ = apply(abs(t(truncated_noise) / cur_scale), 2, max)
 
-      } else {  # just a univariated truncated Gaussian
-                # but we need the law of the absolute value of it
-		# we are sampling here, but could probably
-		# do this without sampling
-          mean_param = sum(as.numeric(cur_adjusted_Xt) * as.numeric(cur_fitted))
-	  scaling = sigma * sqrt(sum(cur_adjusted_Xt^2))
-	  L = (final_lower - mean_param) / scaling
-	  U = (final_upper - mean_param) / scaling
-	  if (L > 6) { # use Exp approximation
-               Z = rexp(ndraw) / L + L
-	  } else if (U < -6) {
-	       Z = rexp(ndraw) / U + U
-	  } else {
-	       Z = qnorm(runif(ndraw) * (pnorm(U) - pnorm(L)) + pnorm(L))
-	  }
-	  print('delta P')
-	  print(pnorm(U) - pnorm(L))
-	  sample_maxZ = abs(Z * scaling + mean_param)
-
-      }
+         } 
 
       observed_maxZ = obj$realized_maxZ[j]
       pval = sum(sample_maxZ > observed_maxZ) / ndraw
