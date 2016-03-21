@@ -512,7 +512,7 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, k=NULL,
 	  cur_offset = as.numeric(t(cur_X) %*% cur_fitted)
       }
       else {
-          cur_fitted = 0
+          cur_fitted = rep(0, length(y))
           cur_offset = rep(0, length(inactive))
       }
 
@@ -541,12 +541,12 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, k=NULL,
           linear_part = rbind(cur_adjusted_Xt, -cur_adjusted_Xt)
           offset = c(final_upper, -final_lower)
           covariance = diag(rep(sigma^2, length(y)))
-          mean = rep(0, length(y))
+          mean_param = cur_fitted # rep(0, length(y))
           initial_point = y
 
           truncated_y = sample_from_constraints(linear_part, 
                                                 offset, 
-                                                mean, 
+                                                mean_param, 
                                                 covariance, 
                                                 initial_point, 
                                                 burnin=burnin, 
@@ -559,29 +559,42 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, k=NULL,
                               diag(rep(-1, nrow(cur_adjusted_Xt))))
           covariance = sigma^2 * (cur_adjusted_Xt %*% t(cur_adjusted_Xt))
           offset = c(final_upper, -final_lower)
-          mean = rep(0, nrow(cur_adjusted_Xt))
+          mean_param = cur_adjusted_Xt %*% cur_fitted # rep(0, nrow(cur_adjusted_Xt))
           initial_point = cur_adjusted_Xt %*% y
 
           truncated_noise = sample_from_constraints(linear_part, 
                                                 offset, 
-                                                mean, 
+                                                mean_param, 
                                                 covariance, 
                                                 initial_point, 
                                                 burnin=burnin, 
                                                 ndraw=ndraw)
           sample_maxZ = apply(abs(t(truncated_noise) / cur_scale), 2, max)
 
-      } else { # problem is just a univariate gaussian
-          # this should work as long as cdfL - cdfU is not tiny
-          cdfL = pnorm(final_lower)
-	  cdfU = pnorm(final_upper)
-          sample_maxZ = qnorm(runif(ndraw) * (cdfU - cdfL) + cdfL)
-      }
-      observed_maxZ = obj$realized_maxZ[j]
+      } else {  # just a univariated truncated Gaussian
+                # but we need the law of the absolute value of it
+		# we are sampling here, but could probably
+		# do this without sampling
+          mean_param = sum(as.numeric(cur_adjusted_Xt) * as.numeric(cur_fitted))
+	  scaling = sigma * sqrt(sum(cur_adjusted_Xt^2))
+	  L = (final_lower - mean_param) / scaling
+	  U = (final_upper - mean_param) / scaling
+	  if (L > 6) { # use Exp approximation
+               Z = rexp(ndraw) / L + L
+	  } else if (U < -6) {
+	       Z = rexp(ndraw) / U + U
+	  } else {
+	       Z = qnorm(runif(ndraw) * (pnorm(U) - pnorm(L)) + pnorm(L))
+	  }
+	  print('delta P')
+	  print(pnorm(U) - pnorm(L))
+	  sample_maxZ = abs(Z * scaling + mean_param)
 
+      }
+
+      observed_maxZ = obj$realized_maxZ[j]
       pval = sum(sample_maxZ > observed_maxZ) / ndraw
       pval = 2 * min(pval, 1 - pval)
-
       pv = c(pv, pval)
   }
 
