@@ -7,7 +7,7 @@ Tools for selective inference
 \description{
 Functions to perform post-selection inference for forward
 stepwise regression, least angle regression, the lasso and the 
-many normal means problem
+many normal means problem. The lasso function also supports logistic regression and the Cox model.
 }
 \details{
 \tabular{ll}{
