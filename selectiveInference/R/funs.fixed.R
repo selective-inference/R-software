@@ -2,12 +2,32 @@
 # for the solution of
 # min 1/2 || y - \beta_0 - X \beta ||_2^2 + \lambda || \beta ||_1
 
-fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
+fixedLassoInf <- function(x, y, beta, lambda, family=c("gaussian","binomial","cox"),intercept=TRUE, status=NULL,
+sigma=NULL, alpha=0.1,
                      type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
                      gridrange=c(-100,100), bits=NULL, verbose=FALSE) {
-  
+    
+ family = match.arg(family)
   this.call = match.call()
   type = match.arg(type)
+ 
+  if(family=="binomial")  {
+      if(type!="partial") stop("Only type= partial allowed with binomial family")
+       out=fixedLogitLassoInf(x,y,beta,lambda,alpha=alpha, type="partial", tol.beta=tol.beta, tol.kkt=tol.kkt,
+                     gridrange=gridrange, bits=bits, verbose=verbose,this.call=this.call)
+                      return(out)
+                    }
+else if(family=="cox")  {
+    if(type!="partial") stop("Only type= partial allowed with Cox family")
+     out=fixedCoxLassoInf(x,y,status,beta,lambda,alpha=alpha, type="partial",tol.beta=tol.beta,
+          tol.kkt=tol.kkt, gridrange=gridrange, bits=bits, verbose=verbose,this.call=this.call)               
+                      return(out)
+                    }
+ 
+else{
+
+ 
+ 
   checkargs.xy(x,y)
   if (missing(beta) || is.null(beta)) stop("Must supply the solution beta")
   if (missing(lambda) || is.null(lambda)) stop("Must supply the tuning parameter value lambda") 
@@ -120,6 +140,7 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
     call=this.call)
   class(out) = "fixedLassoInf"
   return(out)
+}
 }
 
 #############################
