@@ -124,8 +124,8 @@ is not allowed.
 
 \references{
 Jason Lee, Dennis Sun, Yuekai Sun, and Jonathan Taylor (2013). 
-
 Exact post-selection inference, with application to the lasso. arXiv:1311.6238.
+
  Jonathan Taylor and Robert Tibshirani (2016) Post-selection inference for L1-penalized likelihood models.
 arXiv:1602.07358
 
