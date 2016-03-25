@@ -68,6 +68,11 @@ Exact post-selection inference, with application to the lasso. arXiv:1311.6238.
 Stephen Reid, Jonathan Taylor, and Rob Tibshirani (2014).
 Post-selection point and interval estimation of signal sizes in Gaussian samples.
 arXiv:1405.3340.
+
+
+Jonathan Taylor and Robert Tibshirani (2016) Post-selection inference for L1-penalized likelihood models.
+arXiv:1602.07358
+
 }
 
 \examples{
