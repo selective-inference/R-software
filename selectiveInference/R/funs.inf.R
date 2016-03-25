@@ -244,3 +244,56 @@ aicStop <- function(x, y, action, df, sigma, mult=2, ntimes=2) {
   
   return(list(khat=khat,G=G,u=u,aic=aic,stopped=(i<k)))
 }
+
+#these next two functions are used by the binomial and Cox options of fixedLassoInf
+
+mypoly.pval.lee=
+function(y, A, b, eta, Sigma, bits=NULL) {
+    # compute pvalues from poly lemma:  full version from Lee et al for full matrix Sigma
+    nn=length(y)
+    eta=as.vector(eta)
+  temp = sum(eta*y)
+   vv=as.numeric(matrix(eta,nrow=1,ncol=nn)%*%Sigma%*%eta)
+   cc = Sigma%*%eta/vv
+   
+ z=(diag(nn)-matrix(cc,ncol=1)%*%eta)%*%y
+    rho=A%*%cc
+   
+  vec = (b- A %*% z)/rho
+  vlo = suppressWarnings(max(vec[rho<0]))
+  vup = suppressWarnings(min(vec[rho>0]))
+  sd=sqrt(vv)
+  pv = tnorm.surv(temp,0,sd,vlo,vup,bits)
+  return(list(pv=pv,vlo=vlo,vup=vup,sd=sd))
+}
+
+
+
+mypoly.int.lee=
+   function(y,eta,vlo,vup,sd, alpha, gridrange=c(-100,100),gridpts=100, griddepth=2, flip=FALSE, bits=NULL) {
+    # compute sel intervals from poly lemmma, full version from Lee et al for full matrix Sigma
+
+  temp = sum(eta*y)
+  
+  xg = seq(gridrange[1]*sd,gridrange[2]*sd,length=gridpts)
+  fun = function(x) { tnorm.surv(temp,x,sd,vlo,vup,bits) }
+
+  int = grid.search(xg,fun,alpha/2,1-alpha/2,gridpts,griddepth)
+  tailarea = c(fun(int[1]),1-fun(int[2]))
+
+  if (flip) {
+    int = -int[2:1]
+    tailarea = tailarea[2:1]
+  }
+ 
+  return(list(int=int,tailarea=tailarea))
+}
+
+
+
+mydiag=function(x){
+    if(length(x)==1) out=x
+    if(length(x)>1) out=diag(x)
+       return(out)
+   }
+

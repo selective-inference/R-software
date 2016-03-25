@@ -6,6 +6,8 @@ export(lar,fs,
        print.larInf,print.fsInf,
        plot.lar,plot.fs,
        fixedLassoInf,print.fixedLassoInf,
+ #     fixedLogitLassoInf,print.fixedLogitLassoInf,
+  #     fixedCoxLassoInf,print.fixedCoxLassoInf,
        forwardStop,
        estimateSigma,
        manyMeans,print.manyMeans,
@@ -26,6 +28,8 @@ S3method("plot", "fs")
 S3method("print", "fsInf")
 S3method("print", "fsInf_maxZ")
 S3method("print", "fixedLassoInf")
+S3method("print", "fixedLogitLassoInf")
+S3method("print", "fixedCoxLassoInf")
 S3method("print", "manyMeans")
 S3method("print", "groupfs")
 S3method("print", "groupfsInf")
