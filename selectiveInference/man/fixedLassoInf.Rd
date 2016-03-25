@@ -54,7 +54,7 @@ Significance level for confidence intervals (target is miscoverage alpha/2 in ea
 }
 \item{intercept}{
 Was the lasso problem solved (e.g., by glmnet) with an intercept in the model? 
-Default is TRUE
+Default is TRUE. Must be TRUE for "binomial" family. Not used for 'cox" family, where no intercept is assumed.
 }
 \item{type}{Contrast type for p-values and confidence intervals: default is
 "partial"---meaning that the contrasts tested are the partial population 
@@ -89,6 +89,7 @@ Print out progress along the way? Default is FALSE}
 \details{
 This function computes selective p-values and confidence intervals for the lasso,
 given a fixed value of the tuning parameter lambda. 
+Three different response types are supported:  gaussian, binomial and Cox.
 The confidence interval construction involves numerical search and can be fragile:
 if the observed statistic is too close to either end of the truncation interval
 (vlo and vup, see references), then one or possibly both endpoints of the interval of 
@@ -123,7 +124,11 @@ is not allowed.
 
 \references{
 Jason Lee, Dennis Sun, Yuekai Sun, and Jonathan Taylor (2013). 
+
 Exact post-selection inference, with application to the lasso. arXiv:1311.6238.
+ Jonathan Taylor and Robert Tibshirani (2016) Post-selection inference for L1-penalized likelihood models.
+arXiv:1602.07358
+
 }
 \author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
