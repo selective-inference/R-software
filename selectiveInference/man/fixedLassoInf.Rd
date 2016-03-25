@@ -9,7 +9,8 @@ Compute p-values and confidence intervals for the lasso estimate, at a
 fixed value of the tuning parameter lambda
 }
 \usage{
-fixedLassoInf(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
+fixedLassoInf(x, y, beta, lambda, family = c("gaussian", "binomial", 
+    "cox"),intercept=TRUE, sigma=NULL, alpha=0.1,
          type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
          gridrange=c(-100,100), bits=NULL, verbose=FALSE) 
 }
@@ -37,11 +38,16 @@ Estimated lasso coefficients (e.g., from glmnet). This is of length p
   \item{lambda}{
 Value of lambda used to compute beta. See the above warning
 } 
+
+\item{family}{Response type: "gaussian" (default), "binomial", or 
+    "cox" (for censored survival data) }
+
 \item{sigma}{
 Estimate of error standard deviation. If NULL (default), this is estimated 
 using the mean squared residual of the full least squares fit when n >= 2p, and 
 using the standard deviation of y when n < 2p. In the latter case, the user 
-should use \code{\link{estimateSigma}} function for a more accurate estimate
+should use \code{\link{estimateSigma}} function for a more accurate estimate.
+Not used for family= "binomial", or  "cox"
 }
 \item{alpha}{
 Significance level for confidence intervals (target is miscoverage alpha/2 in each tail)
@@ -181,4 +187,56 @@ out = fixedLassoInf(xs,y,beta,lambda,sigma=sigma)
 #rescale conf points to undo the penalty factor
 out$ci=t(scale(t(out$ci),FALSE,pf[out$vars]))
 out
+
+#logistic model
+set.seed(43)
+     n = 50
+     p = 10
+     sigma = 1
+     
+     x = matrix(rnorm(n*p),n,p)
+     x=scale(x,TRUE,TRUE)
+     
+     beta = c(3,2,rep(0,p-2))
+     y = x%*%beta + sigma*rnorm(n)
+     y=1*(y>mean(y))
+     # first run glmnet
+     gfit = glmnet(x,y,standardize=FALSE,family="binomial")
+     
+     # extract coef for a given lambda; note the 1/n factor!
+     # (and here  we DO  include the intercept term)
+     lambda = .8
+     beta = coef(gfit, s=lambda/n, exact=TRUE)
+     
+     # compute fixed lambda p-values and selection intervals
+     out = fixedLassoInf(x,y,beta,lambda,family="binomial")
+     out
+
+#Cox model
+set.seed(43)
+     n = 50
+     p = 10
+     sigma = 1
+     
+     x = matrix(rnorm(n*p),n,p)
+     x=scale(x,TRUE,TRUE)
+     
+     beta = c(3,2,rep(0,p-2))
+     tim = as.vector(x\%*\%beta + sigma*rnorm(n))
+     tim= tim-min(tim)+1
+status=sample(c(0,1),size=n,replace=T)
+     # first run glmnet
+
+
+     gfit = glmnet(x,Surv(tim,status),standardize=FALSE,family="cox")
+   
+     # extract coef for a given lambda; note the 1/n factor!
+   
+     lambda = 1.5
+     beta = as.numeric(coef(gfit, s=lambda/n, exact=TRUE))
+     
+     # compute fixed lambda p-values and selection intervals
+     out = fixedLassoInf(x,tim,beta,lambda,status=status,family="cox")
+     out
 }
+ 
