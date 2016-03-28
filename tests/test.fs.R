@@ -1,5 +1,4 @@
 library(selectiveInference)
-#library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
 options(error=dump.frames)
 
@@ -27,7 +26,7 @@ max(abs(obj$action-unlist(obj2$action)))
 # These don't always match ... what is the lars function doing?
 
 # Checks
-max(abs(obj$action-unlist(obj2$action))
+max(abs(obj$action-unlist(obj2$action)))
 max(abs(coef(obj,s=4.5,mode="step")-
         lars::predict.lars(obj2,s=4.5,type="coef",mode="step")$coef))
 max(abs(predict(obj,s=4.5,mode="step")-

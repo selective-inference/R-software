@@ -31,6 +31,7 @@ void gibbs_step(double *state,     /* state has law N(0,I) constrained to polyhe
   int iconstraint;
 
   for (iconstraint = 0; iconstraint < nconstraint; iconstraint++) {
+
     bound_val = -U[iconstraint] / alpha[iconstraint] + value;
 
     if ((alpha[iconstraint] > tol) &&
@@ -45,6 +46,7 @@ void gibbs_step(double *state,     /* state has law N(0,I) constrained to polyhe
   }
 
   /* Ensure constraints are satisfied */
+
   if (lower_bound > value) {
     lower_bound = value - tol;
   }
@@ -90,25 +92,25 @@ void gibbs_step(double *state,     /* state has law N(0,I) constrained to polyhe
     tnorm = (lower_bound - log(1 - unif) / lower_bound);
   }
   else if (lower_bound < 0) {
-    cdfL = pnorm(lower_bound, 0., 1., 1, 0); /* Ryan */
-    cdfU = pnorm(upper_bound, 0., 1., 1, 0); /* Ryan */
-    unif = runif(0., 1.) * (cdfU - cdfL) + cdfL; /* Ryan */
+    cdfL = pnorm(lower_bound, 0., 1., 1, 0); 
+    cdfU = pnorm(upper_bound, 0., 1., 1, 0); 
+    unif = runif(0., 1.) * (cdfU - cdfL) + cdfL; 
     if (unif < 0.5) {
-      tnorm = qnorm(unif, 0., 1., 1, 0); /* Ryan */
+      tnorm = qnorm(unif, 0., 1., 1, 0); 
     }
     else {
-      tnorm = -qnorm(1-unif, 0., 1., 1, 0); /* Ryan */
+      tnorm = -qnorm(1-unif, 0., 1., 1, 0); 
     }
   }
   else {
-    cdfL = pnorm(-lower_bound, 0., 1., 1, 0); /* Ryan */
-    cdfU = pnorm(-upper_bound, 0., 1., 1, 0); /* Ryan */
+    cdfL = pnorm(-lower_bound, 0., 1., 1, 0); 
+    cdfU = pnorm(-upper_bound, 0., 1., 1, 0); 
     unif = runif(0., 1.) * (cdfL - cdfU) + cdfU;
     if (unif < 0.5) {
-      tnorm = -qnorm(unif, 0., 1., 1, 0); /* Ryan */
+      tnorm = -qnorm(unif, 0., 1., 1, 0); 
     }
     else {
-      tnorm = qnorm(1-unif, 0., 1., 1, 0); /* Ryan */
+      tnorm = qnorm(1-unif, 0., 1., 1, 0);
     }
   }
 
@@ -120,7 +122,7 @@ void gibbs_step(double *state,     /* state has law N(0,I) constrained to polyhe
     state[istate] += delta * direction[istate];
   }
   for (iconstraint = 0; iconstraint < nconstraint; iconstraint++) {
-    U[iconstraint] += U[iconstraint] + delta * alpha[iconstraint] ;
+    U[iconstraint] += delta * alpha[iconstraint] ;
   }
 
   /* End of gibbs_step */
@@ -130,35 +132,44 @@ void gibbs_step(double *state,     /* state has law N(0,I) constrained to polyhe
 void sample_truncnorm_white(double *state,      /* state has law N(0,I) constrained to polyhedral set \{y:Ay \leq b\}*/ 
 			    double *U,          /* A %*% state - b */
 			    double *directions, /* possible steps for sampler to take */
-                                                /* assumed to be stored as list of vectors of dimension nstate */
+                                                /* assumed to be stored as list of columns of dimension nstate */
+			                        /* has shape (nstate, ndirection) */
 			    double *alphas,     /* The matrix A %*% directions */
+      			                        /* has shape (nconstraint, ndirection) */
 			    double *output,     /* array in which to store samples */
                                                 /* assumed will stored as list of vectors of dimension nstate */
-			    int nconstraint,    /* number of rows of A */
-			    int ndirection,     /* the possible number of directions to choose from */
+                                                /* has shape (nstate, ndraw) */  
+			    int *pnconstraint,  /* number of rows of A */
+			    int *pndirection,   /* the possible number of directions to choose from */
                                                 /* `directions` should have size nstate*ndirection */
-			    int nstate,         /* dimension of state */
-			    int burnin,         /* number of burnin steps */
-			    int ndraw)          /* total number of samples to return */
+			    int *pnstate,       /* dimension of state */
+			    int *pburnin,       /* number of burnin steps */
+			    int *pndraw)        /* total number of samples to return */
 {
 
   int iter_count;
   int which_direction;
 
+  int nconstraint = *pnconstraint;
+  int ndirection = *pndirection;
+  int nstate = *pnstate;
+  int burnin = *pburnin;
+  int ndraw = *pndraw;
+
   double *direction, *alpha;
 
   for (iter_count = 0; iter_count < burnin + ndraw; iter_count++) {
   
-    which_direction = (int) floor(runif(0., 1.) * ndirection); /* Ryan */
-    direction = directions + nstate * which_direction; /* Ryan */
-    alpha = alpha + nconstraint * which_direction; /* Ryan */
+    which_direction = (int) floor(runif(0., 1.) * ndirection); 
+    direction = ((double *) directions) + nstate * which_direction; 
+    alpha = ((double *) alphas) + nconstraint * which_direction; 
 
     /* take a step, which implicitly updates `state` and `U` */
 
-    gibbs_step(state,     
-               direction, 
-	       U,         
-	       alpha,     
+    gibbs_step(state,
+               direction,
+	       U,
+	       alpha,
 	       nconstraint,
 	       nstate);
 
@@ -168,8 +179,10 @@ void sample_truncnorm_white(double *state,      /* state has law N(0,I) constrai
     if (iter_count >= burnin) {
       for (istate = 0; istate < nstate; istate++) {
 	*output = state[istate];
-        output++;
+	output++;
       }
     }
   }
+
 }
+

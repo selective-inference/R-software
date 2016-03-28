@@ -8,7 +8,8 @@ Author: Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor,
 Maintainer: Rob Tibshirani <tibs@stanford.edu>
 Depends:
     glmnet,
-    intervals
+    intervals,
+    tmvtnorm
 Suggests:
     Rmpfr
 Description: New tools for post-selection inference, for use
