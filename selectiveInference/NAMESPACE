@@ -1,5 +1,5 @@
 export(lar,fs,
-       larInf,fsInf,
+       larInf,fsInf,fsInf_maxZ,
        coef.lar,coef.fs,
        predict.lar,predict.fs,
        print.lar,print.fs,
@@ -10,7 +10,8 @@ export(lar,fs,
        estimateSigma,
        manyMeans,print.manyMeans,
        groupfs,groupfsInf,
-       scaleGroups,factorDesign
+       scaleGroups,factorDesign,
+       sample_from_constraints
     )
 
 S3method("coef", "lar")
@@ -23,6 +24,7 @@ S3method("predict", "fs")
 S3method("print", "fs")
 S3method("plot", "fs")
 S3method("print", "fsInf")
+S3method("print", "fsInf_maxZ")
 S3method("print", "fixedLassoInf")
 S3method("print", "manyMeans")
 S3method("print", "groupfs")
