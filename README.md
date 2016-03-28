@@ -5,8 +5,6 @@ Maintainer: Rob Tibshirani <tibs@stanford.edu>
 
 New tools for inference after selection, for use with forward stepwise regression, least angle regression, the lasso, and the many means problem. The package is available on [CRAN](http://cran.r-project.org/web/packages/selectiveInference/). See [this paper](http://www.pnas.org/content/112/25/7629.full) for a high level introduction to selective inference.
 
-test
-
 Code is in the directory selectiveInference/R.
 * funs.common.R: Basic functions used by many other functions, such as standardization.
 * funs.fixed.R: Inference for LASSO at a fixed, deterministic value of lambda.
