@@ -9,7 +9,6 @@ Maintainer: Rob Tibshirani <tibs@stanford.edu>
 Depends:
     glmnet,
     intervals,
-    tmvtnorm,
     survival
 Suggests:
     Rmpfr
