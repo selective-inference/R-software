@@ -211,10 +211,10 @@ set.seed(43)
      # extract coef for a given lambda; note the 1/n factor!
      # (and here  we DO  include the intercept term)
      lambda = .8
-     beta = coef(gfit, s=lambda/n, exact=TRUE)
+     beta_hat = coef(gfit, s=lambda/n, exact=TRUE)
      
      # compute fixed lambda p-values and selection intervals
-     out = fixedLassoInf(x,y,beta,lambda,family="binomial")
+     out = fixedLassoInf(x,y,beta_hat,lambda,family="binomial")
      out
 
 #Cox model
@@ -238,10 +238,10 @@ status=sample(c(0,1),size=n,replace=T)
      # extract coef for a given lambda; note the 1/n factor!
    
      lambda = 1.5
-     beta = as.numeric(coef(gfit, s=lambda/n, exact=TRUE))
+     beta_hat = as.numeric(coef(gfit, s=lambda/n, exact=TRUE))
      
      # compute fixed lambda p-values and selection intervals
-     out = fixedLassoInf(x,tim,beta,lambda,status=status,family="cox")
+     out = fixedLassoInf(x,tim,beta_hat,lambda,status=status,family="cox")
      out
 }
  
