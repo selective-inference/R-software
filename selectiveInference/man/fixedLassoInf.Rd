@@ -108,7 +108,7 @@ is not allowed.
 \value{  
 \item{type}{Type of coefficients tested (partial or full)}
 \item{lambda}{Value of tuning parameter lambda used}
-\item{pv}{P-values for active variables}
+\item{pv}{One-sided P-values for active variables, uses the fact we have conditioned on the sign.}
 \item{ci}{Confidence intervals}
 \item{tailarea}{Realized tail areas (lower and upper) for each confidence interval}
 \item{vlo}{Lower truncation limits for statistics}
