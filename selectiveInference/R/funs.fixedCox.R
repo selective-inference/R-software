@@ -50,6 +50,11 @@ b1= -(mydiag(s2)%*%MM)%*%s2*lambda
 
 
 # compute p-values
+
+# JT: are we sure the signs of these are correctly handled?
+# two sided p-values numerically agree with python but
+# the one sided p-values are a bit off
+
     for(jj in 1:length(bbar)){
       vj=rep(0,length(bbar));vj[jj]=1
 
@@ -66,6 +71,7 @@ b1= -(mydiag(s2)%*%MM)%*%s2*lambda
        tailarea[jj,] = junk2$tailarea
      
   }
+  # JT: these don't seem to be the real one-step estimators
     fit0=coxph(Surv(y,status)~x[,m])
       coef0=fit0$coef
       se0=sqrt(diag(fit0$var))
