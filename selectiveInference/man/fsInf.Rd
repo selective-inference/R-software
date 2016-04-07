@@ -82,7 +82,7 @@ to alpha/2, and can be used for error-checking purposes.
 \item{khat}{When type is "active", this is an estimated stopping point
 declared by \code{\link{forwardStop}}; when type is "aic", this is the
 value chosen by the modified AIC scheme}
-\item{pv}{P-values for active variables}
+\item{pv}{One sided P-values for active variables, uses the sign that a variable entered the model with.}
 \item{ci}{Confidence intervals}
 \item{tailarea}{Realized tail areas (lower and upper) for each confidence interval}
 \item{vlo}{Lower truncation limits for statistics}
