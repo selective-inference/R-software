@@ -184,10 +184,10 @@ gfit = glmnet(xs,y,standardize=FALSE)
 # extract coef for a given lambda; note the 1/n factor!
 # (and we don't save the intercept term)
 lambda = .8
-beta = coef(gfit, s=lambda/n, exact=TRUE)[-1]
+beta_hat = coef(gfit, s=lambda/n, exact=TRUE)[-1]
 
 # compute fixed lambda p-values and selection intervals
-out = fixedLassoInf(xs,y,beta,lambda,sigma=sigma)
+out = fixedLassoInf(xs,y,beta_hat,lambda,sigma=sigma)
 
 #rescale conf points to undo the penalty factor
 out$ci=t(scale(t(out$ci),FALSE,pf[out$vars]))
