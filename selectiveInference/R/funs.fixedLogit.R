@@ -98,6 +98,7 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial"), tol.bet
      tailarea[jj,] = junk2$tailarea
    }
 
+  # JT: these are not the one step estimators but they are close
   fit0=glm(y~x[,m],family="binomial")
   sfit0=summary(fit0)
       coef0=fit0$coef[-1]
