@@ -126,7 +126,7 @@ else{
     pv[j] = a$pv 
     vlo[j] = a$vlo * mj # Unstandardize (mult by norm of vj)
     vup[j] = a$vup * mj # Unstandardize (mult by norm of vj)
-    vmat[j,] = vj * mj  # Unstandardize (mult by norm of vj)
+    vmat[j,] = vj * mj * sign[j]  # Unstandardize (mult by norm of vj)
 
     a = poly.int(y,G,u,vj,sigma,alpha,gridrange=gridrange,
       flip=(sign[j]==-1),bits=bits)
@@ -137,6 +137,8 @@ else{
   out = list(type=type,lambda=lambda,pv=pv,ci=ci,
     tailarea=tailarea,vlo=vlo,vup=vup,vmat=vmat,y=y,
     vars=vars,sign=sign,sigma=sigma,alpha=alpha,
+    sd=sigma*sqrt(rowSums(vmat^2)),
+    coef0=vmat%*%y, 
     call=this.call)
   class(out) = "fixedLassoInf"
   return(out)
@@ -197,8 +199,8 @@ print.fixedLassoInf <- function(x, tailarea=TRUE, ...) {
   cat(sprintf("\nTesting results at lambda = %0.3f, with alpha = %0.3f\n",x$lambda,x$alpha))
   cat("",fill=T)
   tab = cbind(x$vars,
-    round(x$sign*x$vmat%*%x$y,3),
-    round(x$sign*x$vmat%*%x$y/(x$sigma*sqrt(rowSums(x$vmat^2))),3),
+    round(x$coef0,3),
+    round(x$coef0 / x$sd,3),
     round(x$pv,3),round(x$ci,3))
   colnames(tab) = c("Var", "Coef", "Z-score", "P-value", "LowConfPt", "UpConfPt")
   if (tailarea) {
