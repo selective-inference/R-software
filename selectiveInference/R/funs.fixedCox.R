@@ -56,7 +56,7 @@ b1= -(mydiag(s2)%*%MM)%*%s2*lambda
 # the one sided p-values are a bit off
 
     for(jj in 1:length(bbar)){
-      vj=rep(0,length(bbar));vj[jj]=1
+      vj=rep(0,length(bbar));vj[jj]=s2[jj]
 
 
       junk=mypoly.pval.lee(bbar,A1,b1,vj,MM)

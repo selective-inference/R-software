@@ -85,7 +85,7 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial"), tol.bet
 
   
     for(jj in 1:sum(m)){
-       vj=c(rep(0,sum(m)+1));vj[jj+1]=1
+       vj=c(rep(0,sum(m)+1));vj[jj+1]=s2[jj+1]
       # compute p-values
       junk=mypoly.pval.lee(bbar,A1,b1,vj,MM)
       pv[jj] = junk$pv
