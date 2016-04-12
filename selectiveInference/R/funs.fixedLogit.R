@@ -45,7 +45,7 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial"), tol.bet
       
 #check KKT
    z=etahat+(y-prhat)/ww
-       g=  t(x)%*%w%*%(z-etahat)/lambda
+       g=  t(x)%*%w%*%(z-etahat)/lambda # negative gradient scaled by lambda
      if (any(abs(g) > 1+tol.kkt) )
     warning(paste("Solution beta does not satisfy the KKT conditions",
                   "(to within specified tolerances)"))
@@ -63,15 +63,18 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial"), tol.bet
   
  #constraints for active variables             
   MM=solve(t(xxm)%*%w%*%xxm)
- 
-   bbar=(bhat-lam2m%*%MM%*%s2)
- 
+  gm = c(0,-g[vars]*lambda) # gradient at LASSO solution, first entry is 0 because intercept is unpenalized
+                            # at exact LASSO solution it should be s2[-1]
+  dbeta = MM %*% gm
 
-   A1=-(mydiag(s2))[-1,-1]
-  b1= ((mydiag(s2)%*%MM)%*%s2*lambda)[-1]
-                  
- tol.poly = 0.01 
-  if (max(A1 %*% bbar[-1] - b1) > tol.poly)
+  # bbar=(bhat+lam2m%*%MM%*%s2)  # JT: this is wrong, shouldn't use sign of intercept anywhere...
+  bbar = bhat - dbeta
+
+  A1=-(mydiag(s2))[-1,]
+  b1= (s2 * dbeta)[-1]
+
+  tol.poly = 0.01 
+  if (max((A1 %*% bbar)[-1] - b1) > tol.poly)
     stop(paste("Polyhedral constraints not satisfied; you must recompute beta",
                "more accurately. With glmnet, make sure to use exact=TRUE in coef(),",
                "and check whether the specified value of lambda is too small",
@@ -82,17 +85,16 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial"), tol.bet
 
   
     for(jj in 1:sum(m)){
-       vj=c(rep(0,sum(m)));vj[jj]=1
-# compute p-values
-      junk=mypoly.pval.lee(bbar[-1],A1,b1,vj,MM[-1,-1])
+       vj=c(rep(0,sum(m)+1));vj[jj+1]=s2[jj+1]
+      # compute p-values
+      junk=mypoly.pval.lee(bbar,A1,b1,vj,MM)
       pv[jj] = junk$pv
  
-
    vlo[jj]=junk$vlo
    vup[jj]=junk$vup
        sd[jj]=junk$sd
   #  junk2=mypoly.int.lee(bbar[-1], A1, b1,vj,MM[-1,-1],alpha=.1)
-     junk2=mypoly.int.lee(bbar[-1],vj,vlo[jj],vup[jj],sd[jj],alpha=.1)
+     junk2=mypoly.int.lee(bbar,vj,vlo[jj],vup[jj],sd[jj],alpha=.1)
 
      ci[jj,]=junk2$int
      tailarea[jj,] = junk2$tailarea
@@ -101,14 +103,15 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial"), tol.bet
   # JT: these are not the one step estimators but they are close
   fit0=glm(y~x[,m],family="binomial")
   sfit0=summary(fit0)
-      coef0=fit0$coef[-1]
-      se0=sqrt(diag(sfit0$cov.scaled)[-1])
+      coef0=bbar[-1]        #fit0$coef[-1]
+      se0=sqrt(diag(MM)[-1]) # sfit0$cov.scaled)[-1])
       zscore0=coef0/se0
       
   out = list(type=type,lambda=lambda,pv=pv,ci=ci,
     tailarea=tailarea,vlo=vlo,vup=vup,sd=sd,
     vars=vars,alpha=alpha,coef0=coef0,zscore0=zscore0,
-    call=this.call)
+    call=this.call,
+    info.matrix=MM) # info.matrix is output just for debugging purposes at the moment
   class(out) = "fixedLogitLassoInf"
   return(out)
 
