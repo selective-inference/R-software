@@ -1,21 +1,26 @@
 library(selectiveInference)
 #library(selectiveInference,lib.loc="/Users/tibs/dropbox/git/R/mylib")
 
+library(glmnet)
+library(MASS)
+library(scalreg)
 #options(error=dump.frames)
 #attach("/Users/tibs/dropbox/PAPERS/lasso/lasso3/.RData")
 
 #####
+#gaussian
 n=50
 p=10
 sigma=.7
 beta=c(3,2,0,0,rep(0,p-4))
 set.seed(43)
-nsim = 100
+nsim = 200
 pvals <- matrix(NA, nrow=nsim, ncol=p)
 x = matrix(rnorm(n*p),n,p)
 x = scale(x,T,T)/sqrt(n-1)
 mu = x%*%beta
 for (i in 1:nsim) {
+    cat(i)
 y=mu+sigma*rnorm(n)
 #y=y-mean(y)
 # first run  glmnet
@@ -30,11 +35,11 @@ pvals[i, which(beta != 0)] <- aa$pv
 nulls = which(!is.na(pvals[,1]) & !is.na(pvals[,2]))
 np = pvals[nulls,-(1:2)]
 mean(np[!is.na(np)] < 0.1)
-
+o=!is.na(np)
+plot((1:sum(o))/sum(o),sort(np))
+abline(0,1)
 #####
-library(selectiveInference)
-library(MASS)
-library(scalreg)
+
 
 S <- diag(10)
 n <- 100
@@ -55,7 +60,75 @@ for(i in 1:100){
 p <- pval[, -(1:2)]
 mean(p[p < 1] < 0.05)
 
-#####
+##logistic
+
+n=50
+p=10
+beta=c(3,2,0,0,rep(0,p-4))
+beta=rep(0,p)
+set.seed(3)
+nsim = 200
+pvals=matrix(NA, nrow=nsim, ncol=p)
+ci=array(NA,c(nsim,p,2))
+x = matrix(rnorm(n*p),n,p)
+x = scale(x,T,T)/sqrt(n-1)
+mu = x%*%beta
+for (ii in 1:nsim) {
+    cat(ii)
+y=mu+rnorm(n)
+y=1*(y>mean(y))
+# first run  glmnet
+gfit=glmnet(x,y,standardize=F,thresh=1e-8,family="binomial")
+lambda = .25
+#extract coef for a given lambda; Note the 1/n factor!
+beta = as.numeric(coef(gfit, s=lambda/n, exact=TRUE))
+# compute fixed lambda p-values and selection intervals
+    aa = fixedLassoInf(x,y,beta,lambda,family="binomial")
+    pvals[ii, which(beta[-1] != 0)] <- aa$pv
+   ci[ii,which(beta[-1] != 0),]=aa$ci
+}
+
+o=!is.na(pvals)
+plot((1:sum(o))/sum(o),sort(pvals))
+abline(0,1)
+o=ci[,1,1]>0 | ci[,1,2]<0
+mean(o,na.rm=T)
+
+
+## cox
+
+n=50
+p=10
+#beta=c(6,6,0,0,rep(0,p-4))
+beta=rep(0,p)
+set.seed(3)
+nsim = 200
+pvals=matrix(NA, nrow=nsim, ncol=p)
+ci=array(NA,c(nsim,p,2))
+x = matrix(rnorm(n*p),n,p)
+x = scale(x,T,T)/sqrt(n-1)
+mu = x%*%beta
+for (ii in 1:nsim) {
+    cat(ii)
+tim=as.vector(mu+rnorm(n))+10
+status=sample(c(0,1),size=n,replace=T)
+    lambda=0.2
+    y=cbind(time=tim,status=status)
+    gfit=glmnet(x,y,family="cox",standardize=FALSE)
+     b=as.numeric(coef(gfit,s=lambda/n,exact=TRUE))
+ 
+   aa= fixedLassoInf(x,tim,b,lambda,status=status,family="cox")
+      
+pvals[ii, which(b != 0)] <- aa$pv[1:sum(!is.na(aa$pv))]
+  ci[ii,which(b != 0),]=aa$ci
+}
+
+o=!is.na(pvals)
+plot((1:sum(o))/sum(o),sort(pvals))
+abline(0,1)
+
+
+#####more Gaussian
 
 a=lar(x,y)
 aa=larInf(a)
@@ -71,13 +144,14 @@ set.seed(3)
 n=50
 p=10
 sigma=2
+nsim=100
 
 x=matrix(rnorm(n*p),n,p)
 #x=scale(x,T,T)/sqrt(n-1)    #try with and without standardization
 
 beta=c(5,4,3,2,1,rep(0,p-5))
 
-nsim=100
+
 seeds=sample(1:9999,size=nsim)
 pv=rep(NA,nsim)
 ci=matrix(NA,nsim,2)
@@ -94,12 +168,12 @@ for(ii in 1:nsim){
      bhat = predict(gfit, s=lambda/n,type="coef",exact=F)[-1]
 
      junk= fixedLassoInf(x,y,bhat,lambda,sigma=sigma)
-    pv[ii]=junk$pv[1]
-   # oo=junk$pred # for old package
-    oo=junk$var   # for new package
-     btrue[ii]=lsfit(x[,oo],mu)$coef[2]
-     ci[ii,]=junk$ci[1,]
+    pvals[ii, which(bhat != 0)] <- aa$pv[1:sum(!is.na(aa$pv))]
+  ci[ii,which(bhat != 0),]=aa$ci
+   
 }
+o=!is.na(pvals)
+plot((1:sum(o))/sum(o),sort(pvals))
 
 sum(ci[,1]> btrue)
 sum(ci[,2]< btrue)

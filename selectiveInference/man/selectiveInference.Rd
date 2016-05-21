@@ -7,7 +7,7 @@ Tools for selective inference
 \description{
 Functions to perform post-selection inference for forward
 stepwise regression, least angle regression, the lasso and the 
-many normal means problem
+many normal means problem. The lasso function also supports logistic regression and the Cox model.
 }
 \details{
 \tabular{ll}{
@@ -20,7 +20,8 @@ This package provides tools for inference after selection, in forward stepwise
 regression, least angle regression, the lasso, and the many normal means problem. 
 The functions compute p-values and selection intervals that properly account for 
 the inherent selection carried out by the procedure. These have exact finite sample 
-type I error and coverage under Gaussian errors.
+type I error and coverage under Gaussian errors. For the logistic and Cox familes (fixedLassoInf),
+ the coverage is asymptotically valid
 
 This R package was developed as part of the selective inference software project
 in Python and R:
@@ -67,6 +68,11 @@ Exact post-selection inference, with application to the lasso. arXiv:1311.6238.
 Stephen Reid, Jonathan Taylor, and Rob Tibshirani (2014).
 Post-selection point and interval estimation of signal sizes in Gaussian samples.
 arXiv:1405.3340.
+
+
+Jonathan Taylor and Robert Tibshirani (2016) Post-selection inference for L1-penalized likelihood models.
+arXiv:1602.07358
+
 }
 
 \examples{
@@ -94,7 +100,7 @@ out.aic
 out.fix = fsInf(fsfit,type="all",k=5)
 out.fix
 
-## NOT RUN---lasso at fixed lambda
+## NOT RUN---lasso at fixed lambda- Gaussian family
 ## first run glmnet
 # gfit = glmnet(x,y)
 
@@ -107,6 +113,54 @@ out.fix
 # out = fixedLassoInf(x,y,beta,lambda,sigma=sigma)
 # out
 
+
+#lasso at fixed lambda- logistic family
+#set.seed(43)
+  #   n = 50
+  #   p = 10
+  #   sigma = 1
+     
+ #    x = matrix(rnorm(n*p),n,p)
+     x=scale(x,TRUE,TRUE)
+  #   
+#     beta = c(3,2,rep(0,p-2))
+ #    y = x%*%beta + sigma*rnorm(n)
+ #    y=1*(y>mean(y))
+     # first run glmnet
+ #    gfit = glmnet(x,y,standardize=FALSE,family="binomial")
+     
+     # extract coef for a given lambda; note the 1/n factor!
+     # (and here  we DO  include the intercept term)
+ #    lambda = .8
+ #    beta = coef(gfit, s=lambda/n, exact=TRUE)
+     
+ #    # compute fixed lambda p-values and selection intervals
+ #    out = fixedLassoInf(x,y,beta,lambda,family="binomial")
+ #    out
+
+##lasso at fixed lambda- Cox family
+#set.seed(43)
+#     n = 50
+ #    p = 10
+ #    sigma = 1
+     
+ #    x = matrix(rnorm(n*p),n,p)
+  #   x=scale(x,TRUE,TRUE)
+     
+ #    beta = c(3,2,rep(0,p-2))
+ #    tim = as.vector(x\%*\%beta + sigma*rnorm(n))
+  #   tim= tim-min(tim)+1
+#status=sample(c(0,1),size=n,replace=T)
+     # first run glmnet
+   #  gfit = glmnet(x,Surv(tim,status),standardize=FALSE,family="cox")
+     # extract coef for a given lambda; note the 1/n factor!
+   
+  #   lambda = 1.5
+  #   beta = as.numeric(coef(gfit, s=lambda/n, exact=TRUE))
+     
+     # compute fixed lambda p-values and selection intervals
+   #  out = fixedLassoInf(x,tim,beta,lambda,status=status,family="cox")
+   #  out
 ## NOT RUN---many normal means
 # set.seed(12345)
 # n = 100 
