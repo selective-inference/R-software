@@ -9,7 +9,8 @@ Compute p-values and confidence intervals for the lasso estimate, at a
 fixed value of the tuning parameter lambda
 }
 \usage{
-fixedLassoInf(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
+fixedLassoInf(x, y, beta, lambda, family = c("gaussian", "binomial", 
+    "cox"),intercept=TRUE, sigma=NULL, alpha=0.1,
          type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
          gridrange=c(-100,100), bits=NULL, verbose=FALSE) 
 }
@@ -37,18 +38,23 @@ Estimated lasso coefficients (e.g., from glmnet). This is of length p
   \item{lambda}{
 Value of lambda used to compute beta. See the above warning
 } 
+
+\item{family}{Response type: "gaussian" (default), "binomial", or 
+    "cox" (for censored survival data) }
+
 \item{sigma}{
 Estimate of error standard deviation. If NULL (default), this is estimated 
 using the mean squared residual of the full least squares fit when n >= 2p, and 
 using the standard deviation of y when n < 2p. In the latter case, the user 
-should use \code{\link{estimateSigma}} function for a more accurate estimate
+should use \code{\link{estimateSigma}} function for a more accurate estimate.
+Not used for family= "binomial", or  "cox"
 }
 \item{alpha}{
 Significance level for confidence intervals (target is miscoverage alpha/2 in each tail)
 }
 \item{intercept}{
 Was the lasso problem solved (e.g., by glmnet) with an intercept in the model? 
-Default is TRUE
+Default is TRUE. Must be TRUE for "binomial" family. Not used for 'cox" family, where no intercept is assumed.
 }
 \item{type}{Contrast type for p-values and confidence intervals: default is
 "partial"---meaning that the contrasts tested are the partial population 
@@ -83,6 +89,7 @@ Print out progress along the way? Default is FALSE}
 \details{
 This function computes selective p-values and confidence intervals for the lasso,
 given a fixed value of the tuning parameter lambda. 
+Three different response types are supported:  gaussian, binomial and Cox.
 The confidence interval construction involves numerical search and can be fragile:
 if the observed statistic is too close to either end of the truncation interval
 (vlo and vup, see references), then one or possibly both endpoints of the interval of 
@@ -101,7 +108,7 @@ is not allowed.
 \value{  
 \item{type}{Type of coefficients tested (partial or full)}
 \item{lambda}{Value of tuning parameter lambda used}
-\item{pv}{P-values for active variables}
+\item{pv}{One-sided P-values for active variables, uses the fact we have conditioned on the sign.}
 \item{ci}{Confidence intervals}
 \item{tailarea}{Realized tail areas (lower and upper) for each confidence interval}
 \item{vlo}{Lower truncation limits for statistics}
@@ -118,6 +125,10 @@ is not allowed.
 \references{
 Jason Lee, Dennis Sun, Yuekai Sun, and Jonathan Taylor (2013). 
 Exact post-selection inference, with application to the lasso. arXiv:1311.6238.
+
+ Jonathan Taylor and Robert Tibshirani (2016) Post-selection inference for L1-penalized likelihood models.
+arXiv:1602.07358
+
 }
 \author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
@@ -173,12 +184,64 @@ gfit = glmnet(xs,y,standardize=FALSE)
 # extract coef for a given lambda; note the 1/n factor!
 # (and we don't save the intercept term)
 lambda = .8
-beta = coef(gfit, s=lambda/n, exact=TRUE)[-1]
+beta_hat = coef(gfit, s=lambda/n, exact=TRUE)[-1]
 
 # compute fixed lambda p-values and selection intervals
-out = fixedLassoInf(xs,y,beta,lambda,sigma=sigma)
+out = fixedLassoInf(xs,y,beta_hat,lambda,sigma=sigma)
 
 #rescale conf points to undo the penalty factor
 out$ci=t(scale(t(out$ci),FALSE,pf[out$vars]))
 out
+
+#logistic model
+set.seed(43)
+     n = 50
+     p = 10
+     sigma = 1
+     
+     x = matrix(rnorm(n*p),n,p)
+     x=scale(x,TRUE,TRUE)
+     
+     beta = c(3,2,rep(0,p-2))
+     y = x%*%beta + sigma*rnorm(n)
+     y=1*(y>mean(y))
+     # first run glmnet
+     gfit = glmnet(x,y,standardize=FALSE,family="binomial")
+     
+     # extract coef for a given lambda; note the 1/n factor!
+     # (and here  we DO  include the intercept term)
+     lambda = .8
+     beta_hat = coef(gfit, s=lambda/n, exact=TRUE)
+     
+     # compute fixed lambda p-values and selection intervals
+     out = fixedLassoInf(x,y,beta_hat,lambda,family="binomial")
+     out
+
+#Cox model
+set.seed(43)
+     n = 50
+     p = 10
+     sigma = 1
+     
+     x = matrix(rnorm(n*p),n,p)
+     x=scale(x,TRUE,TRUE)
+     
+     beta = c(3,2,rep(0,p-2))
+     tim = as.vector(x\%*\%beta + sigma*rnorm(n))
+     tim= tim-min(tim)+1
+status=sample(c(0,1),size=n,replace=T)
+     # first run glmnet
+
+
+     gfit = glmnet(x,Surv(tim,status),standardize=FALSE,family="cox")
+   
+     # extract coef for a given lambda; note the 1/n factor!
+   
+     lambda = 1.5
+     beta_hat = as.numeric(coef(gfit, s=lambda/n, exact=TRUE))
+     
+     # compute fixed lambda p-values and selection intervals
+     out = fixedLassoInf(x,tim,beta_hat,lambda,status=status,family="cox")
+     out
 }
+ 

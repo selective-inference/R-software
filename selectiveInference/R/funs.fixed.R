@@ -2,12 +2,32 @@
 # for the solution of
 # min 1/2 || y - \beta_0 - X \beta ||_2^2 + \lambda || \beta ||_1
 
-fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=0.1,
+fixedLassoInf <- function(x, y, beta, lambda, family=c("gaussian","binomial","cox"),intercept=TRUE, status=NULL,
+sigma=NULL, alpha=0.1,
                      type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
                      gridrange=c(-100,100), bits=NULL, verbose=FALSE) {
-  
+    
+ family = match.arg(family)
   this.call = match.call()
   type = match.arg(type)
+ 
+  if(family=="binomial")  {
+      if(type!="partial") stop("Only type= partial allowed with binomial family")
+       out=fixedLogitLassoInf(x,y,beta,lambda,alpha=alpha, type="partial", tol.beta=tol.beta, tol.kkt=tol.kkt,
+                     gridrange=gridrange, bits=bits, verbose=verbose,this.call=this.call)
+                      return(out)
+                    }
+else if(family=="cox")  {
+    if(type!="partial") stop("Only type= partial allowed with Cox family")
+     out=fixedCoxLassoInf(x,y,status,beta,lambda,alpha=alpha, type="partial",tol.beta=tol.beta,
+          tol.kkt=tol.kkt, gridrange=gridrange, bits=bits, verbose=verbose,this.call=this.call)               
+                      return(out)
+                    }
+ 
+else{
+
+ 
+ 
   checkargs.xy(x,y)
   if (missing(beta) || is.null(beta)) stop("Must supply the solution beta")
   if (missing(lambda) || is.null(lambda)) stop("Must supply the tuning parameter value lambda") 
@@ -106,7 +126,7 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
     pv[j] = a$pv 
     vlo[j] = a$vlo * mj # Unstandardize (mult by norm of vj)
     vup[j] = a$vup * mj # Unstandardize (mult by norm of vj)
-    vmat[j,] = vj * mj  # Unstandardize (mult by norm of vj)
+    vmat[j,] = vj * mj * sign[j]  # Unstandardize (mult by norm of vj)
 
     a = poly.int(y,G,u,vj,sigma,alpha,gridrange=gridrange,
       flip=(sign[j]==-1),bits=bits)
@@ -117,9 +137,12 @@ fixedLassoInf <- function(x, y, beta, lambda, intercept=TRUE, sigma=NULL, alpha=
   out = list(type=type,lambda=lambda,pv=pv,ci=ci,
     tailarea=tailarea,vlo=vlo,vup=vup,vmat=vmat,y=y,
     vars=vars,sign=sign,sigma=sigma,alpha=alpha,
+    sd=sigma*sqrt(rowSums(vmat^2)),
+    coef0=vmat%*%y, 
     call=this.call)
   class(out) = "fixedLassoInf"
   return(out)
+}
 }
 
 #############################
@@ -176,8 +199,8 @@ print.fixedLassoInf <- function(x, tailarea=TRUE, ...) {
   cat(sprintf("\nTesting results at lambda = %0.3f, with alpha = %0.3f\n",x$lambda,x$alpha))
   cat("",fill=T)
   tab = cbind(x$vars,
-    round(x$sign*x$vmat%*%x$y,3),
-    round(x$sign*x$vmat%*%x$y/(x$sigma*sqrt(rowSums(x$vmat^2))),3),
+    round(x$coef0,3),
+    round(x$coef0 / x$sd,3),
     round(x$pv,3),round(x$ci,3))
   colnames(tab) = c("Var", "Coef", "Z-score", "P-value", "LowConfPt", "UpConfPt")
   if (tailarea) {
