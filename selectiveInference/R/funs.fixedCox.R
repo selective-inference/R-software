@@ -32,6 +32,7 @@ s2=sign(bhat)
    aaa=coxph(Surv(y,status)~x[,m],init=bhat,iter.max=0) # this gives the Cox model at exactly bhat
                                                         # so when we compute gradient and score 
 							# we are evaluating at the LASSO solution
+							# naming of variables could be improved...
     res=residuals(aaa,type="score")
 if(!is.matrix(res)) res=matrix(res,ncol=1)
 scor=colSums(res)
