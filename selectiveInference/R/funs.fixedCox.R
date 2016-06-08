@@ -25,7 +25,7 @@ if( sum(status==0)+sum(status==1)!=length(y)) stop("status vector must have valu
 vars=which(m)
 if(sum(m)>0){
     bhat=beta[beta!=0] #penalized coefs just for active variables
-s2=sign(bhat)
+    s2=sign(bhat)
 
  #check KKT
     

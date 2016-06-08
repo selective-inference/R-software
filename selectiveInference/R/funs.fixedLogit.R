@@ -74,7 +74,7 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial"), tol.bet
   b1= (s2 * dbeta)[-1]
 
   tol.poly = 0.01 
-  if (max((A1 %*% bbar)[-1] - b1) > tol.poly)
+  if (max((A1 %*% bbar) - b1) > tol.poly)
     stop(paste("Polyhedral constraints not satisfied; you must recompute beta",
                "more accurately. With glmnet, make sure to use exact=TRUE in coef(),",
                "and check whether the specified value of lambda is too small",
