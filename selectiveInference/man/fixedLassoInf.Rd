@@ -10,7 +10,7 @@ fixed value of the tuning parameter lambda
 }
 \usage{
 fixedLassoInf(x, y, beta, lambda, family = c("gaussian", "binomial", 
-    "cox"),intercept=TRUE, sigma=NULL, alpha=0.1,
+    "cox"),intercept=TRUE, status=NULL, sigma=NULL, alpha=0.1,
          type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
          gridrange=c(-100,100), bits=NULL, verbose=FALSE) 
 }
@@ -56,6 +56,7 @@ Significance level for confidence intervals (target is miscoverage alpha/2 in ea
 Was the lasso problem solved (e.g., by glmnet) with an intercept in the model? 
 Default is TRUE. Must be TRUE for "binomial" family. Not used for 'cox" family, where no intercept is assumed.
 }
+\item{status}{Censoring status for Cox model; 1=failurem 0=censored}
 \item{type}{Contrast type for p-values and confidence intervals: default is
 "partial"---meaning that the contrasts tested are the partial population 
 regression coefficients, within the active set of predictors; the alternative is
@@ -104,6 +105,10 @@ Then when running glmnet, set standardize=F. See example below.
 The penalty.factor facility in glmmet-- allowing different penalties lambda for each predictor,
 is not yet implemented in fixedLassoInf. However you can finesse this--- see the example below. One caveat- using this approach, a penalty factor of zero (forcing a predictor in)
 is not allowed.
+
+Note that the coefficients and standard errors reported are unregularized.
+Eg for the Gaussian, they are the usual least squares estimates and standard errors
+for the model fit to the actice set from the lasso.
 }
 \value{  
 \item{type}{Type of coefficients tested (partial or full)}
@@ -203,7 +208,7 @@ set.seed(43)
      x=scale(x,TRUE,TRUE)
      
      beta = c(3,2,rep(0,p-2))
-     y = x%*%beta + sigma*rnorm(n)
+     y = x\%*\%beta + sigma*rnorm(n)
      y=1*(y>mean(y))
      # first run glmnet
      gfit = glmnet(x,y,standardize=FALSE,family="binomial")
@@ -229,7 +234,7 @@ set.seed(43)
      beta = c(3,2,rep(0,p-2))
      tim = as.vector(x\%*\%beta + sigma*rnorm(n))
      tim= tim-min(tim)+1
-status=sample(c(0,1),size=n,replace=T)
+status=sample(c(0,1),size=n,replace=TRUE)
      # first run glmnet
 
 
