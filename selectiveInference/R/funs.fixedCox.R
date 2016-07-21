@@ -25,11 +25,14 @@ if( sum(status==0)+sum(status==1)!=length(y)) stop("status vector must have valu
 vars=which(m)
 if(sum(m)>0){
     bhat=beta[beta!=0] #penalized coefs just for active variables
-s2=sign(bhat)
+    s2=sign(bhat)
 
  #check KKT
     
-   aaa=coxph(Surv(y,status)~x[,m],init=bhat,iter.max=0)
+   aaa=coxph(Surv(y,status)~x[,m],init=bhat,iter.max=0) # this gives the Cox model at exactly bhat
+                                                        # so when we compute gradient and score 
+							# we are evaluating at the LASSO solution
+							# naming of variables could be improved...
     res=residuals(aaa,type="score")
 if(!is.matrix(res)) res=matrix(res,ncol=1)
 scor=colSums(res)
@@ -39,11 +42,11 @@ scor=colSums(res)
     warning(paste("Solution beta does not satisfy the KKT conditions",
                   "(to within specified tolerances)"))
 
-    
+# Hessian of partial likelihood at the LASSO solution    
 MM=vcov(aaa)
 
- bbar=(bhat+lambda*MM%*%s2)
- A1=-(mydiag(s2))
+bbar=(bhat+lambda*MM%*%s2)
+A1=-(mydiag(s2))
 b1= -(mydiag(s2)%*%MM)%*%s2*lambda
 
    temp=max(A1%*%bbar-b1)

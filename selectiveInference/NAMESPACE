@@ -1,19 +1,18 @@
 export(lar,fs,
-       larInf,fsInf,fsInf_maxZ,
+       larInf,fsInf,
        coef.lar,coef.fs,
        predict.lar,predict.fs,
        print.lar,print.fs,
        print.larInf,print.fsInf,
        plot.lar,plot.fs,
        fixedLassoInf,print.fixedLassoInf,
- #     fixedLogitLassoInf,print.fixedLogitLassoInf,
-  #     fixedCoxLassoInf,print.fixedCoxLassoInf,
+#      fixedLogitLassoInf,print.fixedLogitLassoInf,
+#       fixedCoxLassoInf,print.fixedCoxLassoInf,
        forwardStop,
        estimateSigma,
        manyMeans,print.manyMeans,
        groupfs,groupfsInf,
-       scaleGroups,factorDesign,
-       sample_from_constraints
+       scaleGroups,factorDesign
     )
 
 S3method("coef", "lar")
@@ -26,7 +25,6 @@ S3method("predict", "fs")
 S3method("print", "fs")
 S3method("plot", "fs")
 S3method("print", "fsInf")
-S3method("print", "fsInf_maxZ")
 S3method("print", "fixedLassoInf")
 S3method("print", "fixedLogitLassoInf")
 S3method("print", "fixedCoxLassoInf")
@@ -37,8 +35,9 @@ S3method("print", "groupfsInf")
 useDynLib("selectiveInference")
 import(glmnet)
 import(intervals)
+import(survival)
 importFrom("graphics", abline, axis, matplot)
-importFrom("stats", dnorm, lsfit, pexp, pnorm, predict,
+importFrom("stats", dnorm, lsfit, pexp, pnorm, predict, 
            qnorm, rnorm, sd, uniroot, dchisq, model.matrix, pchisq)
 importFrom("stats", "coef", "df", "lm", "pf")
 
