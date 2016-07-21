@@ -17,7 +17,7 @@ lar <- function(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
 
   this.call = match.call()
   checkargs.xy(x=x,y=y)
-  
+
   # Center and scale, etc.
   obj = standardize(x,y,intercept,normalize)
   x = obj$x
@@ -49,7 +49,7 @@ lar <- function(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
   action = numeric(buf)      # Actions taken
   df = numeric(buf)          # Degrees of freedom
   beta = matrix(0,p,buf)     # LAR estimates
-  
+
   lambda[1] = hit
   action[1] = ihit
   df[1] = 0
@@ -91,14 +91,14 @@ lar <- function(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
   Q1 = Q[,1,drop=FALSE];
   Q2 = Q[,-1,drop=FALSE]
   R = qr.R(obj)
-  
+
   # Throughout the algorithm, we will maintain
   # the decomposition X1 = Q1*R. Dimenisons:
   # X1: n x r
   # Q1: n x r
   # Q2: n x (n-r)
   # R:  r x r
-    
+
   while (k<=maxsteps && lambda[k-1]>=minlam) {
     ##########
     # Check if we've reached the end of the buffer
@@ -118,7 +118,7 @@ lar <- function(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
     b = backsolve(R,backsolve(R,s,transpose=TRUE))
     aa = as.numeric(t(X2) %*% (y - X1 %*% a))
     bb = as.numeric(t(X2) %*% (X1 %*% b))
-    
+
     # If the inactive set is empty, nothing will hit
     if (r==min(n-intercept,p)) hit = 0
 
@@ -128,9 +128,9 @@ lar <- function(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
       hits = aa/(shits-bb)
 
       # Make sure none of the hitting times are larger
-      # than the current lambda 
+      # than the current lambda
       hits[hits>lambda[k-1]] = 0
-        
+
       ihit = which.max(hits)
       hit = hits[ihit]
       shit = shits[ihit]
@@ -138,13 +138,13 @@ lar <- function(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
 
     # Stop if the next critical point is negative
     if (hit<=0) break
-    
+
     # Record the critical lambda and solution
     lambda[k] = hit
     action[k] = I[ihit]
     df[k] = r
     beta[A,k] = a-hit*b
-        
+
     # Gamma matrix!
     if (gi + 2*p > nrow(Gamma)) Gamma = rbind(Gamma,matrix(0,2*p+gbuf,n))
     X2perp = X2 - X1 %*% backsolve(R,t(Q1)%*%X2)
@@ -162,7 +162,7 @@ lar <- function(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
       crit = (t(c[,-ihit])%*%y - ratio*sum(c[,ihit]*y))/(1-ratio)
       mp[k] = max(max(crit[ip]),0)
     }
-    
+
     # Update all of the variables
     r = r+1
     A = c(A,I[ihit])
@@ -176,12 +176,12 @@ lar <- function(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
     Q1 = obj$Q1
     Q2 = obj$Q2
     R = obj$R
-     
+
     if (verbose) {
       cat(sprintf("\n%i. lambda=%.3f, adding variable %i, |A|=%i...",
                   k,hit,A[r],r))
     }
-            
+
     # Step counter
     k = k+1
   }
@@ -195,7 +195,7 @@ lar <- function(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
   nk = nk[Seq(1,k-1)]
   mp = mp[Seq(1,k-1)]
   vreg = vreg[Seq(1,k-1),,drop=FALSE]
-  
+
   # If we reached the maximum number of steps
   if (k>maxsteps) {
     if (verbose) {
@@ -215,11 +215,11 @@ lar <- function(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
     completepath = FALSE
     bls = NULL
   }
-  
+
   # Otherwise, note that we completed the path
   else {
     completepath = TRUE
-    
+
     # Record the least squares solution. Note that
     # we have already computed this
     bls = rep(0,p)
@@ -227,19 +227,19 @@ lar <- function(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
   }
 
   if (verbose) cat("\n")
-  
+
   # Adjust for the effect of centering and scaling
   if (intercept) df = df+1
   if (normalize) beta = beta/sx
   if (normalize && completepath) bls = bls/sx
-  
+
   # Assign column names
   colnames(beta) = as.character(round(lambda,3))
 
   out = list(lambda=lambda,action=action,sign=s,df=df,beta=beta,
     completepath=completepath,bls=bls,
     Gamma=Gamma,nk=nk,vreg=vreg,mp=mp,x=x,y=y,bx=bx,by=by,sx=sx,
-    intercept=intercept,normalize=normalize,call=this.call) 
+    intercept=intercept,normalize=normalize,call=this.call)
   class(out) = "lar"
   return(out)
 }
@@ -253,7 +253,7 @@ lar <- function(x, y, maxsteps=2000, minlam=0, intercept=TRUE, normalize=TRUE,
 downdateQR <- function(Q1,Q2,R,col) {
   m = nrow(Q1)
   n = ncol(Q1)
-  
+
   a = .C("downdate1",
     Q1=as.double(Q1),
     R=as.double(R),
@@ -275,35 +275,6 @@ downdateQR <- function(Q1,Q2,R,col) {
   return(list(Q1=Q1,Q2=Q2,R=R))
 }
 
-# Update the QR factorization, after a column has been
-# added. Here Q1 is m x n, Q2 is m x k, and R is n x n.
-
-updateQR <- function(Q1,Q2,R,col) {
-  m = nrow(Q1)
-  n = ncol(Q1)
-  k = ncol(Q2)
-  
-  a = .C("update1",
-    Q2=as.double(Q2),
-    w=as.double(t(Q2)%*%col),
-    m=as.integer(m),
-    k=as.integer(k),
-    dup=FALSE,
-    package="selectiveInference")
-
-  Q2 = matrix(a$Q2,nrow=m)
-  w = c(t(Q1)%*%col,a$w)
-
-  # Re-structure: delete a column from Q2, add one to
-  # Q1, and expand R
-  Q1 = cbind(Q1,Q2[,1])
-  Q2 = Q2[,-1,drop=FALSE]
-  R = rbind(R,rep(0,n))
-  R = cbind(R,w[Seq(1,n+1)])
-
-  return(list(Q1=Q1,Q2=Q2,R=R))
-}
-
 ##############################
 
 # Coefficient function for lar
@@ -320,7 +291,7 @@ coef.lar <- function(object, s, mode=c("step","lambda"), ...) {
     lambda = object$lambda
     beta = object$beta
   }
-  
+
   if (mode=="step") {
     if (min(s)<0 || max(s)>k) stop(sprintf("s must be between 0 and %i",k))
     knots = 1:k
@@ -330,7 +301,7 @@ coef.lar <- function(object, s, mode=c("step","lambda"), ...) {
     knots = lambda
     dec = TRUE
   }
-  
+
   return(coef.interpolate(beta,s,knots,dec))
 }
 
@@ -350,9 +321,9 @@ predict.lasso <- predict.lar
 
 # Lar inference function
 
-larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic"), 
+larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic"),
                    gridrange=c(-100,100), bits=NULL, mult=2, ntimes=2, verbose=FALSE) {
-  
+
   this.call = match.call()
   type = match.arg(type)
   checkargs.misc(sigma=sigma,alpha=alpha,k=k,
@@ -364,7 +335,7 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
     warning("Package Rmpfr is not installed, reverting to standard precision")
     bits = NULL
   }
-  
+
   k = min(k,length(obj$action)) # Round to last step
   x = obj$x
   y = obj$y
@@ -385,11 +356,11 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
                     "you may want to use the estimateSigma function"))
     }
   }
-  
+
   pv.spacing = pv.modspac = pv.covtest = khat = NULL
-  
+
   if (type == "active") {
-    pv = vlo = vup = numeric(k) 
+    pv = vlo = vup = numeric(k)
     vmat = matrix(0,k,n)
     ci = tailarea = matrix(0,k,2)
     pv.spacing = pv.modspac = pv.covtest = numeric(k)
@@ -399,7 +370,7 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
 
     for (j in 1:k) {
       if (verbose) cat(sprintf("Inference for variable %i ...\n",vars[j]))
-      
+
       Gj = G[1:nk[j],]
       uj = rep(0,nk[j])
       vj = vreg[j,]
@@ -411,12 +382,12 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
       vlo[j] = a$vlo * mj / sxj # Unstandardize (mult by norm of vj / sxj)
       vup[j] = a$vup * mj / sxj # Unstandardize (mult by norm of vj)
       vmat[j,] = vj * mj / sxj  # Unstandardize (mult by norm of vj / sxj)
-    
+
       a = poly.int(y,Gj,uj,vj,sigma,alpha,gridrange=gridrange,
         flip=(sign[j]==-1),bits=bits)
-      ci[j,] = a$int * mj / sxj # Unstandardize (mult by norm of vj / sxj) 
+      ci[j,] = a$int * mj / sxj # Unstandardize (mult by norm of vj / sxj)
       tailarea[j,] = a$tailarea
-      
+
       pv.spacing[j] = spacing.pval(obj,sigma,j)
       pv.modspac[j] = modspac.pval(obj,sigma,j)
       pv.covtest[j] = covtest.pval(obj,sigma,j)
@@ -424,7 +395,7 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
 
     khat = forwardStop(pv,alpha)
   }
-  
+
   else {
     if (type == "aic") {
       out = aicStop(x,y,obj$action[1:k],obj$df[1:k],sigma,mult,ntimes)
@@ -439,22 +410,22 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
       u = rep(0,nk[k])
       kk = k
     }
-    
-    pv = vlo = vup = numeric(kk) 
+
+    pv = vlo = vup = numeric(kk)
     vmat = matrix(0,kk,n)
     ci = tailarea = matrix(0,kk,2)
     sign = numeric(kk)
     vars = obj$action[1:kk]
     xa = x[,vars]
     M = pinv(crossprod(xa)) %*% t(xa)
-    
+
     for (j in 1:kk) {
       if (verbose) cat(sprintf("Inference for variable %i ...\n",vars[j]))
-      
+
       vj = M[j,]
       mj = sqrt(sum(vj^2))
       vj = vj / mj             # Standardize (divide by norm of vj)
-      sign[j] = sign(sum(vj*y)) 
+      sign[j] = sign(sum(vj*y))
       vj = sign[j] * vj
       Gj = rbind(G,vj)
       uj = c(u,0)
@@ -472,7 +443,7 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
       tailarea[j,] = a$tailarea
     }
   }
-  
+
   out = list(type=type,k=k,khat=khat,pv=pv,ci=ci,
     tailarea=tailarea,vlo=vlo,vup=vup,vmat=vmat,y=y,
     pv.spacing=pv.spacing,pv.modspac=pv.modspac,pv.covtest=pv.covtest,
@@ -488,10 +459,10 @@ spacing.pval <- function(obj, sigma, k) {
   v = obj$Gamma[obj$nk[k],]
   sd = sigma*sqrt(sum(v^2))
   a = obj$mp[k]
-  
+
   if (k==1) b = Inf
   else b = obj$lambda[k-1]
-  
+
   return(tnorm.surv(obj$lambda[k],0,sd,a,b))
 }
 
@@ -505,7 +476,7 @@ modspac.pval <- function(obj, sigma, k) {
     warning(sprintf("Modified spacing p-values at step %i require %i steps of the lar path",k,k+1))
     return(NA)
   }
-      
+
   if (k==1) b = Inf
   else b = obj$lambda[k-1]
 
@@ -543,7 +514,7 @@ covtest.pval <- function(obj, sigma, k) {
 print.lar <- function(x, ...) {
   cat("\nCall:\n")
   dput(x$call)
-  
+
   cat("\nSequence of LAR moves:\n")
   nsteps = length(x$action)
   tab = cbind(1:nsteps,x$action,x$sign)
@@ -566,7 +537,7 @@ print.larInf <- function(x, tailarea=TRUE, ...) {
     tab = cbind(1:length(x$pv),x$vars,
       round(x$sign*x$vmat%*%x$y,3),
       round(x$sign*x$vmat%*%x$y/(x$sigma*sqrt(rowSums(x$vmat^2))),3),
-      round(x$pv,3),round(x$ci,3),round(x$pv.spacing,3),round(x$pv.cov,3)) 
+      round(x$pv,3),round(x$ci,3),round(x$pv.spacing,3),round(x$pv.cov,3))
     colnames(tab) = c("Step", "Var", "Coef", "Z-score", "P-value",
               "LowConfPt", "UpConfPt", "Spacing", "CovTest")
     if (tailarea) {
@@ -609,7 +580,7 @@ print.larInf <- function(x, tailarea=TRUE, ...) {
     }
     rownames(tab) = rep("",nrow(tab))
     print(tab)
-    
+
     cat(sprintf("\nEstimated stopping point from AIC rule = %i\n",x$khat))
   }
 
@@ -618,7 +589,7 @@ print.larInf <- function(x, tailarea=TRUE, ...) {
 
 plot.lar <- function(x, xvar=c("norm","step","lambda"), breaks=TRUE,
                      omit.zeros=TRUE, var.labels=TRUE, ...) {
-  
+
   if (x$completepath) {
     k = length(x$action)+1
     lambda = c(x$lambda,0)
@@ -629,7 +600,7 @@ plot.lar <- function(x, xvar=c("norm","step","lambda"), breaks=TRUE,
     beta = x$beta
   }
   p = nrow(beta)
-  
+
   xvar = match.arg(xvar)
   if (xvar=="norm") {
     xx = colSums(abs(beta))
@@ -656,6 +627,6 @@ plot.lar <- function(x, xvar=c("norm","step","lambda"), breaks=TRUE,
   abline(h=0,lwd=2)
   matplot(xx,t(beta),type="l",lty=1,add=TRUE)
   if (breaks) abline(v=xx,lty=2)
-  if (var.labels) axis(4,at=beta[,k],labels=1:p,cex=0.8,adj=0) 
+  if (var.labels) axis(4,at=beta[,k],labels=1:p,cex=0.8,adj=0)
   invisible()
 }

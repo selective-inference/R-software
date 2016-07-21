@@ -32,7 +32,7 @@ standardize <- function(x, y, intercept, normalize) {
   y = as.numeric(y)
   n = nrow(x)
   p = ncol(x)
-  
+
   if (intercept) {
     bx = colMeans(x)
     by = mean(y)
@@ -57,10 +57,10 @@ standardize <- function(x, y, intercept, normalize) {
 # Interpolation function to get coefficients
 
 coef.interpolate <- function(betas, s, knots, dec=TRUE) {
-  # Sort the s values 
+  # Sort the s values
   o = order(s,dec=dec)
   s = s[o]
-        
+
   k = length(s)
   mat = matrix(rep(knots,each=k),nrow=k)
   if (dec) b = s >= mat
@@ -72,7 +72,7 @@ coef.interpolate <- function(betas, s, knots, dec=TRUE) {
   p = numeric(k)
   p[i] = 0
   p[!i] = ((s-knots[blo])/(knots[bhi]-knots[blo]))[!i]
-  
+
   beta = t((1-p)*t(betas[,blo,drop=FALSE]) + p*t(betas[,bhi,drop=FALSE]))
   colnames(beta) = as.character(round(s,3))
   rownames(beta) = NULL
@@ -100,7 +100,7 @@ checkargs.misc <- function(sigma=NULL, alpha=NULL, k=NULL,
                            mult=NULL, ntimes=NULL,
                            beta=NULL, lambda=NULL, tol.beta=NULL, tol.kkt=NULL,
                            bh.q=NULL) {
-  
+
   if (!is.null(sigma) && sigma <= 0) stop("sigma must be > 0")
   if (!is.null(lambda) && lambda < 0) stop("lambda must be >= 0")
   if (!is.null(alpha) && (alpha <= 0 || alpha >= 1)) stop("alpha must be between 0 and 1")
@@ -144,3 +144,43 @@ estimateSigma <- function(x, y, intercept=TRUE, standardize=TRUE) {
   return(list(sigmahat=sigma, df=nz))
 }
 
+# Update the QR factorization, after a column has been
+# added. Here Q1 is m x n, Q2 is m x k, and R is n x n.
+
+updateQR <- function(Q1,Q2,R,col) {
+  m = nrow(Q1)
+  n = ncol(Q1)
+  k = ncol(Q2)
+
+  a = .C("update1",
+    Q2=as.double(Q2),
+    w=as.double(t(Q2)%*%col),
+    m=as.integer(m),
+    k=as.integer(k),
+    dup=FALSE,
+    package="selectiveInference")
+
+  Q2 = matrix(a$Q2,nrow=m)
+  w = c(t(Q1)%*%col,a$w)
+
+  # Re-structure: delete a column from Q2, add one to
+  # Q1, and expand R
+  Q1 = cbind(Q1,Q2[,1])
+  Q2 = Q2[,-1,drop=FALSE]
+  R = rbind(R,rep(0,n))
+  R = cbind(R,w[Seq(1,n+1)])
+
+  return(list(Q1=Q1,Q2=Q2,R=R))
+}
+
+# Moore-Penrose pseudo inverse for symmetric matrices
+
+pinv <- function(A, tol=.Machine$double.eps) {
+  e = eigen(A)
+  v = Re(e$vec)
+  d = Re(e$val)
+  d[d > tol] = 1/d[d > tol]
+  d[d < tol] = 0
+  if (length(d)==1) return(v*d*v)
+  else return(v %*% diag(d) %*% t(v))
+}
