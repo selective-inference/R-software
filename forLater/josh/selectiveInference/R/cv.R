@@ -1,11 +1,18 @@
 # ------------------------------------------------
 # Cross-validation, preliminary
 
-cvMakeFolds <- function(x, nfolds = 10) {
-    #inds <- sample(1:nrow(x), replace=FALSE)
-    inds <- 1:nrow(x)
+cvMakeFolds <- function(x, nfolds = 5) {
+    inds <- sample(1:nrow(x), replace=FALSE)
+    #inds <- 1:nrow(x)
     foldsize <- floor(nrow(x)/nfolds)
-    lapply(1:nfolds, function(f) return(inds[1:foldsize+(f-1)*foldsize]))
+    folds <- lapply(1:nfolds, function(f) return(inds[1:foldsize+(f-1)*foldsize]))
+    if (nfolds*foldsize < nrow(x)) {
+      # remainder observations added to first several folds
+      for (i in 1:(nrow(x) - nfolds*foldsize)) {
+        folds[[i]] <- c(folds[[i]], inds[nfolds*foldsize + i])
+      }
+    }
+    return(folds)
 }
 
 ############################################
@@ -87,6 +94,7 @@ cvfs <- function(x, y, index = 1:ncol(x), maxsteps, sigma = NULL, intercept = TR
         fold <- folds[[f]]
         fit <- groupfs(X[-fold,], Y[-fold], index=index, maxsteps=maxsteps, sigma=sigma, intercept=FALSE, center=FALSE, normalize=FALSE)
         fit$fold <- fold
+        # Why is this commented out?
         ## projections[[f]] <- lapply(fit$projections, function(step.projs) {
         ##     lapply(step.projs, function(proj) {
         ##         # Reduce from n by n matrix to svdu_thresh
