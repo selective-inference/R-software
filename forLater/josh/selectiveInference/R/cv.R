@@ -130,3 +130,48 @@ cvfs <- function(x, y, index = 1:ncol(x), maxsteps, sigma = NULL, intercept = TR
     invisible(fit)
 }
 
+
+cvlar <- function(x, y) { # other args
+    folds <- cvMakeFolds(x)
+    models <- lapply(folds, function(fold) {
+        x.train <- X
+        y.train <- Y
+        x.train[fold,] <- 0
+        y.train[fold] <- 0
+        x.test <- X[fold,]
+        y.test <- Y[fold]
+          larpath.train <- lar(x.train, y.train, maxsteps = maxsteps, intercept = F, normalize = F)
+        return(lff)
+    })
+
+    active.sets <- lapply(models, function(model) model$action)
+    lambdas <- lapply(models, function(model) model$lambda)
+    lmin <- min(unlist(lambdas))
+
+# Interpolate lambda grid or parametrize by steps?
+# interpolation probably requires re-writing cvRSSquads for
+# penalized fits in order to make sense
+
+# do steps for now just to have something that works?
+
+    RSSquads <- list()
+    for (s in 1:maxsteps) {
+        initial.active <- lapply(active.sets, function(a) a[1:s])
+        RSSquads[[s]] <- cvRSSquad(X, folds, initial.active)
+    }
+
+    RSSs <- lapply(RSSquads, function(Q) t(Y) %*% Q %*% Y)
+    sstar <- which.min(RSSs)
+    quadstar <- RSSquads[sstar][[1]]
+
+    RSSquads <- lapply(RSSquads, function(quad) quad - quadstar)
+    RSSquads[[sstar]] <- NULL # remove the all zeroes case
+
+    fit <- lar(X, Y, maxsteps=sstar, intercept = F, normalize = F)
+
+# Very tall Gamma encoding all cv-model paths
+    Gamma <- do.call(rbind, lapply(models, function(model) return(model$Gamma)))
+
+# more to do here    
+}
+
