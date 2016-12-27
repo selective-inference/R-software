@@ -2,11 +2,16 @@
 # Some utilities for affine constraints
 #
 
-# 
+#
 # compute the square-root and inverse square-root of a non-negative
 # definite matrix
 #
 
+#' Compute the square-root and inverse square-root of a non-negative definite matrix. 
+#' @param S matrix
+#' @param rank rank of svd 
+#' 
+#'                                   
 factor_covariance = function(S, rank=NA) {
     if (is.na(rank)) {
         rank = nrow(S)
@@ -26,9 +31,16 @@ factor_covariance = function(S, rank=NA) {
 
 # law is Z \sim N(mean_param, covariance) subject to constraints linear_part %*% Z \leq offset
 
+#' Transform non-iid problem into iid problem
+#' @param linear_part matrix, linear part of constraints
+#' @param offset vector, bias of constraints 
+#' @param mean_param vector of unconditional means
+#' @param covariance vector of unconditional covariance
+#' @return new \code{linear_part} and \code{offset} for 0-mean iid covariance problem, 
+#' and functions that map between the two problems.                                   
 whiten_constraint = function(linear_part, offset, mean_param, covariance) {
 
-    factor_cov = factor_covariance(covariance)
+    factor_cov = factor_covariance(as.matrix(covariance))
     sqrt_cov = factor_cov$sqrt_cov
     sqrt_inv = factor_cov$sqrt_inv
 
@@ -41,7 +53,6 @@ whiten_constraint = function(linear_part, offset, mean_param, covariance) {
     new_A = new_A / scaling
     new_b = new_b / scaling
 
-    # TODO: check these functions will behave when Z is a matrix.
 
     inverse_map = function(Z) {
 	# broadcasting here
@@ -51,7 +62,7 @@ whiten_constraint = function(linear_part, offset, mean_param, covariance) {
 
     forward_map = function(W) {
         return(sqrt_inv %*% (W - mean_param))
-    }    
+    }
 
     return(list(linear_part=new_A,
                 offset=new_b,
@@ -59,65 +70,54 @@ whiten_constraint = function(linear_part, offset, mean_param, covariance) {
                 forward_map=forward_map))
 }
 
-#
-# sample from the law
-#
-# Z \sim N(mean_param, covariance) subject to constraints linear_part %*% Z \leq offset
+#' Sample from multivariate normal distribution under affine restrictions
+#' @description
+#' \code{sample_from_constraints} returns a sample from the conditional 
+#' multivariate normal Z~ N(mean,covariance) s.t. A*Z <= B 
+#'
+#' @param linear_part r x d matrix for r restrictions and d dimension of Z
+#' @param offset r-dim vector of offsets
+#' @param mean_param d-dim mean vector of the unconditional normal
+#' @param covariance d x d covariance matrix of unconditional normal
+#' @param initial_point d-dim vector that initializes the sampler (must meet restrictions)
+#' @param ndraw size of sample 
+#' @param burnin samples to throw away before storing
+#' @return Z ndraw x d matrix of samples 
+#' @export 
+#' @examples
+#' 
+#' truncatedNorm = function(1000, c(0,0,0), identity(3), lower = -1,
+#'                  upper = c(2,1,2), start.value = c(0,0,0))
+#'
+#' constr = thresh2constraints(3, lower = c(1,1,1))
+#'
+#' samp = sample_from_constraints(linear_part = constr$linear_part,
+#'                                    offset= constr$offset,
+#'                                    mean_param = c(0,0,0),
+#'                                    covariance = diag(3),
+#'                                    initial_point = c(1.5,1.5,1.5), 
+#'                                    ndraw=100,
+#'                                    burnin=2000)
+#' 
 
-sample_from_constraints = function(linear_part,
-                                   offset,
-                                   mean_param,
-                                   covariance,
-                                   initial_point, # point must be feasible for constraints
+sample_from_constraints = function(linear_part, 
+                                   offset, 
+                                   mean_param, 
+                                   covariance, 
+                                   initial_point, 
                                    ndraw=8000,
-                                   burnin=2000,
-                                   accept_reject_params=NA) #TODO: implement accept reject check
+                                   burnin=2000) 
 {
 
-    whitened_con = whiten_constraint(linear_part,
+  whitened_con = whiten_constraint(linear_part,
                                      offset,
-				     mean_param,
+                                     mean_param,
                                      covariance)
-    white_initial = whitened_con$forward_map(initial_point)
+  white_initial = whitened_con$forward_map(initial_point)
 
-#     # try 100 draws of accept reject
-#     # if we get more than 50 good draws, then just return a smaller sample
-#     # of size (burnin+ndraw)/5
 
-#     if accept_reject_params: 
-#         use_hit_and_run = False
-#         num_trial, min_accept, num_draw = accept_reject_params
-
-#         def _accept_reject(sample_size, linear_part, offset):
-#             Z_sample = np.random.standard_normal((100, linear_part.shape[1]))
-#             constraint_satisfied = (np.dot(Z_sample, linear_part.T) - 
-#                                     offset[None,:]).max(1) < 0
-#             return Z_sample[constraint_satisfied]
-
-#         Z_sample = _accept_reject(100, 
-#                                   white_con.linear_part,
-#                                   white_con.offset)
-
-#         if Z_sample.shape[0] >= min_accept:
-#             while True:
-#                 Z_sample = np.vstack([Z_sample,
-#                                       _accept_reject(num_draw / 5,
-#                                                      white_con.linear_part,
-#                                                      white_con.offset)])
-#                 if Z_sample.shape[0] > num_draw:
-#                     break
-#             white_samples = Z_sample
-#         else:
-#             use_hit_and_run = True
-#     else:
-#         use_hit_and_run = True
-
-    use_hit_and_run = TRUE
-
-    if (use_hit_and_run) {
-
-        white_linear = whitened_con$linear_part
-        white_offset = whitened_con$offset
+  white_linear = whitened_con$linear_part
+  white_offset = whitened_con$offset
 
 	# Inf cannot be used in C code
 	# In theory, these rows can be dropped
@@ -136,7 +136,7 @@ sample_from_constraints = function(linear_part,
 
                 # normalize rows to have length 1
 
-                scaling = apply(directions, 1, function(x) {  return(sqrt(sum(x^2))) }) 
+                scaling = apply(directions, 1, function(x) {  return(sqrt(sum(x^2))) })
                 directions = directions / scaling
                 ndirection = nrow(directions)
 
@@ -177,10 +177,54 @@ sample_from_constraints = function(linear_part,
            }
        } else {
            Z_sample = matrix(rnorm(nstate * ndraw), nstate, ndraw)
-       }
-    }
+  }
 
-    Z = t(whitened_con$inverse_map(Z_sample))
-    return(Z)
+
+  Z = t(whitened_con$inverse_map(Z_sample))
+  return(Z)
 }
+
+#' Translate between coordinate thresholds and affine constraints
+#' @description
+#' \code{thresh2constraints} translates lower and upper constraints 
+#' on coordinates into linear and offset constraints (A*Z <= B).
+#' lower and upper can have -Inf or Inf coordinates.
+#' @param d dimension of vector
+#' @param lower 1 or d-dim lower constraints 
+#' @param upper 1 or d-dim upper constraints 
+#' @export
+thresh2constraints = function(d, lower = rep(-Inf, d), upper = rep(Inf,d)){
+  stopifnot(is.element(length(lower),c(1,d)))
+  stopifnot(is.element(length(upper),c(1,d)))
+
+  if (length(lower) == 1){
+    lower = rep(lower, d)
+  }
+  if (length(upper) == 1){
+    upper = rep(upper, d)
+  }
+
+
+  linear_part = matrix(ncol = d, nrow = 0)
+  offset = numeric(0)
+  lower_constraints = which(lower > -Inf)
+  for (l in lower_constraints){
+    new_vec = rep(0,d)
+    new_vec[l] = -1
+    linear_part = rbind(linear_part, new_vec)
+    offset = c(offset, -lower[l])
+  }
+  upper_constraints = which(upper < Inf)
+  for (u in upper_constraints){
+    new_vec = rep(0,d)
+    new_vec[u] = 1
+    linear_part = rbind(linear_part, new_vec)
+    offset = c(offset, upper[u])
+  }
+
+  constraints = list(linear_part = linear_part, offset = offset)
+  return(constraints)
+}
+
+
 
