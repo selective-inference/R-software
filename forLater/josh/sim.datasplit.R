@@ -4,30 +4,31 @@ source("../../selectiveInference/R/funs.groupfs.R")
 source("../../selectiveInference/R/funs.quadratic.R")
 source("../../selectiveInference/R/funs.common.R")
 
-set.seed(1)
-niters <- 400
+set.seed(19)
+niters <- 500
 known <- FALSE
-n <- 100
+n <- 50
 p <- 100
-maxsteps <- 10
+maxsteps <- 8
 sparsity <- 5
-snr <- 1
+snr <- 2
 rho <- 0.1
-ratio <- 0.7
-ratio2 <- 0.85
+ratio <- 0.6
+ratio2 <- 0.8
 train <- 1:(ratio*n)
 test <- setdiff(1:n, train)
 train2 <- 1:(ratio2*n)
-test <- setdiff(1:n, train2)
+test2 <- setdiff(1:n, train2)
 index <- 1:p
 
-instance <- function(n, p, sparsity, snr, maxsteps, rho) {
-
-    x <- matrix(rnorm(n*p), nrow=n)
+x <- matrix(rnorm(n*p), nrow=n)
     if (rho != 0) {
         z <- matrix(rep(t(rnorm(n)), p), nrow = n)
         x <- sqrt(1-rho)*x + sqrt(rho)*z
     }
+
+instance <- function(n, p, sparsity, snr, maxsteps, rho) {
+
     y <- rnorm(n)
 
     if (sparsity > 0) {
@@ -47,11 +48,11 @@ instance <- function(n, p, sparsity, snr, maxsteps, rho) {
     xte2 <- x[test2, ]
 
     if (known) {
-        trfit <- groupfs(xtr, ytr, index, maxsteps=maxsteps, sigma=1, aicstop=1, k = 2*log(p))
-        fit <- groupfs(xtr2, ytr2, index, maxsteps=maxsteps, sigma=1, aicstop=1, k = 2*log(p))
+        trfit <- groupfs(xtr, ytr, index, maxsteps=maxsteps, sigma=1, aicstop=1, k = log(length(train)))
+        fit <- groupfs(xtr2, ytr2, index, maxsteps=maxsteps, sigma=1, aicstop=1, k = log(length(train2)))
     } else {
-        trfit <- groupfs(xtr, ytr, index, maxsteps=maxsteps, aicstop=1, k = log(length(train)))
-        fit <- groupfs(xtr2, ytr2, index, maxsteps=maxsteps, aicstop=1, k = log(length(train2)))
+        trfit <- groupfs(xtr, ytr, index, maxsteps=maxsteps, aicstop=1, k = 2*log(p))
+        fit <- groupfs(xtr2, ytr2, index, maxsteps=maxsteps, aicstop=1, k = 2*log(p))
     }
 
     trcols <- which(1:p %in% trfit$action)
@@ -59,11 +60,12 @@ instance <- function(n, p, sparsity, snr, maxsteps, rho) {
     tepv <- summary(lm(yte~xte[, trcols]-1))$coefficients[,4]
     tepv2 <- summary(lm(yte2~xte2[, tr2cols]-1))$coefficients[,4]
     names(tepv) <- as.character(sort(trfit$action))
-    names(tepv2) <- as.character(sort(trfit$action))
+    names(tepv2) <- as.character(sort(fit$action))
     pv <- groupfsInf(fit)
     trpv <- groupfsInf(trfit)
     return(list(vars = fit$action, pvals = pv$pv,
                 splitvars = sort(trfit$action), splitpvals = tepv,
+                splitvars2 = sort(fit$action), splitpvals2 = tepv2,                
                 trpvals = trpv$pv))
 }
 
@@ -75,9 +77,12 @@ vars <- do.call(c, list(output[1,]))
 pvals <- do.call(c, list(output[2,]))
 splitvars <- do.call(c, list(output[3,]))
 splitpvals <- do.call(c, list(output[4,]))
-trpvals <- do.call(c, list(output[5,]))
+splitvars2 <- do.call(c, list(output[5,]))
+splitpvals2 <- do.call(c, list(output[6,]))
+trpvals <- do.call(c, list(output[7,]))
 
-save(vars, pvals, splitvars, splitpvals, trpvals,
+save(vars, pvals, splitvars, splitpvals,
+     splitvars2, splitpvals2, trpvals,
      file = paste0("results/datasplit",
          "_", ifelse(known, "TC", "TF"),
          "_n", n,
