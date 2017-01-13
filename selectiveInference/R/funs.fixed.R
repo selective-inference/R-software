@@ -41,7 +41,7 @@ else{
   n = nrow(x)
   p = ncol(x)
   beta = as.numeric(beta)
-  if (length(beta) != p) stop("beta must have length equal to ncol(x)")
+  if (length(beta) != p) stop("Since family='gaussian', beta must have length equal to ncol(x)")
 
   # If glmnet was run with an intercept term, center x and y
   if (intercept==TRUE) {
