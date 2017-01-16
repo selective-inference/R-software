@@ -45,8 +45,8 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial"), tol.bet
       
 #check KKT
    z=etahat+(y-prhat)/ww
- #      g=  t(x)%*%w%*%(z-etahat)/lambda # negative gradient scaled by lambda
-  gg=scale(t(x),FALSE,1/ww)%*%(z-etahat)/lambda # negative gradient scaled by lambda
+  # g=  t(x)%*%w%*%(z-etahat)/lambda # negative gradient scaled by lambda
+  g=scale(t(x),FALSE,1/ww)%*%(z-etahat)/lambda # negative gradient scaled by lambda
      if (any(abs(g) > 1+tol.kkt) )
     warning(paste("Solution beta does not satisfy the KKT conditions",
                   "(to within specified tolerances)"))

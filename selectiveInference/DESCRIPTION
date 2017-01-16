@@ -1,7 +1,7 @@
 Package: selectiveInference
 Type: Package
 Title: Tools for Post-Selection Inference
-Version: 1.2.1
+Version: 1.2.2
 Date: 2016-07-3
 Author: Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor,
     Joshua Loftus, Stephen Reid
