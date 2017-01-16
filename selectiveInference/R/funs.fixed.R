@@ -158,7 +158,7 @@ function(x, y, beta, lambda, a) {
   if (length(za)>1) dz = diag(za)
   if (length(za)==1) dz = matrix(za,1,1)
 
-  P = diag(1,nrow(xa)) - xa %*% xap
+#  P = diag(1,nrow(xa)) - xa %*% xap
   #NOTE: inactive constraints not needed below!
 
   G = -rbind(
