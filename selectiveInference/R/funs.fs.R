@@ -188,7 +188,8 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
     
     # Record the least squares solution. Note that
     # we have already computed this
-    bls = rep(0,p); bls[A] = keepLs
+    bls = rep(0,p)
+    bls[A] = keepLs
   }
 
   if (verbose) cat("\n")
