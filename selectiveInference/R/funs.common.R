@@ -56,14 +56,14 @@ standardize <- function(x, y, intercept, normalize) {
 
 # Interpolation function to get coefficients
 
-coef.interpolate <- function(betas, s, knots, dec=TRUE) {
+coef.interpolate <- function(beta, s, knots, decreasing=TRUE) {
   # Sort the s values
-  o = order(s,dec=dec)
+  o = order(s,decreasing=decreasing)
   s = s[o]
 
   k = length(s)
   mat = matrix(rep(knots,each=k),nrow=k)
-  if (dec) b = s >= mat
+  if (decreasing) b = s >= mat
   else b = s <= mat
   blo = max.col(b,ties.method="first")
   bhi = pmax(blo-1,1)
@@ -73,7 +73,7 @@ coef.interpolate <- function(betas, s, knots, dec=TRUE) {
   p[i] = 0
   p[!i] = ((s-knots[blo])/(knots[bhi]-knots[blo]))[!i]
 
-  beta = t((1-p)*t(betas[,blo,drop=FALSE]) + p*t(betas[,bhi,drop=FALSE]))
+  beta = t((1-p)*t(beta[,blo,drop=FALSE]) + p*t(beta[,bhi,drop=FALSE]))
   colnames(beta) = as.character(round(s,3))
   rownames(beta) = NULL
 

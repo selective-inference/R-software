@@ -295,14 +295,14 @@ coef.lar <- function(object, s, mode=c("step","lambda"), ...) {
   if (mode=="step") {
     if (min(s)<0 || max(s)>k) stop(sprintf("s must be between 0 and %i",k))
     knots = 1:k
-    dec = FALSE
+    decreasing = FALSE
   } else {
     if (min(s)<min(lambda)) stop(sprintf("s must be >= %0.3f",min(lambda)))
     knots = lambda
-    dec = TRUE
+    decreasing = TRUE
   }
 
-  return(coef.interpolate(beta,s,knots,dec))
+  return(coef.interpolate(beta,s,knots,decreasing))
 }
 
 # Prediction function for lar

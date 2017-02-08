@@ -225,8 +225,8 @@ coef.fs <- function(object, s, ...) {
   
   if (min(s)<0 || max(s)>k) stop(sprintf("s must be between 0 and %i",k))
   knots = 1:k
-  dec = FALSE
-  return(coef.interpolate(beta,s,knots,dec))
+  decreasing = FALSE
+  return(coef.interpolate(beta,s,knots,decreasing))
 }
 
 # Prediction function for fs
