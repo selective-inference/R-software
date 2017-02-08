@@ -106,8 +106,8 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
     }
 
     # Key quantities for the next entry
-    keepLs=backsolve(R,t(Q_active)%*%X_inactive)
-    X_inactive_resid = X_inactive - X_active %*% keepLs
+    keepLs = backsolve(R,t(Q_active)%*%y)
+    X_inactive_resid = X_inactive - X_active %*% backsolve(R,t(Q_active)%*%X_inactive)
     working_x = scale(X_inactive_resid,center=F,scale=sqrt(colSums(X_inactive_resid^2)))
     score = as.numeric(t(working_x)%*%y)
     
@@ -127,7 +127,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
 
     action[k] = I[i_hit] 
     df[k] = r
-    beta[A,k] = backsolve(R,t(Q_active)%*%y)
+    beta[A,k] = keepLs
         
     # Gamma matrix!
     if (gi + 2*p > nrow(Gamma)) Gamma = rbind(Gamma,matrix(0,2*p+gbuf,n))
@@ -188,8 +188,7 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
     
     # Record the least squares solution. Note that
     # we have already computed this
-    bls = rep(0,p)
-   if(length(keepLs)>0)  bls[A] = keepLs
+    bls = rep(0,p); bls[A] = keepLs
   }
 
   if (verbose) cat("\n")

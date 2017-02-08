@@ -12,7 +12,9 @@ Depends:
     survival
 Suggests:
     Rmpfr
-Description: New tools for post-selection inference, for use
-    with forward stepwise regression, least angle regression, the
-    lasso, and the many means problem. The lasso function implements  Gaussian,  logistic and Cox survival models.
+Description: New tools for post-selection inference, for use with forward
+    stepwise regression, least angle regression, the lasso, and the many means
+    problem. The lasso function implements Gaussian, logistic and Cox survival
+    models.
 License: GPL-2
+RoxygenNote: 5.0.1
