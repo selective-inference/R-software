@@ -1,11 +1,18 @@
 # ------------------------------------------------
 # Cross-validation, preliminary
 
-cvMakeFolds <- function(x, nfolds = 10) {
-    #inds <- sample(1:nrow(x), replace=FALSE)
-    inds <- 1:nrow(x)
+cvMakeFolds <- function(x, nfolds = 5) {
+    inds <- sample(1:nrow(x), replace=FALSE)
+    #inds <- 1:nrow(x)
     foldsize <- floor(nrow(x)/nfolds)
-    lapply(1:nfolds, function(f) return(inds[1:foldsize+(f-1)*foldsize]))
+    folds <- lapply(1:nfolds, function(f) return(inds[1:foldsize+(f-1)*foldsize]))
+    if (nfolds*foldsize < nrow(x)) {
+      # remainder observations added to first several folds
+      for (i in 1:(nrow(x) - nfolds*foldsize)) {
+        folds[[i]] <- c(folds[[i]], inds[nfolds*foldsize + i])
+      }
+    }
+    return(folds)
 }
 
 ############################################
@@ -87,6 +94,7 @@ cvfs <- function(x, y, index = 1:ncol(x), maxsteps, sigma = NULL, intercept = TR
         fold <- folds[[f]]
         fit <- groupfs(X[-fold,], Y[-fold], index=index, maxsteps=maxsteps, sigma=sigma, intercept=FALSE, center=FALSE, normalize=FALSE)
         fit$fold <- fold
+        # Why is this commented out?
         ## projections[[f]] <- lapply(fit$projections, function(step.projs) {
         ##     lapply(step.projs, function(proj) {
         ##         # Reduce from n by n matrix to svdu_thresh
@@ -120,5 +128,50 @@ cvfs <- function(x, y, index = 1:ncol(x), maxsteps, sigma = NULL, intercept = TR
     fit$cvperm <- cv_perm
 
     invisible(fit)
+}
+
+
+cvlar <- function(x, y) { # other args
+    folds <- cvMakeFolds(x)
+    models <- lapply(folds, function(fold) {
+        x.train <- X
+        y.train <- Y
+        x.train[fold,] <- 0
+        y.train[fold] <- 0
+        x.test <- X[fold,]
+        y.test <- Y[fold]
+          larpath.train <- lar(x.train, y.train, maxsteps = maxsteps, intercept = F, normalize = F)
+        return(lff)
+    })
+
+    active.sets <- lapply(models, function(model) model$action)
+    lambdas <- lapply(models, function(model) model$lambda)
+    lmin <- min(unlist(lambdas))
+
+# Interpolate lambda grid or parametrize by steps?
+# interpolation probably requires re-writing cvRSSquads for
+# penalized fits in order to make sense
+
+# do steps for now just to have something that works?
+
+    RSSquads <- list()
+    for (s in 1:maxsteps) {
+        initial.active <- lapply(active.sets, function(a) a[1:s])
+        RSSquads[[s]] <- cvRSSquad(X, folds, initial.active)
+    }
+
+    RSSs <- lapply(RSSquads, function(Q) t(Y) %*% Q %*% Y)
+    sstar <- which.min(RSSs)
+    quadstar <- RSSquads[sstar][[1]]
+
+    RSSquads <- lapply(RSSquads, function(quad) quad - quadstar)
+    RSSquads[[sstar]] <- NULL # remove the all zeroes case
+
+    fit <- lar(X, Y, maxsteps=sstar, intercept = F, normalize = F)
+
+# Very tall Gamma encoding all cv-model paths
+    Gamma <- do.call(rbind, lapply(models, function(model) return(model$Gamma)))
+
+# more to do here    
 }
 

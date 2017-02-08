@@ -18,7 +18,7 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial"), tol.bet
      n=length(y)
      p=ncol(x)
  # I assume that intcpt was used
-     if(length(beta)!=p+1) stop("beta must be of length ncol(x)+1, that is, it should include an intercept")
+     if(length(beta)!=p+1) stop("Since family='binomial', beta must be of length ncol(x)+1, that is, it should include an intercept")
      nvar=sum(beta[-1]!=0)
      pv=vlo=vup=sd=rep(NA, nvar)
      ci=tailarea=matrix(NA,nvar,2)
@@ -41,11 +41,12 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial"), tol.bet
    etahat = xxm %*% bhat
    prhat = as.vector(exp(etahat) / (1 + exp(etahat)))
    ww=prhat*(1-prhat)
-   w=diag(ww)
+ #  w=diag(ww)
       
 #check KKT
    z=etahat+(y-prhat)/ww
-       g=  t(x)%*%w%*%(z-etahat)/lambda # negative gradient scaled by lambda
+  # g=  t(x)%*%w%*%(z-etahat)/lambda # negative gradient scaled by lambda
+  g=scale(t(x),FALSE,1/ww)%*%(z-etahat)/lambda # negative gradient scaled by lambda
      if (any(abs(g) > 1+tol.kkt) )
     warning(paste("Solution beta does not satisfy the KKT conditions",
                   "(to within specified tolerances)"))
@@ -62,7 +63,8 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial"), tol.bet
                   "'thresh' parameter, for a more accurate convergence."))
   
  #constraints for active variables             
-  MM=solve(t(xxm)%*%w%*%xxm)
+ # MM=solve(t(xxm)%*%w%*%xxm)
+   MM=solve(scale(t(xxm),F,1/ww)%*%xxm)
   gm = c(0,-g[vars]*lambda) # gradient at LASSO solution, first entry is 0 because intercept is unpenalized
                             # at exact LASSO solution it should be s2[-1]
   dbeta = MM %*% gm
