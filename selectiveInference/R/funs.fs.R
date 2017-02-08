@@ -234,7 +234,10 @@ coef.fs <- function(object, s, ...) {
 predict.fs <- function(object, newx, s, ...) {
   beta = coef.fs(object,s)
   if (missing(newx)) newx = scale(object$x,FALSE,1/object$sx)
-  else newx = scale(newx,object$bx,FALSE)
+  else {
+    newx = matrix(newx,ncol=ncol(object$x))
+    newx = scale(newx,object$bx,FALSE)
+  }
   return(newx %*% beta + object$by)
 }
 

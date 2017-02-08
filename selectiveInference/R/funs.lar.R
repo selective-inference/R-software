@@ -339,7 +339,10 @@ coef.lar <- function(object, s, mode=c("step","lambda"), ...) {
 predict.lar <- function(object, newx, s, mode=c("step","lambda"), ...) {
   beta = coef.lar(object,s,mode)
   if (missing(newx)) newx = scale(object$x,FALSE,1/object$sx)
-  else newx = scale(newx,object$bx,FALSE)
+  else {
+    newx = matrix(newx,ncol=ncol(object$x))
+    newx = scale(newx,object$bx,FALSE)
+  }
   return(newx %*% beta + object$by)
 }
 
