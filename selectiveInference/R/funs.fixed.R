@@ -6,11 +6,11 @@ fixedLassoInf <- function(x, y, beta, lambda, family=c("gaussian","binomial","co
 sigma=NULL, alpha=0.1,
                      type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
                      gridrange=c(-100,100), bits=NULL, verbose=FALSE) {
-    
+
  family = match.arg(family)
   this.call = match.call()
   type = match.arg(type)
- 
+
   if(family=="binomial")  {
       if(type!="partial") stop("Only type= partial allowed with binomial family")
        out=fixedLogitLassoInf(x,y,beta,lambda,alpha=alpha, type="partial", tol.beta=tol.beta, tol.kkt=tol.kkt,
@@ -20,28 +20,28 @@ sigma=NULL, alpha=0.1,
 else if(family=="cox")  {
     if(type!="partial") stop("Only type= partial allowed with Cox family")
      out=fixedCoxLassoInf(x,y,status,beta,lambda,alpha=alpha, type="partial",tol.beta=tol.beta,
-          tol.kkt=tol.kkt, gridrange=gridrange, bits=bits, verbose=verbose,this.call=this.call)               
+          tol.kkt=tol.kkt, gridrange=gridrange, bits=bits, verbose=verbose,this.call=this.call)
                       return(out)
                     }
- 
+
 else{
 
- 
- 
+
+
   checkargs.xy(x,y)
   if (missing(beta) || is.null(beta)) stop("Must supply the solution beta")
-  if (missing(lambda) || is.null(lambda)) stop("Must supply the tuning parameter value lambda") 
+  if (missing(lambda) || is.null(lambda)) stop("Must supply the tuning parameter value lambda")
   checkargs.misc(beta=beta,lambda=lambda,sigma=sigma,alpha=alpha,
                  gridrange=gridrange,tol.beta=tol.beta,tol.kkt=tol.kkt)
   if (!is.null(bits) && !requireNamespace("Rmpfr",quietly=TRUE)) {
     warning("Package Rmpfr is not installed, reverting to standard precision")
     bits = NULL
   }
-  
+
   n = nrow(x)
   p = ncol(x)
   beta = as.numeric(beta)
-  if (length(beta) != p) stop("beta must have length equal to ncol(x)")
+  if (length(beta) != p) stop("Since family='gaussian', beta must have length equal to ncol(x)")
 
   # If glmnet was run with an intercept term, center x and y
   if (intercept==TRUE) {
@@ -66,14 +66,14 @@ else{
                   "(to within specified tolerances). You might try rerunning",
                   "glmnet with a lower setting of the",
                   "'thresh' parameter, for a more accurate convergence."))
-  
+
   # Get lasso polyhedral region, of form Gy >= u
   out = fixedLasso.poly(x,y,beta,lambda,vars)
   G = out$G
   u = out$u
 
   # Check polyhedral region
-  tol.poly = 0.01 
+  tol.poly = 0.01
   if (min(G %*% y - u) < -tol.poly * sqrt(sum(y^2)))
     stop(paste("Polyhedral constraints not satisfied; you must recompute beta",
                "more accurately. With glmnet, make sure to use exact=TRUE in coef(),",
@@ -94,9 +94,9 @@ else{
                     "you may want to use the estimateSigma function"))
     }
   }
- 
+
   k = length(vars)
-  pv = vlo = vup = numeric(k) 
+  pv = vlo = vup = numeric(k)
   vmat = matrix(0,k,n)
   ci = tailarea = matrix(0,k,2)
   sign = numeric(k)
@@ -104,7 +104,7 @@ else{
   if (type=="full" & p > n)
       warning(paste("type='full' does not make sense when p > n;",
                     "switching to type='partial'"))
-  
+
   if (type=="partial" || p > n) {
     xa = x[,vars,drop=F]
     M = pinv(crossprod(xa)) %*% t(xa)
@@ -113,17 +113,17 @@ else{
     M = pinv(crossprod(x)) %*% t(x)
     M = M[vars,,drop=F]
   }
-  
+
   for (j in 1:k) {
     if (verbose) cat(sprintf("Inference for variable %i ...\n",vars[j]))
-    
+
     vj = M[j,]
     mj = sqrt(sum(vj^2))
     vj = vj / mj        # Standardize (divide by norm of vj)
     sign[j] = sign(sum(vj*y))
     vj = sign[j] * vj
     a = poly.pval(y,G,u,vj,sigma,bits)
-    pv[j] = a$pv 
+    pv[j] = a$pv
     vlo[j] = a$vlo * mj # Unstandardize (mult by norm of vj)
     vup[j] = a$vup * mj # Unstandardize (mult by norm of vj)
     vmat[j,] = vj * mj * sign[j]  # Unstandardize (mult by norm of vj)
@@ -133,12 +133,12 @@ else{
     ci[j,] = a$int * mj # Unstandardize (mult by norm of vj)
     tailarea[j,] = a$tailarea
   }
-  
+
   out = list(type=type,lambda=lambda,pv=pv,ci=ci,
     tailarea=tailarea,vlo=vlo,vup=vup,vmat=vmat,y=y,
     vars=vars,sign=sign,sigma=sigma,alpha=alpha,
     sd=sigma*sqrt(rowSums(vmat^2)),
-    coef0=vmat%*%y, 
+    coef0=vmat%*%y,
     call=this.call)
   class(out) = "fixedLassoInf"
   return(out)
@@ -158,9 +158,9 @@ function(x, y, beta, lambda, a) {
   if (length(za)>1) dz = diag(za)
   if (length(za)==1) dz = matrix(za,1,1)
 
-  P = diag(1,nrow(xa)) - xa %*% xap
+#  P = diag(1,nrow(xa)) - xa %*% xap
   #NOTE: inactive constraints not needed below!
- 
+
   G = -rbind(
    #   1/lambda * t(xac) %*% P,
    # -1/lambda * t(xac) %*% P,
@@ -175,17 +175,6 @@ function(x, y, beta, lambda, a) {
 
   return(list(G=G,u=u))
 }
-# Moore-Penrose pseudo inverse for symmetric matrices
-
-pinv <- function(A, tol=.Machine$double.eps) {
-  e = eigen(A)
-  v = Re(e$vec)
-  d = Re(e$val)
-  d[d > tol] = 1/d[d > tol]
-  d[d < tol] = 0
-  if (length(d)==1) return(v*d*v)
-  else return(v %*% diag(d) %*% t(v))
-}
 
 ##############################
 
@@ -195,7 +184,7 @@ print.fixedLassoInf <- function(x, tailarea=TRUE, ...) {
 
   cat(sprintf("\nStandard deviation of noise (specified or estimated) sigma = %0.3f\n",
               x$sigma))
-  
+
   cat(sprintf("\nTesting results at lambda = %0.3f, with alpha = %0.3f\n",x$lambda,x$alpha))
   cat("",fill=T)
   tab = cbind(x$vars,
@@ -209,7 +198,7 @@ print.fixedLassoInf <- function(x, tailarea=TRUE, ...) {
   }
   rownames(tab) = rep("",nrow(tab))
   print(tab)
- 
+
   cat(sprintf("\nNote: coefficients shown are %s regression coefficients\n",
               ifelse(x$type=="partial","partial","full")))
   invisible()
@@ -220,10 +209,10 @@ print.fixedLassoInf <- function(x, tailarea=TRUE, ...) {
 #  if(nsamp < 10) stop("More Monte Carlo samples required for estimation")
 #  if (length(sigma)!=1) stop("sigma should be a number > 0")
  # if (sigma<=0) stop("sigma should be a number > 0")
-                                      
+
  # n = nrow(x)
  # eps = sigma*matrix(rnorm(nsamp*n),n,nsamp)
  # lambda = 2*mean(apply(t(x)%*%eps,2,max))
  # return(lambda)
 #}
-    
+

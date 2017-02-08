@@ -510,3 +510,47 @@ g=t(X)%*%(Y-X%*%b)/lam2
 out = fixedLassoInf(X,Y,beta,lam*n)
 
 
+
+
+
+#
+
+#gaussian
+n=50
+p=10
+sigma=.7
+beta=c(0,0,0,0,rep(0,p-4))
+set.seed(43)
+nsim = 1000
+pvals <- matrix(NA, nrow=nsim, ncol=p)
+x = matrix(rnorm(n*p),n,p)
+x = scale(x,T,T)/sqrt(n-1)
+mu = x%*%beta
+for (i in 1:nsim) {
+    cat(i)
+y=mu+sigma*rnorm(n)
+#y=y-mean(y)
+# first run  glmnet
+    pf=c(rep(.001,4),rep(1,p-4))
+     xs=scale(x,FALSE,pf) #scale cols of x by penalty factors
+     # first run glmnet
+     gfit = glmnet(xs,y,standardize=FALSE)
+     
+    
+     lambda = .8
+     beta = coef(gfit, s=lambda/n, exact=TRUE)[-1]
+     
+     # compute fixed lambda p-values and selection intervals
+     aa = fixedLassoInf(xs,y,beta,lambda,sigma=sigma)
+     
+pvals[i, which(beta != 0)] <- aa$pv
+}
+nulls = 1:nsim
+np = pvals[nulls,-(1:4)]
+mean(np[!is.na(np)] < 0.1)
+o=!is.na(np)
+plot((1:sum(o))/sum(o),sort(np))
+abline(0,1)
+#####
+
+
