@@ -62,7 +62,7 @@ b1= -(mydiag(s2)%*%MM)%*%s2*lambda
       vj=rep(0,length(bbar));vj[jj]=s2[jj]
 
 
-      junk=mypoly.pval.lee(bbar,A1,b1,vj,MM)
+      junk=TG.pvalue(bbar,A1,b1,vj,MM)
 
        pv[jj] = junk$pv
       vlo[jj]=junk$vlo

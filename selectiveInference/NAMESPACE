@@ -12,7 +12,8 @@ export(lar,fs,
        estimateSigma,
        manyMeans,print.manyMeans,
        groupfs,groupfsInf,
-       scaleGroups,factorDesign
+       scaleGroups,factorDesign,
+       TG.pvalue
     )
 
 S3method("coef", "lar")
