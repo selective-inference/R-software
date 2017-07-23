@@ -13,7 +13,8 @@ export(lar,fs,
        manyMeans,print.manyMeans,
        groupfs,groupfsInf,
        scaleGroups,factorDesign,
-       TG.pvalue
+       TG.pvalue, 
+       TG.interval
     )
 
 S3method("coef", "lar")

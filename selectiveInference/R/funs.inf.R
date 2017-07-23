@@ -271,24 +271,34 @@ TG.pvalue = function(Z, A, b, eta, Sigma, bits=NULL) {
 
 
 
-mypoly.int.lee=
-   function(y,eta,vlo,vup,sd, alpha, gridrange=c(-100,100),gridpts=100, griddepth=2, flip=FALSE, bits=NULL) {
+TG.interval = function(Z, eta, vlo, vup, sd, alpha, 
+                       gridrange=c(-100,100),
+                       gridpts=100, 
+                       griddepth=2, 
+                       flip=FALSE, 
+                       bits=NULL) {
+
     # compute sel intervals from poly lemmma, full version from Lee et al for full matrix Sigma
 
-  temp = sum(eta*y)
+    target_estimate = sum(eta*Z)
   
-  xg = seq(gridrange[1]*sd,gridrange[2]*sd,length=gridpts)
-  fun = function(x) { tnorm.surv(temp,x,sd,vlo,vup,bits) }
+    param_grid = seq(gridrange[1]*sd, gridrange[2]*sd, length=gridpts)
 
-  int = grid.search(xg,fun,alpha/2,1-alpha/2,gridpts,griddepth)
-  tailarea = c(fun(int[1]),1-fun(int[2]))
+    pivot = function(param) {
+        tnorm.surv(target_estimate, param, sd, vlo, vup, bits) 
+    }
 
-  if (flip) {
-    int = -int[2:1]
-    tailarea = tailarea[2:1]
-  }
+    interval = grid.search(param_grid, pivot, alpha/2, 1-alpha/2, gridpts, griddepth)
+    tailarea = c(pivot(interval[1]), 1- pivot(interval[2]))
+
+    if (flip) {
+        interval = -interval[2:1]
+        tailarea = tailarea[2:1]
+     }
  
-  return(list(int=int,tailarea=tailarea))
+     # int is not a good variable name, synonymous with integer...
+     return(list(int=interval,
+                 tailarea=tailarea))
 }
 
 

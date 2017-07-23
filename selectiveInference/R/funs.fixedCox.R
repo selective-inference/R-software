@@ -69,7 +69,7 @@ b1= -(mydiag(s2)%*%MM)%*%s2*lambda
        vup[jj]=junk$vup
        sd[jj]=junk$sd
 
-      junk2=mypoly.int.lee(bbar,vj,vlo[jj],vup[jj],sd[jj],alpha)
+      junk2=TG.interval(bbar, vj, vlo[jj], vup[jj], sd[jj], alpha)
        ci[jj,]=junk2$int
        tailarea[jj,] = junk2$tailarea
      
