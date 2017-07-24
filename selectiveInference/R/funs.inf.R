@@ -247,17 +247,17 @@ aicStop <- function(x, y, action, df, sigma, mult=2, ntimes=2) {
 
 #these next two functions are used by the binomial and Cox options of fixedLassoInf
 
-TG.pvalue = function(Z, A, b, eta, Sigma, bits=NULL) {
+TG.pvalue = function(Z, A, b, eta, Sigma, null_value=0, bits=NULL) {
 
     # compute pvalues from poly lemma:  full version from Lee et al for full matrix Sigma
     n = length(Z)
-    eta = as.vector(eta)
+    eta = matrix(eta, ncol=1, nrow=n)
     b = as.vector(b)
     target_estimate = sum(eta * Z)
-    var_estimate = as.numeric(matrix(eta, nrow=1, ncol=n) %*% Sigma %*% eta)
+    var_estimate = sum(matrix(eta, nrow=1, ncol=n) %*% (Sigma %*% eta))
     cross_cov = Sigma %*% eta
    
-    resid = (diag(n) - matrix(cross_cov / var_estimate, ncol=1) %*% eta) %*% Z
+    resid = (diag(n) - matrix(cross_cov / var_estimate, ncol=1, nrow=n) %*% matrix(eta, nrow=1, ncol=n)) %*% Z
     rho = A %*% cross_cov / var_estimate
     vec = (b - as.numeric(A %*% resid)) / rho
 
@@ -265,7 +265,7 @@ TG.pvalue = function(Z, A, b, eta, Sigma, bits=NULL) {
     vup = suppressWarnings(min(vec[rho > 0]))
 
     sd = sqrt(var_estimate)
-    pv = tnorm.surv(target_estimate, 0 , sd, vlo, vup, bits)
+    pv = tnorm.surv(target_estimate, null_value, sd, vlo, vup, bits)
     return(list(pv=pv, vlo=vlo, vup=vup, sd=sd))
 }
 
