@@ -13,3 +13,11 @@ Code is in the directory selectiveInference/R.
 * funs.inf.R: Common functions for inference with fixed, fs, lar, and manymeans (but not group).
 * funs.lar.R: Inference for least angle regression.
 * funs.max.R: Some numerical approximations. Deprecated?
+
+## Installation
+The latest release of the package can be installed through CRAN:
+
+```R
+install.packages("selectiveInference")
+```
+Code in repo is under development and may be unstable.

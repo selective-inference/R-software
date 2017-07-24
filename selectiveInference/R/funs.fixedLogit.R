@@ -95,6 +95,7 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial"), tol.bet
    vlo[jj]=junk$vlo
    vup[jj]=junk$vup
        sd[jj]=junk$sd
+
   #  junk2=TG.interval(bbar[-1], A1, b1,vj,MM[-1,-1],alpha=.1)
      junk2=TG.interval(bbar,vj,vlo[jj],vup[jj],sd[jj],alpha=.1)
 
