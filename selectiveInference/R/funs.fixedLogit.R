@@ -96,7 +96,7 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial"), tol.bet
    vup[jj]=junk$vup
        sd[jj]=junk$sd
   #  junk2=mypoly.int.lee(bbar[-1], A1, b1,vj,MM[-1,-1],alpha=.1)
-     junk2=mypoly.int.lee(bbar,vj,vlo[jj],vup[jj],sd[jj],alpha=.1)
+     junk2=mypoly.int.lee(bbar,vj,vlo[jj],vup[jj],sd[jj],alpha=alpha)
 
      ci[jj,]=junk2$int
      tailarea[jj,] = junk2$tailarea
