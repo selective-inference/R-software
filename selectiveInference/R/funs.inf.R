@@ -253,9 +253,9 @@ TG.pvalue = function(Z, A, b, eta, Sigma, null_value=0, bits=NULL) {
     n = length(Z)
     eta = matrix(eta, ncol=1, nrow=n)
     b = as.vector(b)
-    target_estimate = sum(eta * Z)
-    var_estimate = sum(matrix(eta, nrow=1, ncol=n) %*% (Sigma %*% eta))
-    cross_cov = Sigma %*% eta
+    target_estimate = sum(as.numeric(eta) * as.numeric(Z))
+    var_estimate = sum(matrix(eta, nrow=1, ncol=n) %*% (Sigma %*% matrix(eta, ncol=1, nrow=n)))
+    cross_cov = Sigma %*% matrix(eta, ncol=1, nrow=n)
    
     resid = (diag(n) - matrix(cross_cov / var_estimate, ncol=1, nrow=n) %*% matrix(eta, nrow=1, ncol=n)) %*% Z
     rho = A %*% cross_cov / var_estimate
@@ -280,7 +280,7 @@ TG.interval = function(Z, eta, vlo, vup, sd, alpha,
 
     # compute sel intervals from poly lemmma, full version from Lee et al for full matrix Sigma
 
-    target_estimate = sum(eta*Z)
+    target_estimate = sum(as.numeric(eta) * as.numeric(Z))
   
     param_grid = seq(gridrange[1]*sd, gridrange[2]*sd, length=gridpts)
 
