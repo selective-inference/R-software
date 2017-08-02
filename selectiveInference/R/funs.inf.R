@@ -247,13 +247,19 @@ aicStop <- function(x, y, action, df, sigma, mult=2, ntimes=2) {
 
 #these next two functions are used by the binomial and Cox options of fixedLassoInf
 
-TG.pvalue = function(Z, A, b, eta, Sigma, null_value=0, bits=NULL) {
+# Compute the truncation interval and SD of the corresponding Gaussian
+
+TG.limits = function(Z, A, b, eta, Sigma=NULL) {
+
+    if (is.null(Sigma)) {
+        Sigma = diag(rep(1, n))
+    }
 
     # compute pvalues from poly lemma:  full version from Lee et al for full matrix Sigma
+
     n = length(Z)
     eta = matrix(eta, ncol=1, nrow=n)
     b = as.vector(b)
-    target_estimate = sum(as.numeric(eta) * as.numeric(Z))
     var_estimate = sum(matrix(eta, nrow=1, ncol=n) %*% (Sigma %*% matrix(eta, ncol=1, nrow=n)))
     cross_cov = Sigma %*% matrix(eta, ncol=1, nrow=n)
    
@@ -265,13 +271,19 @@ TG.pvalue = function(Z, A, b, eta, Sigma, null_value=0, bits=NULL) {
     vup = suppressWarnings(min(vec[rho > 0]))
 
     sd = sqrt(var_estimate)
-    pv = tnorm.surv(target_estimate, null_value, sd, vlo, vup, bits)
-    return(list(pv=pv, vlo=vlo, vup=vup, sd=sd))
+    return(list(vlo=vlo, vup=vup, sd=sd))
 }
 
+TG.pvalue = function(Z, A, b, eta, Sigma=NULL, null_value=0, bits=NULL) {
 
+    limits.info = TG.limits(Z, A, b, eta, Sigma)
+    target_estimate = sum(as.numeric(eta) * as.numeric(Z))
+    pv = tnorm.surv(target_estimate, null_value, limits.info$sd, limits.info$vlo, limits.info$vup, bits)
 
-TG.interval = function(Z, eta, vlo, vup, sd, alpha, 
+    return(list(pv=pv, vlo=limits.info$vlo, vup=limits.info$vup, sd=limits.info$sd))
+}
+
+TG.interval = function(Z, A, b, eta, Sigma=NULL, alpha=0.1, 
                        gridrange=c(-100,100),
                        gridpts=100, 
                        griddepth=2, 
@@ -280,12 +292,13 @@ TG.interval = function(Z, eta, vlo, vup, sd, alpha,
 
     # compute sel intervals from poly lemmma, full version from Lee et al for full matrix Sigma
 
+    limits.info = TG.limits(Z, A, b, eta, Sigma)
     target_estimate = sum(as.numeric(eta) * as.numeric(Z))
   
-    param_grid = seq(gridrange[1]*sd, gridrange[2]*sd, length=gridpts)
+    param_grid = seq(gridrange[1] * limits.info$sd, gridrange[2] * limits.info$sd, length=gridpts)
 
     pivot = function(param) {
-        tnorm.surv(target_estimate, param, sd, vlo, vup, bits) 
+        tnorm.surv(target_estimate, param, limits.info$sd, limits.info$vlo, limits.info$vup, bits) 
     }
 
     interval = grid.search(param_grid, pivot, alpha/2, 1-alpha/2, gridpts, griddepth)

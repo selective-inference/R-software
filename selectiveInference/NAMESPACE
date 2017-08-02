@@ -14,6 +14,7 @@ export(lar,fs,
        groupfs,groupfsInf,
        scaleGroups,factorDesign,
        TG.pvalue, 
+       TG.limits, 
        TG.interval
     )
 
