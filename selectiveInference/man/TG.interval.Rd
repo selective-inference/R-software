@@ -9,7 +9,7 @@ Compute truncated Gaussian interval of Lee et al. (2016) with
 arbitrary affine selection and covariance.
 }
 \usage{
-TG.interval(Z, eta, vlo, vup, sd, alpha, 
+TG.interval(Z, A, b, eta, Sigma=NULL, alpha=0.1, 
 	   gridrange=c(-100,100),
            gridpts=100, 
            griddepth=2, 
@@ -20,18 +20,18 @@ TG.interval(Z, eta, vlo, vup, sd, alpha,
 \item{Z}{
 Observed data (assumed to follow N(mu, Sigma) with sum(eta*mu)=null_value)
 }
+\item{A}{
+Matrix specifiying affine inequalities AZ <= b
+}
+\item{b}{
+Offsets in the affine inequalities AZ <= b.
+}      
 \item{eta}{
 Determines the target sum(eta*mu) and estimate sum(eta*Z).
 } 
-\item{vlo}{
-Lower truncation limits for statistic. Can be computed with TG.pvalue.
-}
-\item{vup}{
-Upper truncation limits for statistic. Can be computed with TG.pvalue.
-}
-\item{sd}{
-Standard error of sum(eta*Z).
-}
+\item{Sigma}{
+Covariance matrix of Z. Defaults to identity.
+} 
 \item{alpha}{
 Significance level for confidence intervals (target is miscoverage alpha/2 in each tail)
 }
@@ -82,13 +82,11 @@ Canadian Journal of Statistics, xx, 1-21. (Volume still not posted)
 \author{Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor, Joshua Loftus, Stephen Reid}
 
 \examples{
-
 A = diag(5)
 b = rep(1, 5)
 Z = rep(0, 5)
 Sigma = diag(5)
 eta = as.numeric(c(1, 1, 0, 0, 0))
-V = TG.pvalue(Z, A, b, Sigma, eta)
-TG.interval(Z, eta, V$vlo, V$vup, V$sd, 0.05)
+TG.interval(Z, A, b, Sigma, eta)
 }
  

@@ -25,7 +25,7 @@ Offsets in the affine inequalities AZ <= b.
 Determines the target sum(eta*mu) and estimate sum(eta*Z).
 } 
 \item{Sigma}{
-Covariance matrix of Z.
+Covariance matrix of Z. Defaults to identity.
 } 
 \item{null_value}{Hypothesized value of sum(eta*mu) under the null.
 }
