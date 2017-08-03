@@ -381,18 +381,18 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
       vj = vj / mj              # Standardize (divide by norm of vj)
 
       limits.info = TG.limits(y, -Gj, -uj, vj, Sigma=diag(rep(sigma^2, n)))
-      a = TG.pvalue.lowlevel(limits.info, bits=bits)
+      a = TG.pvalue.base(limits.info, bits=bits)
       pv[j] = a$pv
       sxj = sx[vars[j]]
       vlo[j] = a$vlo * mj / sxj # Unstandardize (mult by norm of vj / sxj)
       vup[j] = a$vup * mj / sxj # Unstandardize (mult by norm of vj)
       vmat[j,] = vj * mj / sxj  # Unstandardize (mult by norm of vj / sxj)
 
-      a = TG.interval.lowlevel(limits.info,
-                               alpha=alpha,
-                               gridrange=gridrange,
-                               flip=(sign[j]==-1),
-                               bits=bits)
+      a = TG.interval.base(limits.info,
+                           alpha=alpha,
+                           gridrange=gridrange,
+                           flip=(sign[j]==-1),
+                           bits=bits)
       ci[j,] = a$int * mj / sxj # Unstandardize (mult by norm of vj / sxj)
       tailarea[j,] = a$tailarea
 
@@ -439,7 +439,7 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
       uj = c(u,0)
 
       limits.info = TG.limits(y, -Gj, -uj, vj, Sigma=diag(rep(sigma^2, n)))
-      a = TG.pvalue.lowlevel(limits.info, bits=bits)
+      a = TG.pvalue.base(limits.info, bits=bits)
 
       pv[j] = a$pv
       sxj = sx[vars[j]]
@@ -447,11 +447,11 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
       vup[j] = a$vup * mj / sxj # Unstandardize (mult by norm of vj / sxj)
       vmat[j,] = vj * mj / sxj  # Unstandardize (mult by norm of vj / sxj)
 
-      a = TG.interval.lowlevel(limits.info,
-                               alpha=alpha,
-                               gridrange=gridrange,
-                               flip=(sign[j]==-1),
-                               bits=bits)
+      a = TG.interval.base(limits.info,
+                           alpha=alpha,
+                           gridrange=gridrange,
+                           flip=(sign[j]==-1),
+                           bits=bits)
       ci[j,] = a$int * mj / sxj # Unstandardize (mult by norm of vj / sxj)
       tailarea[j,] = a$tailarea
     }
