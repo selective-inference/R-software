@@ -7,7 +7,7 @@ Truncated Gaussian confidence interval.
 \description{
 Compute truncated Gaussian interval of Lee et al. (2016) with
 arbitrary affine selection and covariance.
-Z should satisfy A %*% Z elementise less then or equal b.
+Z should satisfy A %*% Z elementwise less then or equal b.
 }
 \usage{
 TG.interval(Z, A, b, eta, Sigma=NULL, alpha=0.1, 

@@ -7,7 +7,7 @@ Truncated Gaussian p-value.
 \description{
 Compute truncated Gaussian p-value of Lee et al. (2016) with
 arbitrary affine selection and covariance.
-Z should satisfy A %*% Z elementise less then or equal b.
+Z should satisfy A %*% Z elementwise less then or equal b.
 }
 \usage{
 TG.pvalue(Z, A, b, eta, Sigma, null_value=0, bits=NULL)  
