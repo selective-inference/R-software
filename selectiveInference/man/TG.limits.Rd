@@ -7,7 +7,7 @@ Truncation limits and standard deviation.
 \description{
 Compute truncated limits and SD for use in computing
 p-values or confidence intervals of Lee et al. (2016).
-Z should satisfy A %*% Z elementise less then or equal b.
+Z should satisfy A %*% Z elementwise less then or equal b.
 }
 \usage{
 TG.limits(Z, A, b, eta, Sigma)  
