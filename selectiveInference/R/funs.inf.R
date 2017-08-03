@@ -208,6 +208,10 @@ TG.limits = function(Z, A, b, eta, Sigma=NULL) {
 
     target_estimate = sum(as.numeric(eta) * as.numeric(Z))
 
+    if (max(A %*% as.numeric(Z) - b) > 0) {
+        warning('Contsraint not satisfied. A %*% Z should be elementwise less than or equal to b')
+    }
+
     if (is.null(Sigma)) {
         Sigma = diag(rep(1, n))
     }
