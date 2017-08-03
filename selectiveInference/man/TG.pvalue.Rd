@@ -71,8 +71,8 @@ b = rep(1, 5)
 Z = rep(0, 5)
 Sigma = diag(5)
 eta = as.numeric(c(1, 1, 0, 0, 0))
-TG.pvalue(Z, A, b, Sigma, eta)
-TG.pvalue(Z, A, b, Sigma, eta, null_value=1)
+TG.pvalue(Z, A, b, eta, Sigma)
+TG.pvalue(Z, A, b, eta, Sigma, null_value=1)
 
 }
  
