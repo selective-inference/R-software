@@ -1,48 +1,3 @@
-# Main p-value function
-
-poly.pval <- function(y, G, u, v, sigma, bits=NULL) {
-  z = sum(v*y)
-  vv = sum(v^2)
-  sd = sigma*sqrt(vv)
-  
-  rho = G %*% v / vv
-  vec = (u - G %*% y + rho*z) / rho
-  vlo = suppressWarnings(max(vec[rho>0]))
-  vup = suppressWarnings(min(vec[rho<0]))
-
-  pv = tnorm.surv(z,0,sd,vlo,vup,bits)
-  return(list(pv=pv,vlo=vlo,vup=vup))
-}
-
-# Main confidence interval function
-
-poly.int <- function(y, G, u, v, sigma, alpha, gridrange=c(-100,100),
-                     gridpts=100, griddepth=2, flip=FALSE, bits=NULL) {
-  
-  z = sum(v*y)
-  vv = sum(v^2)
-  sd = sigma*sqrt(vv)
-  
-  rho = G %*% v / vv
-  vec = (u - G %*% y + rho*z) / rho
-  vlo = suppressWarnings(max(vec[rho>0]))
-  vup = suppressWarnings(min(vec[rho<0]))
-  
-  xg = seq(gridrange[1]*sd,gridrange[2]*sd,length=gridpts)
-  fun = function(x) { tnorm.surv(z,x,sd,vlo,vup,bits) }
-
-  int = grid.search(xg,fun,alpha/2,1-alpha/2,gridpts,griddepth)
-  tailarea = c(fun(int[1]),1-fun(int[2]))
-
-  if (flip) {
-    int = -int[2:1]
-    tailarea = tailarea[2:1]
-  }
-  
-  return(list(int=int,tailarea=tailarea))
-}
-
-##############################
 
 # Assuming that grid is in sorted order from smallest to largest,
 # and vals are monotonically increasing function values over the
@@ -251,6 +206,8 @@ aicStop <- function(x, y, action, df, sigma, mult=2, ntimes=2) {
 
 TG.limits = function(Z, A, b, eta, Sigma=NULL) {
 
+    target_estimate = sum(as.numeric(eta) * as.numeric(Z))
+
     if (is.null(Sigma)) {
         Sigma = diag(rep(1, n))
     }
@@ -271,16 +228,14 @@ TG.limits = function(Z, A, b, eta, Sigma=NULL) {
     vup = suppressWarnings(min(vec[rho > 0]))
 
     sd = sqrt(var_estimate)
-    return(list(vlo=vlo, vup=vup, sd=sd))
+    return(list(vlo=vlo, vup=vup, sd=sd, estimate=target_estimate))
 }
 
 TG.pvalue = function(Z, A, b, eta, Sigma=NULL, null_value=0, bits=NULL) {
 
     limits.info = TG.limits(Z, A, b, eta, Sigma)
-    target_estimate = sum(as.numeric(eta) * as.numeric(Z))
-    pv = tnorm.surv(target_estimate, null_value, limits.info$sd, limits.info$vlo, limits.info$vup, bits)
 
-    return(list(pv=pv, vlo=limits.info$vlo, vup=limits.info$vup, sd=limits.info$sd))
+    return(TG.pvalue.base(limits.info, null_value=null_value, bits=bits))
 }
 
 TG.interval = function(Z, A, b, eta, Sigma=NULL, alpha=0.1, 
@@ -290,15 +245,29 @@ TG.interval = function(Z, A, b, eta, Sigma=NULL, alpha=0.1,
                        flip=FALSE, 
                        bits=NULL) {
 
+    limits.info = TG.limits(Z, A, b, eta, Sigma)
+
+    return(TG.interval.base(limits.info, 
+                            alpha=alpha, 
+                            gridrange=gridrange,
+                            griddepth=griddepth,
+			    flip=flip,
+			    bits=bits))
+}
+
+TG.interval.base = function(limits.info, alpha=0.1, 
+                            gridrange=c(-100,100),
+                            gridpts=100, 
+                            griddepth=2, 
+                            flip=FALSE, 
+                            bits=NULL) {
+
     # compute sel intervals from poly lemmma, full version from Lee et al for full matrix Sigma
 
-    limits.info = TG.limits(Z, A, b, eta, Sigma)
-    target_estimate = sum(as.numeric(eta) * as.numeric(Z))
-  
     param_grid = seq(gridrange[1] * limits.info$sd, gridrange[2] * limits.info$sd, length=gridpts)
 
     pivot = function(param) {
-        tnorm.surv(target_estimate, param, limits.info$sd, limits.info$vlo, limits.info$vup, bits) 
+        tnorm.surv(limits.info$estimate, param, limits.info$sd, limits.info$vlo, limits.info$vup, bits) 
     }
 
     interval = grid.search(param_grid, pivot, alpha/2, 1-alpha/2, gridpts, griddepth)
@@ -314,6 +283,10 @@ TG.interval = function(Z, A, b, eta, Sigma=NULL, alpha=0.1,
                  tailarea=tailarea))
 }
 
+TG.pvalue.base = function(limits.info, null_value=0, bits=NULL) {
+    pv = tnorm.surv(limits.info$estimate, null_value, limits.info$sd, limits.info$vlo, limits.info$vup, bits)
+    return(list(pv=pv, vlo=limits.info$vlo, vup=limits.info$vup, sd=limits.info$sd))
+}
 
 
 mydiag=function(x){
