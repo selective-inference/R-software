@@ -89,14 +89,14 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial"), tol.bet
     for(jj in 1:sum(m)){
        vj=c(rep(0,sum(m)+1));vj[jj+1]=s2[jj+1]
       # compute p-values
-      junk=mypoly.pval.lee(bbar,A1,b1,vj,MM)
+      junk=TG.pvalue(bbar, A1, b1, vj, MM)
       pv[jj] = junk$pv
  
    vlo[jj]=junk$vlo
    vup[jj]=junk$vup
        sd[jj]=junk$sd
-  #  junk2=mypoly.int.lee(bbar[-1], A1, b1,vj,MM[-1,-1],alpha=.1)
-     junk2=mypoly.int.lee(bbar,vj,vlo[jj],vup[jj],sd[jj],alpha=alpha)
+
+     junk2=TG.interval(bbar, A1, b1, vj, MM,alpha=alpha)
 
      ci[jj,]=junk2$int
      tailarea[jj,] = junk2$tailarea

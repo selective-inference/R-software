@@ -299,15 +299,21 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
       vj = vreg[j,]
       mj = sqrt(sum(vj^2)) 
       vj = vj / mj              # Standardize (divide by norm of vj)
-      a = poly.pval(y,Gj,uj,vj,sigma,bits)
+
+      limits.info = TG.limits(y, -Gj, -uj, vj, Sigma=diag(rep(sigma^2, n)))
+      a = TG.pvalue.base(limits.info, bits=bits)
+
       pv[j] = a$pv
       sxj = sx[vars[j]]
       vlo[j] = a$vlo * mj / sxj # Unstandardize (mult by norm of vj / sxj)
       vup[j] = a$vup * mj / sxj # Unstandardize (mult by norm of vj / sxj)
       vmat[j,] = vj * mj / sxj  # Unstandardize (mult by norm of vj / sxj)
   
-      a = poly.int(y,Gj,uj,vj,sigma,alpha,gridrange=gridrange,
-        flip=(sign[j]==-1),bits=bits)
+      a = TG.interval.base(limits.info, 
+                           alpha=alpha,
+			   gridrange=gridrange,
+			   flip=(sign[j]==-1),
+			   bits=bits)
       ci[j,] = a$int * mj / sxj # Unstandardize (mult by norm of vj / sxj)
       tailarea[j,] = a$tailarea
     }
@@ -349,15 +355,19 @@ fsInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","aic
       Gj = rbind(G,vj)
       uj = c(u,0)
 
-      a = poly.pval(y,Gj,uj,vj,sigma,bits)
+      limits.info = TG.limits(y, -Gj, -uj, vj, Sigma=diag(rep(sigma^2, n)))
+      a = TG.pvalue.base(limits.info, bits=bits)
       pv[j] = a$pv
       sxj = sx[vars[j]]
       vlo[j] = a$vlo * mj / sxj # Unstandardize (mult by norm of vj / sxj)
       vup[j] = a$vup * mj / sxj # Unstandardize (mult by norm of vj / sxj)
       vmat[j,] = vj * mj / sxj  # Unstandardize (mult by norm of vj / sxj)
 
-      a = poly.int(y,Gj,uj,vj,sigma,alpha,gridrange=gridrange,
-        flip=(sign[j]==-1),bits=bits)
+      a = TG.interval.base(limits.info,
+                           alpha=alpha,
+                           gridrange=gridrange,
+			   flip=(sign[j]==-1),
+                           bits=bits)
       ci[j,] = a$int * mj / sxj # Unstandardize (mult by norm of vj / sxj)
       tailarea[j,] = a$tailarea
     }
