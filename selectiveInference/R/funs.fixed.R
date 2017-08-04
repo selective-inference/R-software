@@ -122,14 +122,19 @@ else{
     vj = vj / mj        # Standardize (divide by norm of vj)
     sign[j] = sign(sum(vj*y))
     vj = sign[j] * vj
-    a = poly.pval(y,G,u,vj,sigma,bits)
+
+    limits.info = TG.limits(y, -G, -u, vj, Sigma=diag(rep(sigma^2, n)))
+    a = TG.pvalue.base(limits.info, bits=bits)
     pv[j] = a$pv
     vlo[j] = a$vlo * mj # Unstandardize (mult by norm of vj)
     vup[j] = a$vup * mj # Unstandardize (mult by norm of vj)
     vmat[j,] = vj * mj * sign[j]  # Unstandardize (mult by norm of vj)
 
-    a = poly.int(y,G,u,vj,sigma,alpha,gridrange=gridrange,
-      flip=(sign[j]==-1),bits=bits)
+    a = TG.interval.base(limits.info, 
+                         alpha=alpha,
+                         gridrange=gridrange,
+			 flip=(sign[j]==-1),
+                         bits=bits)
     ci[j,] = a$int * mj # Unstandardize (mult by norm of vj)
     tailarea[j,] = a$tailarea
   }
