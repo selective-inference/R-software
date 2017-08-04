@@ -132,7 +132,8 @@ fs <- function(x, y, maxsteps=2000, intercept=TRUE, normalize=TRUE,
     # Gamma matrix!
     if (gi + 2*p > nrow(Gamma)) Gamma = rbind(Gamma,matrix(0,2*p+gbuf,n))
     working_x = t(sign_score*t(working_x))
-    Gamma[gi+Seq(1,p-r),] = t(working_x); gi = gi+p-r
+
+    Gamma[gi+Seq(1,p-r-1),] = t(working_x[,i_hit]+working_x[,-i_hit]); gi = gi+p-r-1
     Gamma[gi+Seq(1,p-r-1),] = t(working_x[,i_hit]-working_x[,-i_hit]); gi = gi+p-r-1
     Gamma[gi+1,] = t(working_x[,i_hit]); gi = gi+1
 
