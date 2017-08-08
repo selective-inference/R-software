@@ -15,7 +15,7 @@ robs.test <- function() {
   hbeta <- as.numeric(coef(las,x=X,y=y,s=lambda/n,exact=TRUE,intercept=T))
   
   
-  return(fixedLassoInf(X,y,hbeta[-1],lambda,family="gaussian",type="partial",intercept=T,sigma=sigma)$pv)
+  return(fixedLassoInf(X,y,hbeta[-1],lambda,family="gaussian",type="partial",intercept=T,sigma=sigma))
 }
 
 
@@ -133,40 +133,5 @@ power.partial.pval.dist <- function(n,p,intercept=T,lambda=1) {
     pvs <- c(pvs,ps,recursive=T)
   }
   qqplot(x=runif(length(pvs)),y=pvs,xlab="Expected",ylab="Observed",main="Partial Coef. 10 Corr. X")
-  abline(0,1)
-}
-
-
-
-
-## Tests pop inf for X and y randomly generated
-nullPopTest <- function(n,p,intercept=T,lambda=1) {
-  y <- matrix(rnorm(n),ncol=1) # rand N(0,1) response
-  X <- matrix(rnorm(p*n),ncol = p) # p rand N(0,1) predictors
-  
-  # lambda <- 1
-  X=scale(X,T,T)/sqrt(n-1)
-  
-  # lambda <- 1
-  las <- glmnet(X,y,family="gaussian",alpha=1,standardize=F,intercept=intercept)
-  hbeta <- as.numeric(coef(las,x=X,y=y,s=lambda/n,exact=TRUE,intercept=intercept))
-  
-  ### perform post selection inference
-  
-  sigma = estimateSigma(X,y)$sigmahat
-  
-  if (intercept) return(fixedLassoInf(X,y,hbeta,lambda,family="gaussian",type="full",intercept=intercept,sigma=sigma))
-  else return(fixedLassoInf(X,y,hbeta[-1],lambda,family="gaussian",type="full",intercept=intercept,sigma=sigma))
-}
-
-## QQ plot of p-values for all null data now that bug fix is implemented
-null.pop.pval.dist <- function(n,p,intercept=T,lambda=1) {
-  pvs <- c()
-  for(i in 1:10) {
-    a <- nullPopTest(n,p,intercept,lambda)
-    ps <- a$pv
-    pvs <- c(pvs,ps,recursive=T)
-  }
-  qqplot(x=runif(length(pvs)),y=pvs,xlab="Expected",ylab="Observed",main="Pop Coef. Null X")
   abline(0,1)
 }

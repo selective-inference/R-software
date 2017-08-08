@@ -148,12 +148,15 @@ sigma=NULL, alpha=0.1,
       hsigma <- 1/n*(t(Xordered)%*%Xordered)
       hsigmaS <- 1/n*(t(XS)%*%XS) # hsigma[S,S]
       hsigmaSinv <- solve(hsigmaS) # pinv(hsigmaS)
-      
+
       # Approximate inverse covariance matrix for when (n < p) from lasso_Inference.R
-      htheta <- InverseLinfty(hsigma, n, verbose=FALSE)
+      htheta <- InverseLinfty(hsigma, n, length(S), verbose=FALSE)
+      # htheta <- InverseLinfty(hsigma, n, verbose=FALSE)
       
       FS = rbind(diag(length(S)),matrix(0,pp-length(S),length(S)))
-      ithetasigma = (diag(pp)-(htheta%*%hsigma))
+      GS = cbind(diag(length(S)),matrix(0,length(S),pp-length(S)))
+      ithetasigma = (GS-(htheta%*%hsigma))
+      # ithetasigma = (diag(pp) - (htheta%*%hsigma))
       
       M <- (((htheta%*%t(Xordered))+ithetasigma%*%FS%*%hsigmaSinv%*%t(XS))/n)
       # vector which is offset for testing debiased beta's
@@ -254,20 +257,21 @@ fixedLasso.poly=
 
 ##############################
 
-### Functions borrowed from lasso_inference.R
+### Functions borrowed and slightly modified from lasso_inference.R
 
 ## Approximates inverse covariance matrix theta
-InverseLinfty <- function(sigma, n, resol=1.5, mu=NULL, maxiter=50, threshold=1e-2, verbose = TRUE) {
-  isgiven <- 1;
+InverseLinfty <- function(sigma, n, e, resol=1.5, mu=NULL, maxiter=50, threshold=1e-2, verbose = TRUE) {
+  # InverseLinfty <- function(sigma, n, resol=1.5, mu=NULL, maxiter=50, threshold=1e-2, verbose = TRUE) {
+    isgiven <- 1;
   if (is.null(mu)){
     isgiven <- 0;
   }
   
   p <- nrow(sigma);
-  M <- matrix(0, p, p);
+  M <- matrix(0, e, p);
   xperc = 0;
   xp = round(p/10);
-  for (i in 1:p) {
+  for (i in 1:e) {
     if ((i %% xp)==0){
       xperc = xperc+10;
       if (verbose) {
