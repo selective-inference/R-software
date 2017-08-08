@@ -5,6 +5,9 @@ r:
   - oldrel
   - release
   - devel
+addons:
+   apt: 
+      packages: libmpfr-dev
 warnings_are_errors: true
 before_install:
   - tlmgr install index # for texlive and vignette?
