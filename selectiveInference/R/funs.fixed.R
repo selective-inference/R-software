@@ -2,7 +2,7 @@
 # for the solution of
 # min 1/2 || y - \beta_0 - X \beta ||_2^2 + \lambda || \beta ||_1
 
-fixedLassoInf <- function(x, y, beta, lambda, family=c("gaussian","binomial","cox"),intercept=TRUE, status=NULL,
+fixedLassoInf <- function(x, y, beta, lambda, family=c("gaussian","binomial","cox"),intercept=TRUE, add.targets=NULL, status=NULL,
 sigma=NULL, alpha=0.1,
                      type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
                      gridrange=c(-100,100), bits=NULL, verbose=FALSE) {
@@ -58,6 +58,12 @@ sigma=NULL, alpha=0.1,
     if (!is.null(bits) && !requireNamespace("Rmpfr",quietly=TRUE)) {
       warning("Package Rmpfr is not installed, reverting to standard precision")
       bits = NULL
+    }
+    
+    if (!is.null(add.targets) && (!is.vector(add.targets)
+                                  || !all(is.numeric(add.targets)) || !all(add.targets==floor(add.targets))
+                                  || !all(add.targets >= 1 && add.targets <= p))) {
+      stop("'add.targets' must be a vector of integers between 1 and p")
     }
     
     # If glmnet was run with an intercept term, center x and y
@@ -117,12 +123,15 @@ sigma=NULL, alpha=0.1,
       }
     }
     
+    # add additional targets for inference if provided
+    if (!is.null(add.targets)) vars = sort(unique(c(vars,add.targets,recursive=T)))
+    
     k = length(vars)
     pv = vlo = vup = numeric(k)
     vmat = matrix(0,k,n)
     ci = tailarea = matrix(0,k,2)
     sign = numeric(k)
-    
+      
     if (type=="full" & p > n) {
       if (intercept == T) {
         pp=p+1
