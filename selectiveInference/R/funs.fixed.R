@@ -138,15 +138,15 @@ sigma=NULL, alpha=0.1,
         Xint <- cbind(rep(1,n),x)
         # indices of selected predictors
         S = c(1,vars + 1)
-        notS = which(abs(beta) <= tol.coef) + 1
       } else {
         pp=p
         Xint <- x
         # indices of selected predictors
         S = vars
-        notS = which(abs(beta) <= tol.coef)
+        # notS = which(abs(beta) <= tol.coef)
       }
       
+      notS = setdiff(1:pp,S)
       
       XS = Xint[,S]
       hbetaS = hbeta[S]
