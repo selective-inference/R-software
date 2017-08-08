@@ -1,0 +1,11 @@
+language: r
+cache: packages
+sudo: false
+r:
+  - oldrel
+  - release
+  - devel
+warnings_are_errors: true
+before_install:
+  - tlmgr install index # for texlive and vignette?
+  - cd selectiveInference
