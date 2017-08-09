@@ -2,8 +2,8 @@
 % Please edit documentation in R/funs.groupfs.R
 \name{predict.groupfs}
 \alias{predict.groupfs}
-\title{Prediction and coefficient functions for \code{\link{groupfs}}.
-
+\title{Prediction and coefficient functions for \code{\link{groupfs}}.}
+\description{
 Make predictions or extract coefficients from a groupfs forward stepwise object.}
 \usage{
 \method{predict}{groupfs}(object, newx)
