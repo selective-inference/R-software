@@ -334,6 +334,25 @@ InverseLinfty <- function(sigma, n, e, resol=1.5, mu=NULL, maxiter=50, threshold
   return(M)
 }
 
+InverseLinftyOneRowC <- function ( sigma, i, mu, maxiter=50, threshold=1e-2 ) {
+
+         p = nrow(sigma)		
+         theta = rep(0, p)     
+
+	 val = .C("find_one_row",
+          	 Sigma=as.double(sigma),
+		 nrow=as.integer(p),
+   		 bound=as.double(mu),
+		 theta=as.double(theta),
+		 maxiter=as.integer(maxiter),
+		 row=as.integer(i-1),
+		 coord=as.integer(i-1),
+		 dup=FALSE,
+		 package="selectiveInference")
+
+	return(val$theta)
+}
+
 InverseLinftyOneRow <- function ( sigma, i, mu, maxiter=50, threshold=1e-2 ) {
   p <- nrow(sigma);
   rho <- max(abs(sigma[i,-i])) / sigma[i,i];
