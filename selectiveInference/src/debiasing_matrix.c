@@ -3,8 +3,12 @@
 
 // Find an approximate row of \hat{Sigma}^{-1}
 
-// Problem (4) of ????
+// Solves a dual version of problem (4) of https://arxiv.org/pdf/1306.3171.pdf
 
+// Dual problem: \text{min}_{\theta} 1/2 \theta^T \Sigma \theta - e_i^T\theta + \mu \|\theta\|_1
+
+// This is the "negative" of the problem as in https://gist.github.com/jonathan-taylor/07774d209173f8bc4e42aa37712339bf
+// Therefore we don't have to negate the answer to get theta.
 // Update one coordinate 
 
 double update_one_coord(double *Sigma,     /* A covariance matrix: X^TX/n */
@@ -36,7 +40,7 @@ double update_one_coord(double *Sigma,     /* A covariance matrix: X^TX/n */
   }
   
   if (row == coord) {
-    linear_term += 1;
+    linear_term -= 1;
   }
 
   // Now soft-threshold the coord entry of theta 
@@ -44,11 +48,14 @@ double update_one_coord(double *Sigma,     /* A covariance matrix: X^TX/n */
   // Objective is t \mapsto q/2 * t^2 + l * t + bound |t|
   // with q=quadratic_term and l=linear_term
 
+  // With a negative linear term, solution should be
+  // positive
+
   if (linear_term < -bound) {
-    value = - (-linear_term - bound) / quadratic_term;
+    value = (-linear_term - bound) / quadratic_term;
   }
   else if (linear_term > bound) {
-    value = (linear_term - bound) / quadratic_term;
+    value = -(linear_term - bound) / quadratic_term;
   }
 
   theta_ptr = ((double *) theta + coord);

@@ -334,13 +334,15 @@ InverseLinfty <- function(sigma, n, e, resol=1.5, mu=NULL, maxiter=50, threshold
   return(M)
 }
 
-InverseLinftyOneRowC <- function ( sigma, i, mu, maxiter=50, threshold=1e-2 ) {
+InverseLinftyOneRowC <- function (Sigma, i, mu, maxiter=50, threshold=1e-2 ) {
 
-         p = nrow(sigma)		
+         p = nrow(Sigma)		
+         basis_vector = rep(0, p)
+	 basis_vector[i] = 1.
          theta = rep(0, p)     
 
 	 val = .C("find_one_row",
-          	 Sigma=as.double(sigma),
+          	 Sigma=as.double(Sigma),
 		 nrow=as.integer(p),
    		 bound=as.double(mu),
 		 theta=as.double(theta),
@@ -349,6 +351,13 @@ InverseLinftyOneRowC <- function ( sigma, i, mu, maxiter=50, threshold=1e-2 ) {
 		 coord=as.integer(i-1),
 		 dup=FALSE,
 		 package="selectiveInference")
+
+	# Check feasibility
+
+	if (max(abs(Sigma %*% val$theta - basis_vector)) > 1.01 * mu) {
+           print("Solution for row of M does not seem to be feasible")
+	   warning("Solution for row of M does not seem to be feasible")
+	}
 
 	return(val$theta)
 }
