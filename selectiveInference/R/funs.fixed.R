@@ -159,7 +159,8 @@ sigma=NULL, alpha=0.1,
       hsigmaSinv <- solve(hsigmaS) # pinv(hsigmaS)
 
       # Approximate inverse covariance matrix for when (n < p) from lasso_Inference.R
-      htheta <- InverseLinfty(hsigma, n, length(S), verbose=FALSE)
+      useC = TRUE
+      htheta <- InverseLinfty(hsigma, n, length(S), verbose=FALSE, useC=useC)
       # htheta <- InverseLinfty(hsigma, n, verbose=FALSE)
       
       FS = rbind(diag(length(S)),matrix(0,pp-length(S),length(S)))
@@ -269,7 +270,7 @@ fixedLasso.poly=
 ### Functions borrowed and slightly modified from lasso_inference.R
 
 ## Approximates inverse covariance matrix theta
-InverseLinfty <- function(sigma, n, e, resol=1.5, mu=NULL, maxiter=50, threshold=1e-2, verbose = TRUE) {
+InverseLinfty <- function(sigma, n, e, resol=1.5, mu=NULL, maxiter=50, threshold=1e-2, verbose = TRUE, useC = FALSE) {
   # InverseLinfty <- function(sigma, n, resol=1.5, mu=NULL, maxiter=50, threshold=1e-2, verbose = TRUE) {
     isgiven <- 1;
   if (is.null(mu)){
@@ -294,7 +295,11 @@ InverseLinfty <- function(sigma, n, e, resol=1.5, mu=NULL, maxiter=50, threshold
     incr <- 0;
     while ((mu.stop != 1)&&(try.no<10)){
       last.beta <- beta
-      output <- InverseLinftyOneRow(sigma, i, mu, maxiter=maxiter, threshold=threshold)
+      if (useC == FALSE) {
+            output <- InverseLinftyOneRow(sigma, i, mu, maxiter=maxiter, threshold=threshold)
+      } else {
+            output <- InverseLinftyOneRowC(sigma, i, mu, maxiter=maxiter)
+      }
       beta <- output$optsol
       iter <- output$iter
       if (isgiven==1){
@@ -334,17 +339,46 @@ InverseLinfty <- function(sigma, n, e, resol=1.5, mu=NULL, maxiter=50, threshold
   return(M)
 }
 
+InverseLinftyOneRowC <- function (Sigma, i, mu, maxiter=50) {
+
+         p = nrow(Sigma)		
+         basis_vector = rep(0, p)
+	 basis_vector[i] = 1.
+         theta = rep(0, p)     
+
+	 val = .C("find_one_row",
+          	 Sigma=as.double(Sigma),
+		 Sigma_diag=as.double(diag(Sigma)),
+		 Sigma_theta=as.double(rep(0, p)),
+		 nrow=as.integer(p),
+   		 bound=as.double(mu),
+		 theta=as.double(theta),
+		 maxiter=as.integer(50),
+		 row=as.integer(i-1),
+		 coord=as.integer(i-1),
+		 dup=FALSE,
+		 package="selectiveInference")
+
+	# Check feasibility
+
+	if (max(abs(Sigma %*% val$theta - basis_vector)) > 1.01 * mu) {
+	   warning("Solution for row of M does not seem to be feasible")
+	}
+
+	return(val$theta)
+}
+
 InverseLinftyOneRow <- function ( sigma, i, mu, maxiter=50, threshold=1e-2 ) {
   p <- nrow(sigma);
   rho <- max(abs(sigma[i,-i])) / sigma[i,i];
   mu0 <- rho/(1+rho);
   beta <- rep(0,p);
   
-  if (mu >= mu0){
-    beta[i] <- (1-mu0)/sigma[i,i];
-    returnlist <- list("optsol" = beta, "iter" = 0);
-    return(returnlist);
-  }
+  #if (mu >= mu0){
+  #  beta[i] <- (1-mu0)/sigma[i,i];
+  #  returnlist <- list("optsol" = beta, "iter" = 0);
+  #  return(returnlist);
+  #}
   
   diff.norm2 <- 1;
   last.norm2 <- 1;
