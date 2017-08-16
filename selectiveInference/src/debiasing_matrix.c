@@ -141,7 +141,7 @@ void find_one_row(double *Sigma,          /* A covariance matrix: X^TX/n */
 			       bound,
 			       theta);
   double new_value; 
-  double tol=1.e-10;
+  double tol=1.e-6;
 
   for (iter=0; iter<maxiter; iter++) {
 
