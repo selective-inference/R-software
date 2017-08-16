@@ -10,7 +10,7 @@ fixed value of the tuning parameter lambda
 }
 \usage{
 fixedLassoInf(x, y, beta, lambda, family = c("gaussian", "binomial", 
-    "cox"),intercept=TRUE, status=NULL, sigma=NULL, alpha=0.1,
+    "cox"),intercept=TRUE, add.targets=NULL, status=NULL, sigma=NULL, alpha=0.1,
          type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
          gridrange=c(-100,100), bits=NULL, verbose=FALSE) 
 }
@@ -56,6 +56,7 @@ Significance level for confidence intervals (target is miscoverage alpha/2 in ea
 Was the lasso problem solved (e.g., by glmnet) with an intercept in the model? 
 Default is TRUE. Must be TRUE for "binomial" family. Not used for 'cox" family, where no intercept is assumed.
 }
+\item{add.targets}{Optional vector of predictors to be included as targets of inference, regardless of whether or not they are selected by the lasso. Default is NULL.}
 \item{status}{Censoring status for Cox model; 1=failurem 0=censored}
 \item{type}{Contrast type for p-values and confidence intervals: default is
 "partial"---meaning that the contrasts tested are the partial population 
