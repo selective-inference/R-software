@@ -27,15 +27,16 @@ double objective(double *Sigma,       /* A covariance matrix: X^TX/n */
 
   for (irow=0; irow<nrow; irow++) {
     double *theta_col_ptr = theta;
-    for (icol=0; icol<nrow; icol++) {
-      value += 0.5 * (*Sigma_ptr) * (*theta_row_ptr) * (*theta_col_ptr);
-      Sigma_ptr++;
-      theta_col_ptr++;
+    if (*theta_row_ptr != 0) {
+      for (icol=0; icol<nrow; icol++) {
+        value += 0.5 * (*Sigma_ptr) * (*theta_row_ptr) * (*theta_col_ptr);
+        Sigma_ptr++;
+        theta_col_ptr++;
+      }
     }
     if (irow == row) {
       value -= (*theta_row_ptr); // the elementary basis vector term
     }
-
     value = value + bound * fabs((*theta_row_ptr)); // the \ell_1 term
     theta_row_ptr++;
   }
@@ -108,38 +109,10 @@ double update_one_coord(double *Sigma,           /* A covariance matrix: X^TX/n 
       Sigma_ptr += 1;
     }
 
-    double before = objective(Sigma,
-			      nrow,
-			      row,
-			      bound,
-			      theta);
-  fprintf(stderr, "before %f\n", before);
-
-  theta_ptr = ((double *) theta + coord);
-  *theta_ptr = value;
-
-  double after = objective(Sigma,
-			   nrow,
-			   row,
-			   bound,
-			   theta);
-
-  fprintf(stderr, "after %f\n", after);
-  if (after > before) {
-    fprintf(stderr, "not a descent step!!!!!!!!!!!!!!!!!!!!!\n");
-  }
-
+    theta_ptr = ((double *) theta + coord);
+    *theta_ptr = value;
 
   }
-
-    Sigma_ptr = ((double *) Sigma + coord * nrow);
-    Sigma_theta_ptr = ((double *) Sigma_theta);
-    for (icol=0; icol<nrow; icol++) {
-      
-      Sigma_theta_ptr += 1;
-      Sigma_ptr += 1;
-    }
-
 
   return(value);
 
@@ -201,11 +174,10 @@ void find_one_row(double *Sigma,          /* A covariance matrix: X^TX/n */
 			  bound,
 			  theta);
 
-    if (((old_value - new_value) < tol * fabs(new_value)) && (iter > 5)) {
+    if (((old_value - new_value) < tol * fabs(new_value)) && (iter > 0)) {
       break;
     }
 
-    fprintf(stderr, "%f %f value\n", old_value, new_value);
     old_value = new_value;
   }
 

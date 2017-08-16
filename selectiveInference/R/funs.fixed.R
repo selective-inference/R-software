@@ -361,12 +361,6 @@ InverseLinftyOneRowC <- function (Sigma, i, mu, maxiter=50) {
 
 	# Check feasibility
 
-	# DEBUG statements
-	#print(diag(Sigma))
-	#print(0.5 * sum(val$theta * (Sigma %*% val$theta)) - val$theta[i] + mu * sum(abs(val$theta)))
-	#print(Sigma %*% val$theta - val$Sigma_theta)
-	#print(val$nrow) # number of iterations
-
 	if (max(abs(Sigma %*% val$theta - basis_vector)) > 1.01 * mu) {
 	   warning("Solution for row of M does not seem to be feasible")
 	}
