@@ -348,16 +348,24 @@ InverseLinftyOneRowC <- function (Sigma, i, mu, maxiter=50) {
 
 	 val = .C("find_one_row",
           	 Sigma=as.double(Sigma),
+		 Sigma_diag=as.double(diag(Sigma)),
+		 Sigma_theta=as.double(rep(0, p)),
 		 nrow=as.integer(p),
    		 bound=as.double(mu),
 		 theta=as.double(theta),
-		 maxiter=as.integer(maxiter),
+		 maxiter=as.integer(50),
 		 row=as.integer(i-1),
 		 coord=as.integer(i-1),
 		 dup=FALSE,
 		 package="selectiveInference")
 
 	# Check feasibility
+
+	# DEBUG statements
+	#print(diag(Sigma))
+	#print(0.5 * sum(val$theta * (Sigma %*% val$theta)) - val$theta[i] + mu * sum(abs(val$theta)))
+	#print(Sigma %*% val$theta - val$Sigma_theta)
+	#print(val$nrow) # number of iterations
 
 	if (max(abs(Sigma %*% val$theta - basis_vector)) > 1.01 * mu) {
 	   warning("Solution for row of M does not seem to be feasible")
@@ -372,11 +380,11 @@ InverseLinftyOneRow <- function ( sigma, i, mu, maxiter=50, threshold=1e-2 ) {
   mu0 <- rho/(1+rho);
   beta <- rep(0,p);
   
-  if (mu >= mu0){
-    beta[i] <- (1-mu0)/sigma[i,i];
-    returnlist <- list("optsol" = beta, "iter" = 0);
-    return(returnlist);
-  }
+  #if (mu >= mu0){
+  #  beta[i] <- (1-mu0)/sigma[i,i];
+  #  returnlist <- list("optsol" = beta, "iter" = 0);
+  #  return(returnlist);
+  #}
   
   diff.norm2 <- 1;
   last.norm2 <- 1;
