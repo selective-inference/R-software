@@ -11,34 +11,72 @@
 // Therefore we don't have to negate the answer to get theta.
 // Update one coordinate 
 
-double update_one_coord(double *Sigma,     /* A covariance matrix: X^TX/n */
-			int nrow,          /* How many rows in Sigma */
-			double bound,      /* feasibility parameter */
-			double *theta,     /* current value */
-			int row,           /* which row: 0-based */
-			int coord)         /* which coordinate to update: 0-based */
+double objective(double *Sigma,       /* A covariance matrix: X^TX/n */
+		 int nrow,            /* how many rows in Sigma */
+		 int row,             /* which row: 0-based */
+		 double bound,        /* Lagrange multipler for \ell_1 */
+		 double *theta)       /* current value */
+{
+  int irow, icol;
+  double value = 0;
+  double *Sigma_ptr = Sigma;
+  double *theta_row_ptr, *theta_col_ptr;
+
+  theta_row_ptr = theta;
+  theta_col_ptr = theta;
+
+  for (irow=0; irow<nrow; irow++) {
+    double *theta_col_ptr = theta;
+    for (icol=0; icol<nrow; icol++) {
+      value += 0.5 * (*Sigma_ptr) * (*theta_row_ptr) * (*theta_col_ptr);
+      Sigma_ptr++;
+      theta_col_ptr++;
+    }
+    if (irow == row) {
+      value -= (*theta_row_ptr); // the elementary basis vector term
+    }
+
+    value = value + bound * fabs((*theta_row_ptr)); // the \ell_1 term
+    theta_row_ptr++;
+  }
+
+  return(value);
+}
+
+
+double update_one_coord(double *Sigma,           /* A covariance matrix: X^TX/n */
+                        double *Sigma_diag,      /* Diagonal entries of Sigma */
+                        double *Sigma_theta,     /* Sigma times theta */
+			int nrow,                /* How many rows in Sigma */
+			double bound,            /* feasibility parameter */
+			double *theta,           /* current value */
+			int row,                 /* which row: 0-based */
+			int coord)               /* which coordinate to update: 0-based */
 {
 
+  double delta;
   double linear_term = 0;
-  double quadratic_term = 0;
   double value = 0;
+  double old_value;
   double *Sigma_ptr;
-  double *theta_ptr = theta;
+  double *Sigma_theta_ptr;
+  double *theta_ptr;
   int icol = 0;
 
-  Sigma_ptr = ((double *) Sigma + nrow * coord);
+  double *quadratic_ptr = ((double *) Sigma_diag + coord);
+  double quadratic_term = *quadratic_ptr;
 
-  for (icol=0; icol < nrow; icol++) {
-    if (icol != coord) {
-      linear_term += (*Sigma_ptr) * (*theta_ptr);
-    }
-    else {
-      quadratic_term = (*Sigma_ptr);
-    }
-    Sigma_ptr += 1;
-    theta_ptr += 1;
-  }
-  
+  Sigma_theta_ptr = ((double *) Sigma_theta + coord);
+  linear_term = *Sigma_theta_ptr;
+
+  theta_ptr = ((double *) theta + coord);
+  old_value = *theta_ptr;
+
+  // The coord entry of Sigma_theta term has a diagonal term in it:
+  // Sigma[coord, coord] * theta[coord]
+  // This removes it. 
+  linear_term -= quadratic_term * old_value;
+
   if (row == coord) {
     linear_term -= 1;
   }
@@ -58,60 +96,72 @@ double update_one_coord(double *Sigma,     /* A covariance matrix: X^TX/n */
     value = -(linear_term - bound) / quadratic_term;
   }
 
+  if (fabs(old_value - value) > 1.e-6 * (fabs(value) + fabs(old_value))) { // Update the linear term
+
+    delta = value - old_value;
+    Sigma_ptr = ((double *) Sigma + coord * nrow);
+    Sigma_theta_ptr = ((double *) Sigma_theta);
+
+    for (icol=0; icol<nrow; icol++) {
+      *Sigma_theta_ptr = *Sigma_theta_ptr + delta * (*Sigma_ptr);
+      Sigma_theta_ptr += 1;
+      Sigma_ptr += 1;
+    }
+
+    double before = objective(Sigma,
+			      nrow,
+			      row,
+			      bound,
+			      theta);
+  fprintf(stderr, "before %f\n", before);
+
   theta_ptr = ((double *) theta + coord);
   *theta_ptr = value;
-  return(value);
 
-}
+  double after = objective(Sigma,
+			   nrow,
+			   row,
+			   bound,
+			   theta);
 
-double objective(double *Sigma,       /* A covariance matrix: X^TX/n */
-		 int nrow,            /* how many rows in Sigma */
-		 int row,             /* which row: 0-based */
-		 double bound,        /* Lagrange multipler for \ell_1 */
-		 double *theta)       /* current value */
-{
-  int irow, icol;
-  double value = 0;
-  double *Sigma_ptr = Sigma;
-  double *theta_row_ptr, *theta_col_ptr;
-
-  theta_row_ptr = theta;
-  theta_col_ptr = theta;
-
-  for (irow=0; irow<nrow; irow++) {
-    double *theta_col_ptr = theta;
-    for (icol=0; icol<nrow; icol++) {
-      value += (*Sigma_ptr) * (*theta_row_ptr) * (*theta_col_ptr);
-      Sigma_ptr++;
-      theta_col_ptr++;
-    }
-    if (irow == row) {
-      value += (*theta_row_ptr); // the elementary basis vector term
-    }
-
-    value = value + bound * fabs((*theta_row_ptr)); // the \ell_1 term
-    theta_row_ptr++;
+  fprintf(stderr, "after %f\n", after);
+  if (after > before) {
+    fprintf(stderr, "not a descent step!!!!!!!!!!!!!!!!!!!!!\n");
   }
 
+
+  }
+
+    Sigma_ptr = ((double *) Sigma + coord * nrow);
+    Sigma_theta_ptr = ((double *) Sigma_theta);
+    for (icol=0; icol<nrow; icol++) {
+      
+      Sigma_theta_ptr += 1;
+      Sigma_ptr += 1;
+    }
+
+
   return(value);
+
 }
 
 void find_one_row(double *Sigma,          /* A covariance matrix: X^TX/n */
+                  double *Sigma_diag,     /* Diagonal entry of covariance matrix */
+                  double *Sigma_theta,    /* Sigma times theta */
                   int *nrow_ptr,          /* How many rows in Sigma */
 		  double *bound_ptr,      /* feasibility parameter */
                   double *theta,          /* current value */
                   int *maxiter_ptr,       /* how many iterations */
-                  int *row_ptr,           /* which row: 0-based */
-                  int *coord_ptr)         /* which coordinate to update: 0-based */
+                  int *row_ptr)         /* which coordinate to update: 0-based */
 {
 
   int maxiter = *maxiter_ptr;
   int iter = 0;
   int icoord = 0;
-  int coord = *coord_ptr;
   int row = *row_ptr;
   double bound = *bound_ptr;
   int nrow = *nrow_ptr;
+
   double old_value = objective(Sigma,
 			       nrow,
 			       row,
@@ -125,6 +175,8 @@ void find_one_row(double *Sigma,          /* A covariance matrix: X^TX/n */
     // Update the diagonal first
 
     update_one_coord(Sigma,
+		     Sigma_diag,
+		     Sigma_theta,
 		     nrow,
 		     bound,
 		     theta,
@@ -134,6 +186,8 @@ void find_one_row(double *Sigma,          /* A covariance matrix: X^TX/n */
     for (icoord=0; icoord<nrow; icoord++) {
 
       update_one_coord(Sigma,
+		       Sigma_diag,
+		       Sigma_theta,
 		       nrow,
 		       bound,
 		       theta,
@@ -147,9 +201,11 @@ void find_one_row(double *Sigma,          /* A covariance matrix: X^TX/n */
 			  bound,
 			  theta);
 
-    if (((old_value - new_value) < tol * fabs(new_value)) && (iter > 3)) {
+    if (((old_value - new_value) < tol * fabs(new_value)) && (iter > 5)) {
       break;
     }
+
+    fprintf(stderr, "%f %f value\n", old_value, new_value);
     old_value = new_value;
   }
 
