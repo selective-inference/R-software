@@ -355,7 +355,6 @@ InverseLinftyOneRowC <- function (Sigma, i, mu, maxiter=50, threshold=1e-2 ) {
 	# Check feasibility
 
 	if (max(abs(Sigma %*% val$theta - basis_vector)) > 1.01 * mu) {
-           print("Solution for row of M does not seem to be feasible")
 	   warning("Solution for row of M does not seem to be feasible")
 	}
 
