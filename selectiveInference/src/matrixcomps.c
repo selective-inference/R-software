@@ -53,11 +53,8 @@ void colrot(double *A, int j1, int j2, int m, int n, int i1, int i2, double c, d
 // where Q1 is m x n and R is n x n. The other part of 
 // the Q matrix, Q2 m x (m-n), isn't needed so it isn't 
 // passed for efficiency
-void downdate1(double *Q1, double *R, int *j0p, int *mp, int *np) {
-  int j0,m,n,j;
-  j0 = *j0p;
-  m = *mp;
-  n = *np;
+void downdate1(double *Q1, double *R, int j0, int m, int n) {
+  int j;
 
   double c,s;
   for (j=j0+1; j<n; j++) {
@@ -76,10 +73,8 @@ void downdate1(double *Q1, double *R, int *j0p, int *mp, int *np) {
 // For convenience, we are given w=Q2'z. Here Q2 is m x 
 // (m-n). The other part of the Q matrix, Q1 m x n, and 
 // R are not needed, so they aren't passed for efficiency 
-void update1(double *Q2, double *w, int *mp, int *kp) {
-  int m,k,j;
-  m = *mp;
-  k = *kp;
+void update1(double *Q2, double *w, int m, int k) {
+  int j;
 
   double c,s;
   for (j=k-1; j>=1; j--) {
