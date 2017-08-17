@@ -295,6 +295,7 @@ InverseLinfty <- function(sigma, n, e, resol=1.5, mu=NULL, maxiter=50, threshold
     incr <- 0;
     while ((mu.stop != 1)&&(try.no<10)){
       last.beta <- beta
+      useC = TRUE
       if (useC == FALSE) {
             output <- InverseLinftyOneRow(sigma, i, mu, maxiter=maxiter, threshold=threshold)
       } else {
@@ -341,37 +342,17 @@ InverseLinfty <- function(sigma, n, e, resol=1.5, mu=NULL, maxiter=50, threshold
 
 InverseLinftyOneRowC <- function (Sigma, i, mu, maxiter=50) {
 
-         theta = find_one_row(Sigma, i, mu, maxiter)
-         return(theta)
+    theta = find_one_row(Sigma, i-1, mu, maxiter)
+
+   # Check feasibility
+
+  if (max(abs(Sigma %*% val$theta - basis_vector)) > 1.01 * mu) {
+     warning("Solution for row of M does not seem to be feasible")
+  } 
+
+  return(theta)
+
 }
-#          p = nrow(Sigma)		
-#          basis_vector = rep(0, p)
-# 	 basis_vector[i] = 1.
-#          theta = rep(0, p)     
-
-# 	 val = .C("find_one_row",
-#           	 Sigma=as.double(Sigma),
-# 		 Sigma_diag=as.double(diag(Sigma)),
-# 		 Sigma_theta=as.double(rep(0, p)),
-#                  ever_active=as.integer(i),
-# 		 nactive_ptr=as.integer(1),
-# 		 nrow=as.integer(p),
-#    		 bound=as.double(mu),
-# 		 theta=as.double(theta),
-# 		 maxiter=as.integer(50),
-# 		 row=as.integer(i-1),
-# 		 coord=as.integer(i-1),
-# 		 dup=FALSE,
-# 		 package="selectiveInference")
-
-# 	# Check feasibility
-
-# 	if (max(abs(Sigma %*% val$theta - basis_vector)) > 1.01 * mu) {
-# 	   warning("Solution for row of M does not seem to be feasible")
-# 	}
-
-# 	return(val$theta)
-# }
 
 InverseLinftyOneRow <- function ( sigma, i, mu, maxiter=50, threshold=1e-2 ) {
   p <- nrow(sigma);

@@ -37,11 +37,11 @@ Rcpp::NumericVector find_one_row(Rcpp::NumericMatrix Sigma,
 		    (double *) Sigma_theta.begin(),
 		    (int *) ever_active.begin(),
 		    (int *) nactive.begin(),
-		    (int *) &nrow,
-		    (double *) &bound,
+		    nrow,
+		    bound,
 		    (double *) theta.begin(),
-		    (int *) &maxiter,
-		    (int *) &row);
+		    maxiter,
+		    row);
 
   return theta;
 }
