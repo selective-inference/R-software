@@ -346,19 +346,22 @@ InverseLinftyOneRowC <- function (Sigma, i, mu, maxiter=50) {
 	 basis_vector[i] = 1.
          theta = rep(0, p)     
 
+	 Sigma_ = as.double(Sigma)
+	 Sigma_diag_ = as.double(diag(Sigma))
+	 Sigma_theta_ = as.double(rep(0, p))
 	 val = .C("find_one_row",
-          	 Sigma=as.double(Sigma),
-		 Sigma_diag=as.double(diag(Sigma)),
-		 Sigma_theta=as.double(rep(0, p)),
-                 ever_active=as.integer(i),
+          	 Sigma=Sigma_,
+		 Sigma_diag=Sigma_diag_,
+		 Sigma_theta=Sigma_theta_,
+                 ever_active=as.integer(i-1),
 		 nactive_ptr=as.integer(1),
 		 nrow=as.integer(p),
    		 bound=as.double(mu),
 		 theta=as.double(theta),
 		 maxiter=as.integer(50),
 		 row=as.integer(i-1),
-		 coord=as.integer(i-1),
-		 dup=FALSE,
+		 DUP=FALSE,
+		 NAOK=TRUE,
 		 package="selectiveInference")
 
 	# Check feasibility
