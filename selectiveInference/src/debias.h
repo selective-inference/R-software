@@ -13,6 +13,7 @@ int find_one_row_(double *Sigma,          /* A covariance matrix: X^TX/n */
 		  double *theta,          /* current value */
 		  int maxiter,       /* how many iterations */
 		  int row);          /* which coordinate to update: 0-based */
+
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif /* __cplusplus */
