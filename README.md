@@ -26,7 +26,6 @@ Code in repo is under development and may be unstable.
 
 You will have to run
 
-```R
-library(Rcpp)
-Rcpp::compileAttributes('selectiveInference')
+```
+make Rcpp
 ```

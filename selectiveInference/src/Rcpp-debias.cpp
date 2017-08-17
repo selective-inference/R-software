@@ -2,10 +2,10 @@
 #include <debias.h>    // where find_one_row_void is defined
 
 // [[Rcpp::export]]
-Rcpp::NumericVector find_one_row(Rcpp::NumericMatrix Sigma,
-				 int row, // 0-based 
-				 double bound,
-				 int maxiter) {
+Rcpp::List find_one_row_debiasingM(Rcpp::NumericMatrix Sigma,
+				   int row, // 0-based 
+				   double bound,
+				   int maxiter) {
 
   int nrow = Sigma.nrow(); // number of features
 
@@ -42,6 +42,21 @@ Rcpp::NumericVector find_one_row(Rcpp::NumericMatrix Sigma,
 		    (double *) theta.begin(),
 		    maxiter,
 		    row);
+  
+  // Check whether feasible
 
-  return theta;
+  double feasible_val = 0; 
+  double val;
+  for (irow=0; irow<nrow; irow++) {
+    val = Sigma_theta[irow];
+    if (irow == row) {
+      val -= 1.;
+    }
+    if (fabs(val) > feasible_val) {
+      feasible_val = fabs(val);
+    }
+  }
+
+  return(Rcpp::List::create(Rcpp::Named("theta") = theta,
+			    Rcpp::Named("feasible_val") = feasible_val));
 }

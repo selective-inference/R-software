@@ -342,11 +342,13 @@ InverseLinfty <- function(sigma, n, e, resol=1.5, mu=NULL, maxiter=50, threshold
 
 InverseLinftyOneRowC <- function (Sigma, i, mu, maxiter=50) {
 
-    theta = find_one_row(Sigma, i-1, mu, maxiter)
+  result = find_one_row_debiasingM(Sigma, i-1, mu, maxiter) # C function uses 0-based indexing
+  theta = result$theta
+  feasible_val = result$feasible_val
 
-   # Check feasibility
+  # Check feasibility
 
-  if (max(abs(Sigma %*% val$theta - basis_vector)) > 1.01 * mu) {
+  if (feasible_val > 1.01 * mu) {
      warning("Solution for row of M does not seem to be feasible")
   } 
 
