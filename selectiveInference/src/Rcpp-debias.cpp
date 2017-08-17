@@ -32,16 +32,16 @@ Rcpp::List find_one_row_debiasingM(Rcpp::NumericMatrix Sigma,
   
   // Now call our C function
 
-  find_one_row_void((double *) Sigma.begin(),
-		    (double *) Sigma_diag.begin(),
-		    (double *) Sigma_theta.begin(),
-		    (int *) ever_active.begin(),
-		    (int *) nactive.begin(),
-		    nrow,
-		    bound,
-		    (double *) theta.begin(),
-		    maxiter,
-		    row);
+  int iter = find_one_row_((double *) Sigma.begin(),
+			   (double *) Sigma_diag.begin(),
+			   (double *) Sigma_theta.begin(),
+			   (int *) ever_active.begin(),
+			   (int *) nactive.begin(),
+			   nrow,
+			   bound,
+			   (double *) theta.begin(),
+			   maxiter,
+			   row);
   
   // Check whether feasible
 
@@ -57,6 +57,7 @@ Rcpp::List find_one_row_debiasingM(Rcpp::NumericMatrix Sigma,
     }
   }
 
-  return(Rcpp::List::create(Rcpp::Named("theta") = theta,
-			    Rcpp::Named("feasible_val") = feasible_val));
+  return(Rcpp::List::create(Rcpp::Named("optsol") = theta,
+			    Rcpp::Named("feasible_val") = feasible_val,
+			    Rcpp::Named("iter") = iter));
 }
