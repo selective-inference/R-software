@@ -1,0 +1,14 @@
+PKG_CFLAGS=-DR_PACKAGE=1 -I.
+PKG_CPPFLAGS=-DR_PACKAGE=1 -I.
+PKG_LIBS=-L. -ldebias
+
+$(SHLIB): Rcpp-debias.o RcppExports.o 
+
+Rcpp-debias.o: debias.ts
+RcppExports.o: debias.ts
+
+debias.ts:
+	gcc -shared -fPIC selectiveInference/src/debiasing_matrix.c -o debias.so
+
+clean:
+	rm -f debias.so

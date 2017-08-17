@@ -12,7 +12,7 @@
 // Update one coordinate 
 
 double objective(double *Sigma,       /* A covariance matrix: X^TX/n */
-		 int *ever_active,    /* Ever active set   */ 
+		 int *ever_active,    /* Ever active set: 0-based */ 
 		 int *nactive_ptr,    /* Size of ever active set */
 		 int nrow,            /* how many rows in Sigma */
 		 int row,             /* which row: 0-based */
@@ -121,7 +121,7 @@ int check_KKT(double *theta,       /* current theta */
 double update_one_coord(double *Sigma,           /* A covariance matrix: X^TX/n */
                         double *Sigma_diag,      /* Diagonal entries of Sigma */
                         double *Sigma_theta,     /* Sigma times theta */
-			int *ever_active,        /* Ever active set   */ 
+			int *ever_active,        /* Ever active set: 0-based */ 
 			int *nactive_ptr,        /* Size of ever active set */
 			int nrow,                /* How many rows in Sigma */
 			double bound,            /* feasibility parameter */
@@ -208,7 +208,7 @@ double update_one_coord(double *Sigma,           /* A covariance matrix: X^TX/n 
 void find_one_row(double *Sigma,          /* A covariance matrix: X^TX/n */
                   double *Sigma_diag,     /* Diagonal entry of covariance matrix */
                   double *Sigma_theta,    /* Sigma times theta */
-		  int *ever_active,       /* Ever active set   */ 
+		  int *ever_active,       /* Ever active set: 0-based */ 
 		  int *nactive_ptr,       /* Size of ever active set */
                   int *nrow_ptr,          /* How many rows in Sigma */
 		  double *bound_ptr,      /* feasibility parameter */
