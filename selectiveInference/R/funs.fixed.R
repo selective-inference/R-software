@@ -293,10 +293,13 @@ InverseLinfty <- function(sigma, n, e, resol=1.5, mu=NULL, maxiter=50, threshold
     mu.stop <- 0;
     try.no <- 1;
     incr <- 0;
+
+    output = NULL
+
     while ((mu.stop != 1)&&(try.no<10)){
       last.beta <- beta
-      output <- InverseLinftyOneRow(sigma, i, mu, maxiter=maxiter)
-      beta <- output$optsol
+      output <- InverseLinftyOneRow(sigma, i, mu, maxiter=maxiter, soln_result=output) # uses a warm start
+      beta <- output$soln
       iter <- output$iter
       if (isgiven==1){
         mu.stop <- 1
@@ -335,15 +338,26 @@ InverseLinfty <- function(sigma, n, e, resol=1.5, mu=NULL, maxiter=50, threshold
   return(M)
 }
 
-InverseLinftyOneRow <- function (Sigma, i, mu, maxiter=50) {
+InverseLinftyOneRow <- function (Sigma, i, mu, maxiter=50, soln_result=NULL) {
 
-  result = find_one_row_debiasingM(Sigma, i-1, mu, maxiter) # C function uses 0-based indexing
-  theta = result$theta
-  feasible_val = result$feasible_val
+  # If soln_result is not Null, it is used as a warm start.
+  # It should be a list
+  # with entries "soln" and "Sigma_soln"
+
+  if (is.null(soln_result)) {
+     soln = rep(0, nrow(Sigma))
+     Sigma_soln = rep(0, nrow(Sigma)) 
+  }
+  else {
+     soln = soln_result$soln
+     Sigma_soln = soln_result$Sigma_soln  
+  }
+
+  result = find_one_row_debiasingM(Sigma, i-1, mu, maxiter, soln, Sigma_soln) # C function uses 0-based indexing
 
   # Check feasibility
 
-  if (feasible_val > 1.01 * mu) {
+  if (!result$kkt_check) {
      warning("Solution for row of M does not seem to be feasible")
   } 
 
