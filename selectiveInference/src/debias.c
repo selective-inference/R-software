@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <math.h> // for fabs
 
 // Find an approximate row of \hat{Sigma}^{-1}
@@ -41,10 +40,8 @@ double objective(double *Sigma,       /* A covariance matrix: X^TX/n */
       active_col_ptr = ((int *) ever_active + icol);
       active_col = *active_col_ptr;
       theta_col_ptr = ((double *) theta + active_col);
-      
-      fprintf(stderr, "%d %d \n", active_row, active_col);
 
-      Sigma_ptr = ((double *) Sigma + nrow * active_row + active_col);
+      Sigma_ptr = ((double *) Sigma + nrow * active_col + active_row); // Matrices are column-major order
 
       value += 0.5 * (*Sigma_ptr) * (*theta_row_ptr) * (*theta_col_ptr);
     }
@@ -220,8 +217,6 @@ void find_one_row_void(double *Sigma,          /* A covariance matrix: X^TX/n */
   int iter = 0;
   int icoord = 0;
 
-  fprintf(stderr, "starting now\n");
-
   double old_value = objective(Sigma,
 			       ever_active,
 			       nactive_ptr,
@@ -252,7 +247,6 @@ void find_one_row_void(double *Sigma,          /* A covariance matrix: X^TX/n */
 		  nrow,
 		  row,
 		  bound) == 1) {
-      fprintf(stderr, "ending in first KKT check\n");
       break;
     }
 					  
@@ -275,7 +269,6 @@ void find_one_row_void(double *Sigma,          /* A covariance matrix: X^TX/n */
 		  nrow,
 		  row,
 		  bound) == 1) {
-      fprintf(stderr, "ending in second KKT check\n");
       break;
     }
 					  
@@ -288,7 +281,6 @@ void find_one_row_void(double *Sigma,          /* A covariance matrix: X^TX/n */
 			  theta);
 
     if (((old_value - new_value) < tol * fabs(new_value)) && (iter > 0)) {
-      fprintf(stderr, "ending in objective value check\n");
       break;
     }
 
