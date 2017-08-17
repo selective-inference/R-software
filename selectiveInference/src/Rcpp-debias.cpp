@@ -5,7 +5,9 @@
 Rcpp::List find_one_row_debiasingM(Rcpp::NumericMatrix Sigma,
 				   int row, // 0-based 
 				   double bound,
-				   int maxiter) {
+				   int maxiter,
+				   Rcpp::NumericVector theta,
+				   Rcpp::NumericVector Sigma_theta) {
 
   int nrow = Sigma.nrow(); // number of features
 
@@ -25,11 +27,6 @@ Rcpp::List find_one_row_debiasingM(Rcpp::NumericMatrix Sigma,
     sigma_p[irow] = Sigma(irow, irow);
   }
   
-  // The solution and its product with Sigma
-
-  Rcpp::NumericVector theta(nrow);
-  Rcpp::NumericVector Sigma_theta(nrow);
-  
   // Now call our C function
 
   int iter = find_one_row_((double *) Sigma.begin(),
@@ -45,19 +42,15 @@ Rcpp::List find_one_row_debiasingM(Rcpp::NumericMatrix Sigma,
   
   // Check whether feasible
 
-  double feasible_val = 0; 
-  double val;
-  for (irow=0; irow<nrow; irow++) {
-    val = Sigma_theta[irow];
-    if (irow == row) {
-      val -= 1.;
-    }
-    if (fabs(val) > feasible_val) {
-      feasible_val = fabs(val);
-    }
-  }
+  int kkt_check = check_KKT(theta.begin(),
+			    Sigma_theta.begin(),
+			    nrow,
+			    row,
+			    bound);
 
-  return(Rcpp::List::create(Rcpp::Named("optsol") = theta,
-			    Rcpp::Named("feasible_val") = feasible_val,
-			    Rcpp::Named("iter") = iter));
+  return(Rcpp::List::create(Rcpp::Named("soln") = theta,
+			    Rcpp::Named("Sigma_soln") = Sigma_theta,
+			    Rcpp::Named("iter") = iter,
+			    Rcpp::Named("kkt_check") = kkt_check));
+
 }
