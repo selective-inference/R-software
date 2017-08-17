@@ -1,5 +1,5 @@
 #include <Rcpp.h>      // need to include the main Rcpp header file 
-#include <debias.h>    // where find_one_row is defined
+#include <debias.h>    // where find_one_row_void is defined
 
 // [[Rcpp::export]]
 Rcpp::NumericVector find_one_row(Rcpp::NumericMatrix Sigma,
@@ -8,38 +8,40 @@ Rcpp::NumericVector find_one_row(Rcpp::NumericMatrix Sigma,
 				 int maxiter) {
 
   int nrow = Sigma.nrow(); // number of features
-  int nactive = 1;
+
+  // Active set
+
+  int irow;
+  Rcpp::IntegerVector nactive(1); // An array so we can easily modify it
   Rcpp::IntegerVector ever_active(1);
+  int *ever_active_p = ever_active.begin();
+  *ever_active_p = row;
+
+  // Extract the diagonal
   Rcpp::NumericVector Sigma_diag(nrow);
-  Rcpp::NumericVector Sigma_theta(nrow);
+  double *sigma_p = Sigma_diag.begin();
 
-}
- Rcpp::NumericVector xUL,
-                       int maxEval, double absErr, double tol, int vectorInterface, unsigned norm) {
-
-  count = 0; /* Zero count */
-  fun = f;
-
-  Rcpp::NumericVector integral(fDim);
-  Rcpp::NumericVector errVals(fDim);
-  int retCode;
-
-  // Rcpp::Rcout<<"Call Integrator" <<std::endl;
-  if (vectorInterface) {
-    retCode = hcubature_v(fDim, fWrapper_v, NULL,
-			  xLL.size(), xLL.begin(), xUL.begin(),
-			  maxEval, absErr, tol, (error_norm) norm,
-			  integral.begin(), errVals.begin());
-  } else {
-    retCode = hcubature(fDim, fWrapper, NULL,
-			xLL.size(), xLL.begin(), xUL.begin(),
-			maxEval, absErr, tol, (error_norm) norm,
-			integral.begin(), errVals.begin());
+  for (irow=0; irow<nrow; irow++) {
+    sigma_p[irow] = Sigma(irow, irow);
   }
-  return Rcpp::List::create(
-			    Rcpp::_["integral"] = integral,
-			    Rcpp::_["error"] = errVals,
-			    Rcpp::_["functionEvaluations"] = count,
-			    Rcpp::_["returnCode"] = retCode);
-}
+  
+  // The solution and its product with Sigma
 
+  Rcpp::NumericVector theta(nrow);
+  Rcpp::NumericVector Sigma_theta(nrow);
+  
+  // Now call our C function
+
+  find_one_row_void((double *) Sigma.begin(),
+		    (double *) Sigma_diag.begin(),
+		    (double *) Sigma_theta.begin(),
+		    (int *) ever_active.begin(),
+		    (int *) nactive.begin(),
+		    (int *) &nrow,
+		    (double *) &bound,
+		    (double *) theta.begin(),
+		    (int *) &maxiter,
+		    (int *) &row);
+
+  return theta;
+}
