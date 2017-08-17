@@ -346,9 +346,12 @@ InverseLinftyOneRowC <- function (Sigma, i, mu, maxiter=50) {
 	 basis_vector[i] = 1.
          theta = rep(0, p)     
 
+	 Sigma_ = as.double(Sigma)
+	 Sigma_diag_ = as.double(diag(Sigma))
+
 	 val = .C("find_one_row",
-          	 Sigma=as.double(Sigma),
-		 Sigma_diag=as.double(diag(Sigma)),
+          	 Sigma=Sigma_,
+		 Sigma_diag=Sigma_diag_,
 		 Sigma_theta=as.double(rep(0, p)),
                  ever_active=as.integer(i),
 		 nactive_ptr=as.integer(1),
