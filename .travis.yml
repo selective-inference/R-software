@@ -7,8 +7,9 @@ r:
   - devel
 addons:
    apt: 
-      packages: libmpfr-dev
+      packages: libmpfr-dev 
 warnings_are_errors: true
 before_install:
   - tlmgr install index # for texlive and vignette?
+  - make Rcpp
   - cd selectiveInference
