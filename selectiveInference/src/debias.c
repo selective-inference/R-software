@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <math.h> // for fabs
 
 // Find an approximate row of \hat{Sigma}^{-1}
@@ -109,41 +108,28 @@ int check_KKT(double *theta,        /* current theta */
 
     gradient = *gradient_ptr_tmp;
 
-    fprintf(stderr, "how does it look %d %f %f\n", irow, *theta_ptr, gradient);
-
     // Compute this coordinate of the gradient
 
     if (fabs(*theta_ptr) > tol) { // these coordinates of gradients should be equal to \pm bound
-      fprintf(stderr, "active %f %f\n", fabs(fabs(gradient) - bound), bound);
       if (fabs(fabs(gradient) - bound) > tol * bound) {
-        fprintf(stderr, "here1 %d %f %f\n", irow, *theta_ptr, gradient);
 	return(0);
-	// fail += 1;
       }
       else if ((*theta_ptr > 0) && (gradient > 0)) {
-        fprintf(stderr, "here2 %d %f %f\n", irow, *theta_ptr, gradient);
 	return(0);
-	// fail += 1;
       }
       else if ((*theta_ptr < 0) && (gradient < 0)) {
-        fprintf(stderr, "here3 %d %f %f\n", irow, *theta_ptr, gradient);
 	return(0);
-	// fail += 1;
       }
     }
     else {
-      fprintf(stderr, "before4 %d %f %f\n", irow, *theta_ptr, gradient);
       if (fabs(gradient) > (1. + tol) * bound) {
-        fprintf(stderr, "here4 %d %f %f\n", irow, *theta_ptr, gradient);
 	return(0);
-	// fail += 1;
       }
     }
     theta_ptr++;
     gradient_ptr_tmp++;
   }
 
-  fprintf(stderr, "OK now\n");
   return(fail == 0);
   
 }
@@ -283,7 +269,6 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 		  gradient_ptr,
 		  nrow,
 		  bound) == 1) {
-      fprintf(stderr, "here5 \n");
       break;
     }
 					  
@@ -310,7 +295,6 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 		  gradient_ptr,
 		  nrow,
 		  bound) == 1) {
-      fprintf(stderr, "here6 \n");
       break;
     }
 					  
@@ -322,9 +306,9 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 			  bound,
 			  theta);
 
-/*     if (((old_value - new_value) < tol * fabs(new_value)) && (iter > 0)) { */
-/*       break; */
-/*     } */
+    if (((old_value - new_value) < tol * fabs(new_value)) && (iter > 0)) {
+      break;
+    }
 
     old_value = new_value;
   }
