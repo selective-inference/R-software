@@ -90,34 +90,32 @@ int update_ever_active(int coord,
   return(0);
 }
 
-int check_KKT(double *theta,        /* current theta */
+int check_KKT(double *theta,       /* current theta */
 	      double *gradient_ptr, /* Sigma times theta */
-	      int nrow,             /* how many rows in Sigma */
-	      double bound)         /* Lagrange multipler for \ell_1 */
+	      int nrow,            /* how many rows in Sigma */
+	      double bound)        /* Lagrange multipler for \ell_1 */
 {
   // First check inactive
 
   int irow;
   int fail = 0;
-  double tol = 1.e-4;
-  double *theta_ptr = theta;
-  double *gradient_ptr_tmp = gradient_ptr;
+  double tol = 1.e-6;
+  double *theta_ptr, *gradient_ptr_tmp;
   double gradient;
 
   for (irow=0; irow<nrow; irow++) {
-
-    gradient = *gradient_ptr_tmp;
+    theta_ptr = ((double *) theta + irow);
+    gradient_ptr_tmp = ((double *) gradient_ptr + irow);
 
     // Compute this coordinate of the gradient
 
-    if (fabs(*theta_ptr) > tol) { // these coordinates of gradients should be equal to \pm bound
-      if (fabs(fabs(gradient) - bound) > tol * bound) {
+    gradient = *gradient_ptr_tmp;
+
+    if (*theta_ptr != 0) { // these coordinates of gradients should be equal to -bound
+      if ((*theta_ptr > 0) &&  (fabs(gradient + bound) > tol * bound)) {
 	return(0);
       }
-      else if ((*theta_ptr > 0) && (gradient > 0)) {
-	return(0);
-      }
-      else if ((*theta_ptr < 0) && (gradient < 0)) {
+      else if ((*theta_ptr < 0) && (fabs(gradient - bound) > tol * bound)) {
 	return(0);
       }
     }
@@ -126,12 +124,9 @@ int check_KKT(double *theta,        /* current theta */
 	return(0);
       }
     }
-    theta_ptr++;
-    gradient_ptr_tmp++;
   }
 
-  return(fail == 0);
-  
+  return(1);
 }
 
 double update_one_coord(double *Sigma_ptr,           /* A covariance matrix: X^TX/n */
@@ -232,13 +227,13 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
   int iactive = 0;
   int *active_ptr;
 
-  double old_value = objective(Sigma_ptr,
-			       linear_func_ptr,
-			       ever_active_ptr,
-			       nactive_ptr,
-			       nrow,
-			       bound,
-			       theta);
+/*   double old_value = objective(Sigma_ptr, */
+/* 			       linear_func_ptr, */
+/* 			       ever_active_ptr, */
+/* 			       nactive_ptr, */
+/* 			       nrow, */
+/* 			       bound, */
+/* 			       theta); */
   double new_value; 
   double tol=1.e-8;
 
@@ -298,19 +293,19 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
       break;
     }
 					  
-    new_value = objective(Sigma_ptr,
-			  linear_func_ptr,
-			  ever_active_ptr,
-			  nactive_ptr,
-			  nrow,
-			  bound,
-			  theta);
+/*     new_value = objective(Sigma_ptr, */
+/* 			  linear_func_ptr, */
+/* 			  ever_active_ptr, */
+/* 			  nactive_ptr, */
+/* 			  nrow, */
+/* 			  bound, */
+/* 			  theta); */
 
-    if (((old_value - new_value) < tol * fabs(new_value)) && (iter > 0)) {
-      break;
-    }
+/*     if (((old_value - new_value) < tol * fabs(new_value)) && (iter > 0)) { */
+/*       break; */
+/*     } */
 
-    old_value = new_value;
+//    old_value = new_value;
   }
   return(iter);
 }
