@@ -69,16 +69,19 @@ int update_ever_active(int coord,
     active_var = (*ever_active_ptr_tmp);
     if (active_var == coord) {
 
-      // Add it to the active set and increment the 
-      // number of active variables
-
-      ever_active_ptr_tmp = ((int *) ever_active_ptr + *nactive_ptr);
-      *ever_active_ptr_tmp = coord;
-      *nactive_ptr += 1;
-
       return(1);
     }
   }
+
+  // If we have not returned yet, this variable
+  // was not in ever_active
+
+  // Add it to the active set and increment the 
+  // number of active variables
+
+  ever_active_ptr_tmp = ((int *) ever_active_ptr + *nactive_ptr);
+  *ever_active_ptr_tmp = coord;
+  *nactive_ptr += 1;
 
   return(0);
 }
