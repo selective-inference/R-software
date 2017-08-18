@@ -4,7 +4,8 @@ extern "C"
 #endif /* __cplusplus */
 
 int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
-		  double *Sigma_ptr_ptr,     /* Diagonal entry of covariance matrix */
+ 		  double *linear_func_ptr,    /* Linear term in objective */
+		  double *Sigma_diag_ptr,     /* Diagonal entry of covariance matrix */
 		  double *gradient_ptr,       /* Current gradient of quadratic loss */
 		  int *ever_active_ptr,       /* Ever active set: 0-based */ 
 		  int *nactive_ptr,           /* Size of ever active set */

@@ -297,6 +297,7 @@ InverseLinfty <- function(sigma, n, e, resol=1.2, mu=NULL, maxiter=50, threshold
 
     while ((mu.stop != 1)&&(try.no<10)){
       last.beta <- beta
+      #print(c("trying ", try.no))
       output <- InverseLinftyOneRow(sigma, i, mu, maxiter=maxiter, soln_result=output) # uses a warm start
       beta <- output$soln
       iter <- output$iter
@@ -358,7 +359,16 @@ InverseLinftyOneRow <- function (Sigma, i, mu, maxiter=50, soln_result=NULL) {
      nactive = as.integer(soln_result$nactive)
   }
 
-  result = find_one_row_debiasingM(Sigma, i-1, mu, maxiter, soln, gradient, ever_active, nactive) # C function uses 0-based indexing
+  linear_func = rep(0, p)
+  linear_func[i] = -1
+  linear_func = as.numeric(linear_func)
+
+  #print(c(soln, "soln"))
+  #print(c(gradient, "grad"))
+  #print(c(ever_active, "ever_active"))
+  #print(c(nactive, "nactive"))
+  #print(c(linear_func, "linear_func"))
+  result = find_one_row_debiasingM(Sigma, i-1, mu, maxiter, soln, linear_func, gradient, ever_active, nactive) # C function uses 0-based indexing
 
   # Check feasibility
 
