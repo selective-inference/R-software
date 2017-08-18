@@ -68,7 +68,6 @@ int update_ever_active(int coord,
     ever_active_ptr_tmp = ((int *) ever_active_ptr + iactive);
     active_var = (*ever_active_ptr_tmp);
     if (active_var == coord) {
-
       return(1);
     }
   }
@@ -188,7 +187,7 @@ double update_one_coord(double *Sigma_ptr,           /* A covariance matrix: X^T
 
   // Add to active set if necessary
 
-  if (!is_active) {
+  if (is_active == 0) {
     update_ever_active(coord, ever_active_ptr, nactive_ptr);
   }
 
