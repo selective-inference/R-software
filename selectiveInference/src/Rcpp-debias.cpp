@@ -3,7 +3,6 @@
 
 // [[Rcpp::export]]
 Rcpp::List find_one_row_debiasingM(Rcpp::NumericMatrix Sigma,
-				   int row, // 0-based 
 				   double bound,
 				   int maxiter,
 				   Rcpp::NumericVector theta,

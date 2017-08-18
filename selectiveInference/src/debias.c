@@ -100,34 +100,52 @@ int check_KKT(double *theta,        /* current theta */
 
   int irow;
   int fail = 0;
-  double tol = 1.e-4;
-  double *theta_ptr, *gradient_ptr_tmp;
+  double tol = 1.e-5;
+  double *theta_ptr = theta;
+  double *gradient_ptr_tmp = gradient_ptr;
   double gradient;
 
   for (irow=0; irow<nrow; irow++) {
-    theta_ptr = ((double *) theta + irow);
-    gradient_ptr_tmp = ((double *) gradient_ptr + irow);
-
-    // Compute this coordinate of the gradient
 
     gradient = *gradient_ptr_tmp;
 
-    if (*theta_ptr != 0) { // these coordinates of gradients should be equal to -bound
-      if ((*theta_ptr > 0) &&  (fabs(gradient + bound) > (1. + tol) * bound)) {
-	fail += 1;
+    fprintf(stderr, "how does it look %d %f %f\n", irow, *theta_ptr, gradient);
+
+    // Compute this coordinate of the gradient
+
+    if (fabs(*theta_ptr) > tol) { // these coordinates of gradients should be equal to \pm bound
+      fprintf(stderr, "active %f %f\n", fabs(fabs(gradient) - bound), bound);
+      if (fabs(fabs(gradient) - bound) > tol * bound) {
+        fprintf(stderr, "here1 %d %f %f\n", irow, *theta_ptr, gradient);
+	return(0);
+	// fail += 1;
       }
-      else if ((*theta_ptr < 0) && (fabs(gradient - bound) > (1. + tol) * bound)) {
-	fail += 1;
+      else if ((*theta_ptr > 0) && (gradient > 0)) {
+        fprintf(stderr, "here2 %d %f %f\n", irow, *theta_ptr, gradient);
+	return(0);
+	// fail += 1;
+      }
+      else if ((*theta_ptr < 0) && (gradient < 0)) {
+        fprintf(stderr, "here3 %d %f %f\n", irow, *theta_ptr, gradient);
+	return(0);
+	// fail += 1;
       }
     }
     else {
+      fprintf(stderr, "before4 %d %f %f\n", irow, *theta_ptr, gradient);
       if (fabs(gradient) > (1. + tol) * bound) {
-	fail += 1;
+        fprintf(stderr, "here4 %d %f %f\n", irow, *theta_ptr, gradient);
+	return(0);
+	// fail += 1;
       }
     }
+    theta_ptr++;
+    gradient_ptr_tmp++;
   }
 
+  fprintf(stderr, "OK now\n");
   return(fail == 0);
+  
 }
 
 double update_one_coord(double *Sigma_ptr,           /* A covariance matrix: X^TX/n */
@@ -236,7 +254,7 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 			       bound,
 			       theta);
   double new_value; 
-  double tol=1.e-5;
+  double tol=1.e-8;
 
   for (iter=0; iter<maxiter; iter++) {
 
@@ -265,6 +283,7 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 		  gradient_ptr,
 		  nrow,
 		  bound) == 1) {
+      fprintf(stderr, "here5 \n");
       break;
     }
 					  
@@ -291,6 +310,7 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 		  gradient_ptr,
 		  nrow,
 		  bound) == 1) {
+      fprintf(stderr, "here6 \n");
       break;
     }
 					  
@@ -302,9 +322,9 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 			  bound,
 			  theta);
 
-    if (((old_value - new_value) < tol * fabs(new_value)) && (iter > 0)) {
-      break;
-    }
+/*     if (((old_value - new_value) < tol * fabs(new_value)) && (iter > 0)) { */
+/*       break; */
+/*     } */
 
     old_value = new_value;
   }
