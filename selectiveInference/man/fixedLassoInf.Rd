@@ -145,7 +145,7 @@ p = 10
 sigma = 1
 
 x = matrix(rnorm(n*p),n,p)
-x=scale(x,TRUE,TRUE)
+x = scale(x,TRUE,TRUE)
 
 beta = c(3,2,rep(0,p-2))
 y = x\%*\%beta + sigma*rnorm(n)
@@ -165,10 +165,10 @@ out
 
 ## as above, but use lar function instead to get initial 
 ## lasso fit (should get same results)
- lfit = lar(x,y,normalize=FALSE)
- beta = coef(lfit,s=lambda,mode="lambda")
- out2 = fixedLassoInf(x,y,beta,lambda,sigma=sigma)
- out2
+lfit = lar(x,y,normalize=FALSE)
+beta = coef(lfit,s=lambda,mode="lambda")
+out2 = fixedLassoInf(x,y,beta,lambda,sigma=sigma)
+out2
 
 ## mimic different penalty factors by first scaling x
  set.seed(43)
@@ -249,5 +249,30 @@ status=sample(c(0,1),size=n,replace=TRUE)
      # compute fixed lambda p-values and selection intervals
      out = fixedLassoInf(x,tim,beta_hat,lambda,status=status,family="cox")
      out
+
+# Debiased lasso or "full"
+
+n = 50
+p = 100
+sigma = 1
+
+x = matrix(rnorm(n*p),n,p)
+x = scale(x,TRUE,TRUE)
+
+beta = c(3,2,rep(0,p-2))
+y = x\%*\%beta + sigma*rnorm(n)
+
+# first run glmnet
+gfit = glmnet(x, y, standardize=FALSE, intercept=FALSE)
+
+# extract coef for a given lambda; note the 1/n factor!
+# (and we don't save the intercept term)
+lambda = 2.8
+beta = coef(gfit, s=lambda/n, exact=TRUE)[-1]
+
+# compute fixed lambda p-values and selection intervals
+out = fixedLassoInf(x, y, beta, lambda, sigma=sigma, type='full', intercept=FALSE)
+out
+
 }
  
