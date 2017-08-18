@@ -270,8 +270,7 @@ fixedLasso.poly=
 ### Functions borrowed and slightly modified from lasso_inference.R
 
 ## Approximates inverse covariance matrix theta
-InverseLinfty <- function(sigma, n, e, resol=1.5, mu=NULL, maxiter=50, threshold=1e-2, verbose = TRUE) {
-  # InverseLinfty <- function(sigma, n, resol=1.5, mu=NULL, maxiter=50, threshold=1e-2, verbose = TRUE) {
+InverseLinfty <- function(sigma, n, e, resol=1.2, mu=NULL, maxiter=50, threshold=1e-2, verbose = TRUE) {
     isgiven <- 1;
   if (is.null(mu)){
     isgiven <- 0;
