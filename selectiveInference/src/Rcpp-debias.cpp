@@ -7,6 +7,7 @@ Rcpp::List find_one_row_debiasingM(Rcpp::NumericMatrix Sigma,
 				   double bound,
 				   int maxiter,
 				   Rcpp::NumericVector theta,
+				   Rcpp::NumericVector linear_func,
 				   Rcpp::NumericVector gradient,
 				   Rcpp::IntegerVector ever_active,
 				   Rcpp::IntegerVector nactive
@@ -29,6 +30,7 @@ Rcpp::List find_one_row_debiasingM(Rcpp::NumericMatrix Sigma,
   // Now call our C function
 
   int iter = find_one_row_((double *) Sigma.begin(),
+			   (double *) linear_func.begin(),
 			   (double *) Sigma_diag.begin(),
 			   (double *) gradient.begin(),
 			   (int *) ever_active.begin(),
