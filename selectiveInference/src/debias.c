@@ -11,7 +11,7 @@
 // Update one coordinate 
 
 double objective(double *Sigma,       /* A covariance matrix: X^TX/n */
-		 int *ever_active,    /* Ever active set: 0-based */ 
+		 int *ever_active_ptr,    /* Ever active set: 0-based */ 
 		 int *nactive_ptr,    /* Size of ever active set */
 		 int nrow,            /* how many rows in Sigma */
 		 int row,             /* which row: 0-based */
@@ -31,13 +31,13 @@ double objective(double *Sigma,       /* A covariance matrix: X^TX/n */
 
   for (irow=0; irow<nactive; irow++) {
 
-    active_row_ptr = ((int *) ever_active + irow);
+    active_row_ptr = ((int *) ever_active_ptr + irow);
     active_row = *active_row_ptr;
     theta_row_ptr = ((double *) theta + active_row);
 
     for (icol=0; icol<nactive; icol++) {
       
-      active_col_ptr = ((int *) ever_active + icol);
+      active_col_ptr = ((int *) ever_active_ptr + icol);
       active_col = *active_col_ptr;
       theta_col_ptr = ((double *) theta + active_col);
 
@@ -57,23 +57,23 @@ double objective(double *Sigma,       /* A covariance matrix: X^TX/n */
 // Check if active and add it to active list if necessary
 
 int update_ever_active(int coord,
-		       int *ever_active,
+		       int *ever_active_ptr,
 		       int *nactive_ptr) {
   int iactive;
   int active_var;
   int nactive = *nactive_ptr;
-  int *ever_active_ptr = ever_active;
+  int *ever_active_ptr_tmp = ever_active_ptr;
 
   for (iactive=0; iactive<nactive; iactive++) {
-    ever_active_ptr = ((int *) ever_active + iactive);
-    active_var = (*ever_active_ptr);
+    ever_active_ptr_tmp = ((int *) ever_active_ptr + iactive);
+    active_var = (*ever_active_ptr_tmp);
     if (active_var == coord) {
 
       // Add it to the active set and increment the 
       // number of active variables
 
-      ever_active_ptr = ((int *) ever_active + *nactive_ptr);
-      *ever_active_ptr = coord;
+      ever_active_ptr_tmp = ((int *) ever_active_ptr + *nactive_ptr);
+      *ever_active_ptr_tmp = coord;
       *nactive_ptr += 1;
 
       return(1);
@@ -129,7 +129,7 @@ int check_KKT(double *theta,       /* current theta */
 double update_one_coord(double *Sigma,           /* A covariance matrix: X^TX/n */
                         double *Sigma_diag,      /* Diagonal entries of Sigma */
                         double *gradient_ptr,     /* Sigma times theta */
-			int *ever_active,        /* Ever active set: 0-based */ 
+			int *ever_active_ptr,        /* Ever active set: 0-based */ 
 			int *nactive_ptr,        /* Size of ever active set */
 			int nrow,                /* How many rows in Sigma */
 			double bound,            /* feasibility parameter */
@@ -151,7 +151,7 @@ double update_one_coord(double *Sigma,           /* A covariance matrix: X^TX/n 
   double *quadratic_ptr = ((double *) Sigma_diag + coord);
   double quadratic_term = *quadratic_ptr;
 
-  int *ever_active_ptr;
+  // int *ever_active_ptr_tmp;
 
   gradient_ptr_tmp = ((double *) gradient_ptr + coord);
   linear_term = *gradient_ptr_tmp;
@@ -186,7 +186,7 @@ double update_one_coord(double *Sigma,           /* A covariance matrix: X^TX/n 
   // Add to active set if necessary
 
   if (!is_active) {
-    update_ever_active(coord, ever_active, nactive_ptr);
+    update_ever_active(coord, ever_active_ptr, nactive_ptr);
   }
 
   // Update the linear term
@@ -215,7 +215,7 @@ double update_one_coord(double *Sigma,           /* A covariance matrix: X^TX/n 
 int find_one_row_(double *Sigma,          /* A covariance matrix: X^TX/n */
 		  double *Sigma_diag,     /* Diagonal entry of covariance matrix */
 		  double *gradient_ptr,    /* Sigma times theta */
-		  int *ever_active,       /* Ever active set: 0-based */ 
+		  int *ever_active_ptr,       /* Ever active set: 0-based */ 
 		  int *nactive_ptr,       /* Size of ever active set */
 		  int nrow,               /* How many rows in Sigma */
 		  double bound,           /* feasibility parameter */
@@ -230,7 +230,7 @@ int find_one_row_(double *Sigma,          /* A covariance matrix: X^TX/n */
   int *active_ptr;
 
   double old_value = objective(Sigma,
-			       ever_active,
+			       ever_active_ptr,
 			       nactive_ptr,
 			       nrow,
 			       row,
@@ -243,13 +243,13 @@ int find_one_row_(double *Sigma,          /* A covariance matrix: X^TX/n */
 
     // Update the active variables first
 
-    active_ptr = (int *) ever_active;
+    active_ptr = (int *) ever_active_ptr;
 
     for (iactive=0; iactive < *nactive_ptr; iactive++) {
       update_one_coord(Sigma,
 		       Sigma_diag,
 		       gradient_ptr,
-		       ever_active,
+		       ever_active_ptr,
 		       nactive_ptr,
 		       nrow,
 		       bound,
@@ -273,7 +273,7 @@ int find_one_row_(double *Sigma,          /* A covariance matrix: X^TX/n */
       update_one_coord(Sigma,
 		       Sigma_diag,
 		       gradient_ptr,
-		       ever_active,
+		       ever_active_ptr,
 		       nactive_ptr,
 		       nrow,
 		       bound,
@@ -292,7 +292,7 @@ int find_one_row_(double *Sigma,          /* A covariance matrix: X^TX/n */
     }
 					  
     new_value = objective(Sigma,
-			  ever_active,
+			  ever_active_ptr,
 			  nactive_ptr,
 			  nrow,
 			  row,
