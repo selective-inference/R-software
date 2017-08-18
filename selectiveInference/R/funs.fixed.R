@@ -298,10 +298,6 @@ InverseLinfty <- function(sigma, n, e, resol=1.5, mu=NULL, maxiter=50, threshold
 
     while ((mu.stop != 1)&&(try.no<10)){
       last.beta <- beta
-      if (!is.null(output)) {
-         print(c('at least second try', try.no))
-      }
-      print(output)
       output <- InverseLinftyOneRow(sigma, i, mu, maxiter=maxiter, soln_result=output) # uses a warm start
       beta <- output$soln
       iter <- output$iter
