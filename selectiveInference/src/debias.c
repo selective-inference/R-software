@@ -99,7 +99,7 @@ int check_KKT(double *theta,        /* current theta */
 
   int irow;
   int fail = 0;
-  double tol = 1.e-5;
+  double tol = 1.e-4;
   double *theta_ptr = theta;
   double *gradient_ptr_tmp = gradient_ptr;
   double gradient;
