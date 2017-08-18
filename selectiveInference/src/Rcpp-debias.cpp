@@ -51,6 +51,7 @@ Rcpp::List find_one_row_debiasingM(Rcpp::NumericMatrix Sigma,
 
   return(Rcpp::List::create(Rcpp::Named("soln") = theta,
 			    Rcpp::Named("gradient") = gradient,
+			    Rcpp::Named("linear_func") = linear_func,
 			    Rcpp::Named("iter") = iter,
 			    Rcpp::Named("kkt_check") = kkt_check,
 			    Rcpp::Named("ever_active") = ever_active,

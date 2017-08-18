@@ -346,28 +346,29 @@ InverseLinftyOneRow <- function (Sigma, i, mu, maxiter=50, soln_result=NULL) {
 
   if (is.null(soln_result)) {
      soln = rep(0, nrow(Sigma))
-     gradient = rep(0, nrow(Sigma)) 
      ever_active = rep(0, nrow(Sigma))
      ever_active[1] = i-1             # 0-based
      ever_active = as.integer(ever_active)
      nactive = as.integer(1)
+     linear_func = rep(0, p)
+     linear_func[i] = -1
+     linear_func = as.numeric(linear_func)
+     gradient = 1. * linear_func
   }
   else {
      soln = soln_result$soln
      gradient = soln_result$gradient  
      ever_active = as.integer(soln_result$ever_active)
      nactive = as.integer(soln_result$nactive)
+     linear_func = soln_result$linear_func
   }
-
-  linear_func = rep(0, p)
-  linear_func[i] = -1
-  linear_func = as.numeric(linear_func)
 
   #print(c(soln, "soln"))
   #print(c(gradient, "grad"))
   #print(c(ever_active, "ever_active"))
   #print(c(nactive, "nactive"))
   #print(c(linear_func, "linear_func"))
+
   result = find_one_row_debiasingM(Sigma, i-1, mu, maxiter, soln, linear_func, gradient, ever_active, nactive) # C function uses 0-based indexing
 
   # Check feasibility
