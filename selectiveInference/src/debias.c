@@ -95,7 +95,7 @@ int check_KKT(double *theta,       /* current theta */
 
   int irow;
   int fail = 0;
-  double tol = 1.e-4;
+  double tol = 1.e-6;
   double *theta_ptr, *gradient_ptr_tmp;
   double gradient;
 
@@ -111,10 +111,10 @@ int check_KKT(double *theta,       /* current theta */
     }
 
     if (*theta_ptr != 0) { // these coordinates of gradients should be equal to -bound
-      if ((*theta_ptr > 0) &&  (fabs(gradient + bound) > (1. + tol) * bound)) {
+      if ((*theta_ptr > 0) &&  (fabs(gradient + bound) > tol * bound)) {
 	fail += 1;
       }
-      else if ((*theta_ptr < 0) && (fabs(gradient - bound) > (1. + tol) * bound)) {
+      else if ((*theta_ptr < 0) && (fabs(gradient - bound) > tol * bound)) {
 	fail += 1;
       }
     }
