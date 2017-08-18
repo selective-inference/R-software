@@ -5,7 +5,8 @@
 
 // Solves a dual version of problem (4) of https://arxiv.org/pdf/1306.3171.pdf
 
-// Dual problem: \text{min}_{\theta} 1/2 \theta^T \Sigma \theta - e_i^T\theta + \mu \|\theta\|_1
+// Dual problem: \text{min}_{\theta} 1/2 \theta^T \Sigma \theta - l^T\theta + \mu \|\theta\|_1
+// where l is `linear_func` below
 
 // This is the "negative" of the problem as in https://gist.github.com/jonathan-taylor/07774d209173f8bc4e42aa37712339bf
 // Therefore we don't have to negate the answer to get theta.
@@ -16,7 +17,6 @@ double objective(double *Sigma_ptr,       /* A covariance matrix: X^TX/n */
 		 int *ever_active_ptr,    /* Ever active set: 0-based */ 
 		 int *nactive_ptr,        /* Size of ever active set */
 		 int nrow,                /* how many rows in Sigma */
-		 int row,                 /* which row: 0-based */
 		 double bound,            /* Lagrange multipler for \ell_1 */
 		 double *theta)           /* current value */
 {
@@ -52,8 +52,8 @@ double objective(double *Sigma_ptr,       /* A covariance matrix: X^TX/n */
 
     // The linear term in the objective
 
+    linear_func_ptr_tmp = ((double *) linear_func_ptr + active_row);
     value += (*linear_func_ptr_tmp) * (*theta_row_ptr); 
-    linear_func_ptr_tmp++;
 
   }
   
@@ -74,7 +74,6 @@ int update_ever_active(int coord,
     ever_active_ptr_tmp = ((int *) ever_active_ptr + iactive);
     active_var = *ever_active_ptr_tmp;
     if (active_var == coord) {
-      // fprintf(stderr, "blah %d %d %d\n", coord, active_var, *nactive_ptr);
       return(1);
     }
   }
@@ -92,11 +91,10 @@ int update_ever_active(int coord,
   return(0);
 }
 
-int check_KKT(double *theta,       /* current theta */
+int check_KKT(double *theta,        /* current theta */
 	      double *gradient_ptr, /* Sigma times theta */
-	      int nrow,            /* how many rows in Sigma */
-	      int row,             /* which row: 0-based */
-	      double bound)        /* Lagrange multipler for \ell_1 */
+	      int nrow,             /* how many rows in Sigma */
+	      double bound)         /* Lagrange multipler for \ell_1 */
 {
   // First check inactive
 
@@ -113,9 +111,6 @@ int check_KKT(double *theta,       /* current theta */
     // Compute this coordinate of the gradient
 
     gradient = *gradient_ptr_tmp;
-    if (row == irow) {
-      gradient -= 1;
-    }
 
     if (*theta_ptr != 0) { // these coordinates of gradients should be equal to -bound
       if ((*theta_ptr > 0) &&  (fabs(gradient + bound) > (1. + tol) * bound)) {
@@ -144,7 +139,6 @@ double update_one_coord(double *Sigma_ptr,           /* A covariance matrix: X^T
 			int nrow,                    /* How many rows in Sigma */
 			double bound,                /* feasibility parameter */
 			double *theta,               /* current value */
-			int row,                     /* which row: 0-based */
 			int coord,                   /* which coordinate to update: 0-based */
 			int is_active)               /* Is this part of ever_active */     
 {
@@ -161,8 +155,6 @@ double update_one_coord(double *Sigma_ptr,           /* A covariance matrix: X^T
   double *quadratic_ptr = ((double *) Sigma_diag_ptr + coord);
   double quadratic_term = *quadratic_ptr;
 
-  // int *ever_active_ptr_tmp;
-
   gradient_ptr_tmp = ((double *) gradient_ptr + coord);
   linear_term = *gradient_ptr_tmp;
 
@@ -172,9 +164,8 @@ double update_one_coord(double *Sigma_ptr,           /* A covariance matrix: X^T
   // The coord entry of gradient_ptr term has a diagonal term in it:
   // Sigma[coord, coord] * theta[coord]
   // This removes it. 
-  linear_term -= quadratic_term * old_value;
 
-  linear_term += *((double *) linear_func_ptr + coord);
+  linear_term -= quadratic_term * old_value;
 
   // Now soft-threshold the coord entry of theta 
 
@@ -229,8 +220,7 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 		  int nrow,                   /* How many rows in Sigma */
 		  double bound,               /* feasibility parameter */
 		  double *theta,              /* current value */
-		  int maxiter,                /* how many iterations */
-		  int row)                    /* which coordinate to update: 0-based */
+		  int maxiter)
 {
 
   int iter = 0;
@@ -243,7 +233,6 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 			       ever_active_ptr,
 			       nactive_ptr,
 			       nrow,
-			       row,
 			       bound,
 			       theta);
   double new_value; 
@@ -265,7 +254,6 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 		       nrow,
 		       bound,
 		       theta,
-		       row,
 		       *active_ptr,
 		       1);
       active_ptr++;
@@ -276,7 +264,6 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
     if (check_KKT(theta,
 		  gradient_ptr,
 		  nrow,
-		  row,
 		  bound) == 1) {
       break;
     }
@@ -294,7 +281,6 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 		       nrow,
 		       bound,
 		       theta,
-		       row,
 		       icoord,
 		       0);
     }
@@ -304,7 +290,6 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
     if (check_KKT(theta,
 		  gradient_ptr,
 		  nrow,
-		  row,
 		  bound) == 1) {
       break;
     }
@@ -314,7 +299,6 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 			  ever_active_ptr,
 			  nactive_ptr,
 			  nrow,
-			  row,
 			  bound,
 			  theta);
 
