@@ -38,15 +38,13 @@ Rcpp::List find_one_row_debiasingM(Rcpp::NumericMatrix Sigma,
 			   nrow,
 			   bound,
 			   (double *) theta.begin(),
-			   maxiter,
-			   row);
+			   maxiter);
   
   // Check whether feasible
 
   int kkt_check = check_KKT(theta.begin(),
 			    gradient.begin(),
 			    nrow,
-			    row,
 			    bound);
 
   return(Rcpp::List::create(Rcpp::Named("soln") = theta,
