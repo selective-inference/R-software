@@ -65,6 +65,7 @@ int update_ever_active(int coord,
   int *ever_active_ptr = ever_active;
 
   for (iactive=0; iactive<nactive; iactive++) {
+    ever_active_ptr = ((int *) ever_active + iactive);
     active_var = (*ever_active_ptr);
     if (active_var == coord) {
 
@@ -83,7 +84,7 @@ int update_ever_active(int coord,
 }
 
 int check_KKT(double *theta,       /* current theta */
-	      double *Sigma_theta, /* Sigma times theta */
+	      double *gradient_ptr, /* Sigma times theta */
 	      int nrow,            /* how many rows in Sigma */
 	      int row,             /* which row: 0-based */
 	      double bound)        /* Lagrange multipler for \ell_1 */
@@ -93,16 +94,16 @@ int check_KKT(double *theta,       /* current theta */
   int irow;
   int fail = 0;
   double tol = 1.e-4;
-  double *theta_ptr, *Sigma_theta_ptr;
+  double *theta_ptr, *gradient_ptr_tmp;
   double gradient;
 
   for (irow=0; irow<nrow; irow++) {
     theta_ptr = ((double *) theta + irow);
-    Sigma_theta_ptr = ((double *) Sigma_theta + irow);
+    gradient_ptr_tmp = ((double *) gradient_ptr + irow);
 
     // Compute this coordinate of the gradient
 
-    gradient = *Sigma_theta_ptr;
+    gradient = *gradient_ptr_tmp;
     if (row == irow) {
       gradient -= 1;
     }
@@ -127,7 +128,7 @@ int check_KKT(double *theta,       /* current theta */
 
 double update_one_coord(double *Sigma,           /* A covariance matrix: X^TX/n */
                         double *Sigma_diag,      /* Diagonal entries of Sigma */
-                        double *Sigma_theta,     /* Sigma times theta */
+                        double *gradient_ptr,     /* Sigma times theta */
 			int *ever_active,        /* Ever active set: 0-based */ 
 			int *nactive_ptr,        /* Size of ever active set */
 			int nrow,                /* How many rows in Sigma */
@@ -143,7 +144,7 @@ double update_one_coord(double *Sigma,           /* A covariance matrix: X^TX/n 
   double value = 0;
   double old_value;
   double *Sigma_ptr;
-  double *Sigma_theta_ptr;
+  double *gradient_ptr_tmp;
   double *theta_ptr;
   int icol = 0;
 
@@ -152,13 +153,13 @@ double update_one_coord(double *Sigma,           /* A covariance matrix: X^TX/n 
 
   int *ever_active_ptr;
 
-  Sigma_theta_ptr = ((double *) Sigma_theta + coord);
-  linear_term = *Sigma_theta_ptr;
+  gradient_ptr_tmp = ((double *) gradient_ptr + coord);
+  linear_term = *gradient_ptr_tmp;
 
   theta_ptr = ((double *) theta + coord);
   old_value = *theta_ptr;
 
-  // The coord entry of Sigma_theta term has a diagonal term in it:
+  // The coord entry of gradient_ptr term has a diagonal term in it:
   // Sigma[coord, coord] * theta[coord]
   // This removes it. 
   linear_term -= quadratic_term * old_value;
@@ -194,11 +195,11 @@ double update_one_coord(double *Sigma,           /* A covariance matrix: X^TX/n 
 
     delta = value - old_value;
     Sigma_ptr = ((double *) Sigma + coord * nrow);
-    Sigma_theta_ptr = ((double *) Sigma_theta);
+    gradient_ptr_tmp = ((double *) gradient_ptr);
 
     for (icol=0; icol<nrow; icol++) {
-      *Sigma_theta_ptr = *Sigma_theta_ptr + delta * (*Sigma_ptr);
-      Sigma_theta_ptr += 1;
+      *gradient_ptr_tmp = *gradient_ptr_tmp + delta * (*Sigma_ptr);
+      gradient_ptr_tmp += 1;
       Sigma_ptr += 1;
     }
 
@@ -213,7 +214,7 @@ double update_one_coord(double *Sigma,           /* A covariance matrix: X^TX/n 
 
 int find_one_row_(double *Sigma,          /* A covariance matrix: X^TX/n */
 		  double *Sigma_diag,     /* Diagonal entry of covariance matrix */
-		  double *Sigma_theta,    /* Sigma times theta */
+		  double *gradient_ptr,    /* Sigma times theta */
 		  int *ever_active,       /* Ever active set: 0-based */ 
 		  int *nactive_ptr,       /* Size of ever active set */
 		  int nrow,               /* How many rows in Sigma */
@@ -247,7 +248,7 @@ int find_one_row_(double *Sigma,          /* A covariance matrix: X^TX/n */
     for (iactive=0; iactive < *nactive_ptr; iactive++) {
       update_one_coord(Sigma,
 		       Sigma_diag,
-		       Sigma_theta,
+		       gradient_ptr,
 		       ever_active,
 		       nactive_ptr,
 		       nrow,
@@ -260,7 +261,7 @@ int find_one_row_(double *Sigma,          /* A covariance matrix: X^TX/n */
     }
 
     if (check_KKT(theta,
-		  Sigma_theta,
+		  gradient_ptr,
 		  nrow,
 		  row,
 		  bound) == 1) {
@@ -271,7 +272,7 @@ int find_one_row_(double *Sigma,          /* A covariance matrix: X^TX/n */
 
       update_one_coord(Sigma,
 		       Sigma_diag,
-		       Sigma_theta,
+		       gradient_ptr,
 		       ever_active,
 		       nactive_ptr,
 		       nrow,
@@ -283,7 +284,7 @@ int find_one_row_(double *Sigma,          /* A covariance matrix: X^TX/n */
     }
 
     if (check_KKT(theta,
-		  Sigma_theta,
+		  gradient_ptr,
 		  nrow,
 		  row,
 		  bound) == 1) {
