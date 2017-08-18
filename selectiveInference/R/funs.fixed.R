@@ -295,6 +295,7 @@ InverseLinfty <- function(sigma, n, e, resol=1.5, mu=NULL, maxiter=50, threshold
     incr <- 0;
     while ((mu.stop != 1)&&(try.no<10)){
       last.beta <- beta
+      useC = FALSE
       if (useC == FALSE) {
             output <- InverseLinftyOneRow(sigma, i, mu, maxiter=maxiter, threshold=threshold)
       } else {
