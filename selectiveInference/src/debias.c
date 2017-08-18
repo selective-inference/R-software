@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <math.h> // for fabs
 
 // Find an approximate row of \hat{Sigma}^{-1}
@@ -41,6 +42,7 @@ double objective(double *Sigma,       /* A covariance matrix: X^TX/n */
       active_col = *active_col_ptr;
       theta_col_ptr = ((double *) theta + active_col);
 
+      fprintf(stderr, "%d %d %d\n", active_row, active_col, nactive);
       Sigma_ptr = ((double *) Sigma + nrow * active_col + active_row); // Matrices are column-major order
 
       value += 0.5 * (*Sigma_ptr) * (*theta_row_ptr) * (*theta_col_ptr);
@@ -54,9 +56,11 @@ double objective(double *Sigma,       /* A covariance matrix: X^TX/n */
   return(value);
 }
 
-int is_active(int coord,
-	      int *nactive_ptr,
-	      int *ever_active) {
+// Check if active and add it to active list if necessary
+
+int update_ever_active(int coord,
+		       int *ever_active,
+		       int *nactive_ptr) {
   int iactive;
   int active_var;
   int nactive = *nactive_ptr;
@@ -65,9 +69,17 @@ int is_active(int coord,
   for (iactive=0; iactive<nactive; iactive++) {
     active_var = (*ever_active_ptr);
     if (active_var == coord) {
+
+      fprintf(stderr, "%d %d before\n", *nactive_ptr);
+      ever_active_ptr = ((int *) ever_active + *nactive_ptr);
+      *ever_active_ptr = coord;
+      *nactive_ptr += 1;
+      fprintf(stderr, "%d %d after\n", *nactive_ptr, coord);
+
       return(1);
     }
   }
+
   return(0);
 }
 
@@ -173,11 +185,7 @@ double update_one_coord(double *Sigma,           /* A covariance matrix: X^TX/n 
 
   // Add to active set if necessary
 
-  if ((value != 0) && (is_active(coord, ever_active, nactive_ptr) == 0)) {
-    ever_active_ptr = ((int *) ever_active + *nactive_ptr);
-    *ever_active_ptr = coord;
-    *nactive_ptr += 1;
-  }
+  update_ever_active(coord, ever_active, nactive_ptr);
 
   // Update the linear term
 
@@ -231,6 +239,7 @@ int find_one_row_(double *Sigma,          /* A covariance matrix: X^TX/n */
 
     // Update the diagonal first
 
+    fprintf(stderr, "wtf %d %d %d\n", row, icoord, *nactive_ptr);
     update_one_coord(Sigma,
 		     Sigma_diag,
 		     Sigma_theta,
@@ -252,6 +261,7 @@ int find_one_row_(double *Sigma,          /* A covariance matrix: X^TX/n */
 					  
     for (icoord=0; icoord<nrow; icoord++) {
 
+      fprintf(stderr, "here %d %d %d\n", row, icoord, *nactive_ptr);
       update_one_coord(Sigma,
 		       Sigma_diag,
 		       Sigma_theta,
