@@ -1,5 +1,4 @@
 #include <math.h> // for fabs
-#include <stdio.h>
 
 // Find an approximate row of \hat{Sigma}^{-1}
 
@@ -82,8 +81,6 @@ int update_ever_active_qp(int coord,
   // Add it to the active set and increment the 
   // number of active variables
 
-  fprintf(stderr, "adding %d\n", coord);
-
   ever_active_ptr_tmp = ((int *) ever_active_ptr + *nactive_ptr);
   *ever_active_ptr_tmp = coord;
   *nactive_ptr += 1;
@@ -99,7 +96,6 @@ int check_KKT_qp(double *theta,       /* current theta */
   // First check inactive
 
   int irow;
-  int fail = 0;
   double tol = 1.e-6;
   double *theta_ptr, *gradient_ptr_tmp;
   double gradient;
@@ -228,12 +224,10 @@ int solve_qp(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
   int iactive = 0;
   int *active_ptr;
 
-  int check_objective = 0;
+  int check_objective = 1;
 
   double old_value, new_value; 
   double tol=1.e-8;
-
-  fprintf(stderr, "%d nactive start\n", *nactive_ptr);
 
   if (check_objective) {
 
@@ -250,7 +244,6 @@ int solve_qp(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 
   for (iter=0; iter<maxiter; iter++) {
 
-    fprintf(stderr, "%d nactive loop \n", *nactive_ptr);
     // Update the active variables first
 
     active_ptr = (int *) ever_active_ptr;
