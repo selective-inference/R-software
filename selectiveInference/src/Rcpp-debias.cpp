@@ -28,16 +28,16 @@ Rcpp::List find_one_row_debiasingM(Rcpp::NumericMatrix Sigma,
   
   // Now call our C function
 
-  int iter = find_one_row_((double *) Sigma.begin(),
-			   (double *) linear_func.begin(),
-			   (double *) Sigma_diag.begin(),
-			   (double *) gradient.begin(),
-			   (int *) ever_active.begin(),
-			   (int *) nactive.begin(),
-			   nrow,
-			   bound,
-			   (double *) theta.begin(),
-			   maxiter);
+  int iter = solve_qp((double *) Sigma.begin(),
+		      (double *) linear_func.begin(),
+		      (double *) Sigma_diag.begin(),
+		      (double *) gradient.begin(),
+		      (int *) ever_active.begin(),
+		      (int *) nactive.begin(),
+		      nrow,
+		      bound,
+		      (double *) theta.begin(),
+		      maxiter);
   
   // Check whether feasible
 
