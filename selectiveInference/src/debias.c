@@ -94,7 +94,6 @@ int check_KKT(double *theta,       /* current theta */
   // First check inactive
 
   int irow;
-  int fail = 0;
   double tol = 1.e-6;
   double *theta_ptr, *gradient_ptr_tmp;
   double gradient;
@@ -106,26 +105,26 @@ int check_KKT(double *theta,       /* current theta */
     // Compute this coordinate of the gradient
 
     gradient = *gradient_ptr_tmp;
-    if (row == irow) {
-      gradient -= 1;
-    }
+    // if (row == irow) {
+    //   gradient -= 1;
+    // }
 
     if (*theta_ptr != 0) { // these coordinates of gradients should be equal to -bound
       if ((*theta_ptr > 0) &&  (fabs(gradient + bound) > tol * bound)) {
-	fail += 1;
+	return(0);
       }
       else if ((*theta_ptr < 0) && (fabs(gradient - bound) > tol * bound)) {
-	fail += 1;
+	return(0);
       }
     }
     else {
       if (fabs(gradient) > (1. + tol) * bound) {
-	fail += 1;
+	return(0);
       }
     }
   }
 
-  return(fail == 0);
+  return(1);
 }
 
 double update_one_coord(double *Sigma_ptr,           /* A covariance matrix: X^TX/n */
@@ -230,16 +229,21 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
   int icoord = 0;
   int iactive = 0;
   int *active_ptr;
+  double old_value, new_value, tol=1.e-5;
 
-  double old_value = objective(Sigma_ptr,
-			       ever_active_ptr,
-			       nactive_ptr,
-			       nrow,
-			       row,
-			       bound,
-			       theta);
-  double new_value; 
-  double tol=1.e-5;
+  int check_objective = 1;
+
+  if (check_objective) {
+
+    old_value = objective(Sigma_ptr,
+			  ever_active_ptr,
+			  nactive_ptr,
+			  nrow,
+			  row,
+			  bound,
+			  theta);
+  }
+
 
   for (iter=0; iter<maxiter; iter++) {
 
@@ -299,19 +303,21 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
       break;
     }
 					  
-    new_value = objective(Sigma_ptr,
-			  ever_active_ptr,
-			  nactive_ptr,
-			  nrow,
-			  row,
-			  bound,
-			  theta);
+    if (check_objective) {
+      new_value = objective(Sigma_ptr,
+			    ever_active_ptr,
+			    nactive_ptr,
+			    nrow,
+			    row,
+			    bound,
+			    theta);
 
-    if (((old_value - new_value) < tol * fabs(new_value)) && (iter > 0)) {
-      break;
+      if (((old_value - new_value) < tol * fabs(new_value)) && (iter > 0)) {
+	break;
+      }
+
+      old_value = new_value;
     }
-
-    old_value = new_value;
   }
   return(iter);
 }

@@ -297,7 +297,7 @@ InverseLinfty <- function(sigma, n, e, resol=1.2, mu=NULL, maxiter=50, threshold
 
     while ((mu.stop != 1)&&(try.no<10)){
       last.beta <- beta
-      print(c("#######################trying ", try.no))
+      #print(c("#######################trying ", try.no))
       output <- InverseLinftyOneRow(sigma, i, mu, maxiter=maxiter, soln_result=output) # uses a warm start
       beta <- output$soln
       iter <- output$iter
@@ -365,11 +365,10 @@ InverseLinftyOneRow <- function (Sigma, i, mu, maxiter=50, soln_result=NULL) {
      linear_func = soln_result$linear_func
   }
 
-  result = solve_QP(Sigma, mu, maxiter, soln, linear_func, gradient, ever_active, nactive) # C function uses 0-based indexing
-  result2 = find_one_row_debiasingM(Sigma, i, mu, maxiter, soln, gradient, ever_active, nactive) # C function uses 0-based indexing
-
-  print('close?')
-  print(c(sqrt(sum((result$soln-result2$soln)^2)/sum(result$soln^2)), sqrt(sum(result$soln^2)), result2$nactive))
+  result = find_one_row_debiasingM(Sigma, i, mu, maxiter, 0 * soln, gradient, ever_active, nactive) # C function uses 0-based indexing
+  #result1 = solve_QP(Sigma, mu, maxiter, soln, linear_func, gradient, ever_active, nactive) 
+  #print("close?")
+  #print(c(sqrt(sum((result1$soln-result$soln)^2)/sum(result$soln^2)), sum(result$soln^2)))
 
   # Check feasibility
 
