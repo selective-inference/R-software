@@ -1,4 +1,5 @@
 #include <math.h> // for fabs
+#include <stdio.h>
 
 // Find an approximate row of \hat{Sigma}^{-1}
 
@@ -80,6 +81,8 @@ int update_ever_active_qp(int coord,
 
   // Add it to the active set and increment the 
   // number of active variables
+
+  fprintf(stderr, "adding %d\n", coord);
 
   ever_active_ptr_tmp = ((int *) ever_active_ptr + *nactive_ptr);
   *ever_active_ptr_tmp = coord;
@@ -181,7 +184,7 @@ double update_one_coord_qp(double *Sigma_ptr,           /* A covariance matrix: 
 
   // Add to active set if necessary
 
-  if (is_active == 0) {
+  if ((is_active == 0) && (value != 0)) {
     update_ever_active_qp(coord, ever_active_ptr, nactive_ptr);
   }
 
@@ -230,6 +233,8 @@ int solve_qp(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
   double old_value, new_value; 
   double tol=1.e-8;
 
+  fprintf(stderr, "%d nactive start\n", *nactive_ptr);
+
   if (check_objective) {
 
     old_value = objective_qp(Sigma_ptr,
@@ -245,6 +250,7 @@ int solve_qp(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 
   for (iter=0; iter<maxiter; iter++) {
 
+    fprintf(stderr, "%d nactive loop \n", *nactive_ptr);
     // Update the active variables first
 
     active_ptr = (int *) ever_active_ptr;
