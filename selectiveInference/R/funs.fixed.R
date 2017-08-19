@@ -297,7 +297,7 @@ InverseLinfty <- function(sigma, n, e, resol=1.2, mu=NULL, maxiter=50, threshold
 
     while ((mu.stop != 1)&&(try.no<10)){
       last.beta <- beta
-      #print(c("trying ", try.no))
+      print(c("#######################trying ", try.no))
       output <- InverseLinftyOneRow(sigma, i, mu, maxiter=maxiter, soln_result=output) # uses a warm start
       beta <- output$soln
       iter <- output$iter
@@ -344,9 +344,11 @@ InverseLinftyOneRow <- function (Sigma, i, mu, maxiter=50, soln_result=NULL) {
   # It should be a list
   # with entries "soln", "gradient", "ever_active", "nactive"
 
+  p = nrow(Sigma)
+
   if (is.null(soln_result)) {
-     soln = rep(0, nrow(Sigma))
-     ever_active = rep(0, nrow(Sigma))
+     soln = rep(0, p)
+     ever_active = rep(0, p)
      ever_active[1] = i-1             # 0-based
      ever_active = as.integer(ever_active)
      nactive = as.integer(1)
@@ -363,7 +365,11 @@ InverseLinftyOneRow <- function (Sigma, i, mu, maxiter=50, soln_result=NULL) {
      linear_func = soln_result$linear_func
   }
 
-  result = find_one_row_debiasingM(Sigma, mu, maxiter, soln, linear_func, gradient, ever_active, nactive) # C function uses 0-based indexing
+  result = solve_QP(Sigma, mu, maxiter, soln, linear_func, gradient, ever_active, nactive) # C function uses 0-based indexing
+  result2 = find_one_row_debiasingM(Sigma, i, mu, maxiter, soln, gradient, ever_active, nactive) # C function uses 0-based indexing
+
+  print('close?')
+  print(c(sqrt(sum((result$soln-result2$soln)^2)/sum(result$soln^2)), sqrt(sum(result$soln^2)), result2$nactive))
 
   # Check feasibility
 
