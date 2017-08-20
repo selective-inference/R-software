@@ -88,15 +88,15 @@ int update_ever_active_qp(int coord,
   return(0);
 }
 
-int check_KKT_qp(double *theta,       /* current theta */
+int check_KKT_qp(double *theta,        /* current theta */
 		 double *gradient_ptr, /* Sigma times theta */
-		 int nrow,            /* how many rows in Sigma */
-		 double bound)        /* Lagrange multipler for \ell_1 */
+		 int nrow,             /* how many rows in Sigma */
+		 double bound,         /* Lagrange multipler for \ell_1 */
+		 double tol)           /* precision for checking KKT conditions */        
 {
   // First check inactive
 
   int irow;
-  double tol = 1.e-6;
   double *theta_ptr, *gradient_ptr_tmp;
   double gradient;
 
@@ -216,7 +216,9 @@ int solve_qp(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 	     int nrow,                   /* How many rows in Sigma */
 	     double bound,               /* feasibility parameter */
 	     double *theta,              /* current value */
-	     int maxiter)
+	     int maxiter,                /* max number of iterations */
+	     double kkt_tol,             /* precision for checking KKT conditions */
+	     double objective_tol)       /* precision for checking relative decrease in objective value */
 {
 
   int iter = 0;
@@ -227,7 +229,6 @@ int solve_qp(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
   int check_objective = 1;
 
   double old_value, new_value; 
-  double tol=1.e-8;
 
   if (check_objective) {
 
@@ -268,7 +269,8 @@ int solve_qp(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
     if (check_KKT_qp(theta,
 		     gradient_ptr,
 		     nrow,
-		     bound) == 1) {
+		     bound,
+		     kkt_tol) == 1) {
       break;
     }
 					  
@@ -294,7 +296,8 @@ int solve_qp(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
     if (check_KKT_qp(theta,
 		     gradient_ptr,
 		     nrow,
-		     bound) == 1) {
+		     bound,
+		     kkt_tol) == 1) {
       break;
     }
 					  
@@ -307,7 +310,7 @@ int solve_qp(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 			       bound,
 			       theta);
 
-      if (((old_value - new_value) < tol * fabs(new_value)) && (iter > 0)) {
+      if ((fabs(old_value - new_value) < objective_tol * fabs(new_value)) && (iter > 0)) {
 	break;
       }
       old_value = new_value;

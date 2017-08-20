@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <math.h> // for fabs
 
 // Find an approximate row of \hat{Sigma}^{-1}
@@ -67,6 +68,7 @@ int update_ever_active(int coord,
   for (iactive=0; iactive<nactive; iactive++) {
     ever_active_ptr_tmp = ((int *) ever_active_ptr + iactive);
     active_var = (*ever_active_ptr_tmp);
+    // fprintf(stderr, "%d %d\n", iactive, active_var);
     if (active_var == coord) {
       return(1);
     }
@@ -85,16 +87,16 @@ int update_ever_active(int coord,
   return(0);
 }
 
-int check_KKT(double *theta,       /* current theta */
+int check_KKT(double *theta,        /* current theta */
 	      double *gradient_ptr, /* Sigma times theta */
-	      int nrow,            /* how many rows in Sigma */
-	      int row,             /* which row: 0-based */
-	      double bound)        /* Lagrange multipler for \ell_1 */
+	      int nrow,             /* how many rows in Sigma */
+	      int row,              /* which row: 0-based */
+	      double bound,         /* Lagrange multipler for \ell_1 */
+	      double tol)           /* precision for checking KKT conditions */
 {
   // First check inactive
 
   int irow;
-  double tol = 1.e-6;
   double *theta_ptr, *gradient_ptr_tmp;
   double gradient;
 
@@ -105,9 +107,12 @@ int check_KKT(double *theta,       /* current theta */
     // Compute this coordinate of the gradient
 
     gradient = *gradient_ptr_tmp;
-    // if (row == irow) {
-    //   gradient -= 1;
-    // }
+
+    // For the basis vector
+
+    if (row == irow) {
+       gradient -= 1;
+    }
 
     if (*theta_ptr != 0) { // these coordinates of gradients should be equal to -bound
       if ((*theta_ptr > 0) &&  (fabs(gradient + bound) > tol * bound)) {
@@ -122,6 +127,7 @@ int check_KKT(double *theta,       /* current theta */
 	return(0);
       }
     }
+
   }
 
   return(1);
@@ -129,15 +135,15 @@ int check_KKT(double *theta,       /* current theta */
 
 double update_one_coord(double *Sigma_ptr,           /* A covariance matrix: X^TX/n */
                         double *Sigma_diag_ptr,      /* Diagonal entries of Sigma */
-                        double *gradient_ptr,     /* Sigma times theta */
+                        double *gradient_ptr,        /* Sigma times theta */
 			int *ever_active_ptr,        /* Ever active set: 0-based */ 
-			int *nactive_ptr,        /* Size of ever active set */
-			int nrow,                /* How many rows in Sigma */
-			double bound,            /* feasibility parameter */
-			double *theta,           /* current value */
-			int row,                 /* which row: 0-based */
-			int coord,               /* which coordinate to update: 0-based */
-			int is_active)           /* Is this part of ever_active */     
+			int *nactive_ptr,            /* Size of ever active set */
+			int nrow,                    /* How many rows in Sigma */
+			double bound,                /* feasibility parameter */
+			double *theta,               /* current value */
+			int row,                     /* which row: 0-based */
+			int coord,                   /* which coordinate to update: 0-based */
+			int is_active)               /* Is this part of ever_active */     
 {
 
   double delta;
@@ -215,21 +221,23 @@ double update_one_coord(double *Sigma_ptr,           /* A covariance matrix: X^T
 
 int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 		  double *Sigma_diag_ptr,     /* Diagonal entry of covariance matrix */
-		  double *gradient_ptr,    /* Sigma times theta */
+		  double *gradient_ptr,       /* Sigma times theta */
 		  int *ever_active_ptr,       /* Ever active set: 0-based */ 
-		  int *nactive_ptr,       /* Size of ever active set */
-		  int nrow,               /* How many rows in Sigma */
-		  double bound,           /* feasibility parameter */
-		  double *theta,          /* current value */
-		  int maxiter,            /* how many iterations */
-		  int row)                /* which coordinate to update: 0-based */
+		  int *nactive_ptr,           /* Size of ever active set */
+		  int nrow,                   /* How many rows in Sigma */
+		  double bound,               /* feasibility parameter */
+		  double *theta,              /* current value */
+		  int maxiter,                /* how many iterations */
+		  int row,                    /* which coordinate to update: 0-based */
+		  double kkt_tol,             /* precision for checking KKT conditions */
+		  double objective_tol)       /* precision for checking relative decrease in objective value */
 {
 
   int iter = 0;
   int icoord = 0;
   int iactive = 0;
   int *active_ptr;
-  double old_value, new_value, tol=1.e-5;
+  double old_value, new_value;
 
   int check_objective = 1;
 
@@ -272,7 +280,8 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 		  gradient_ptr,
 		  nrow,
 		  row,
-		  bound) == 1) {
+		  bound,
+		  kkt_tol) == 1) {
       break;
     }
 					  
@@ -299,7 +308,8 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 		  gradient_ptr,
 		  nrow,
 		  row,
-		  bound) == 1) {
+		  bound,
+		  kkt_tol) == 1) {
       break;
     }
 					  
@@ -312,7 +322,7 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 			    bound,
 			    theta);
 
-      if (((old_value - new_value) < tol * fabs(new_value)) && (iter > 0)) {
+      if (((old_value - new_value) < objective_tol * fabs(new_value)) && (iter > 0)) {
 	break;
       }
 

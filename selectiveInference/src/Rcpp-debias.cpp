@@ -9,7 +9,9 @@ Rcpp::List solve_QP(Rcpp::NumericMatrix Sigma,
 		    Rcpp::NumericVector linear_func,
 		    Rcpp::NumericVector gradient,
 		    Rcpp::IntegerVector ever_active,
-		    Rcpp::IntegerVector nactive
+		    Rcpp::IntegerVector nactive,
+		    double kkt_tol,
+		    double objective_tol
 		    ) {
 
   int nrow = Sigma.nrow(); // number of features
@@ -37,14 +39,17 @@ Rcpp::List solve_QP(Rcpp::NumericMatrix Sigma,
 		      nrow,
 		      bound,
 		      (double *) theta.begin(),
-		      maxiter);
+		      maxiter,
+		      kkt_tol,
+		      objective_tol);
   
   // Check whether feasible
 
   int kkt_check = check_KKT_qp(theta.begin(),
 			       gradient.begin(),
 			       nrow,
-			       bound);
+			       bound,
+			       kkt_tol);
 
   return(Rcpp::List::create(Rcpp::Named("soln") = theta,
 			    Rcpp::Named("gradient") = gradient,
@@ -64,7 +69,9 @@ Rcpp::List find_one_row_debiasingM(Rcpp::NumericMatrix Sigma,
 				   Rcpp::NumericVector theta,
 				   Rcpp::NumericVector gradient,
 				   Rcpp::IntegerVector ever_active,
-				   Rcpp::IntegerVector nactive
+				   Rcpp::IntegerVector nactive,
+				   double kkt_tol,
+				   double objective_tol
 				   ) {
 
   int nrow = Sigma.nrow(); // number of features
@@ -92,7 +99,9 @@ Rcpp::List find_one_row_debiasingM(Rcpp::NumericMatrix Sigma,
 			   bound,
 			   (double *) theta.begin(),
 			   maxiter,
-			   row);
+			   row,
+			   kkt_tol,
+			   objective_tol);
   
   // Check whether feasible
 
@@ -100,7 +109,8 @@ Rcpp::List find_one_row_debiasingM(Rcpp::NumericMatrix Sigma,
 			    gradient.begin(),
 			    nrow,
 			    row,
-			    bound);
+			    bound,
+			    kkt_tol);
 
   return(Rcpp::List::create(Rcpp::Named("soln") = theta,
 			    Rcpp::Named("gradient") = gradient,
