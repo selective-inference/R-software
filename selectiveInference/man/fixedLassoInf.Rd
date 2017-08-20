@@ -10,9 +10,9 @@ fixed value of the tuning parameter lambda
 }
 \usage{
 fixedLassoInf(x, y, beta, lambda, family = c("gaussian", "binomial", 
-    "cox"),intercept=TRUE, add.targets=NULL, status=NULL, sigma=NULL, alpha=0.1,
+         "cox"),intercept=TRUE, add.targets=NULL, status=NULL, sigma=NULL, alpha=0.1,
          type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
-         gridrange=c(-100,100), bits=NULL, verbose=FALSE) 
+         gridrange=c(-100,100), bits=NULL, verbose=FALSE, linesearch.try=5) 
 }
 \arguments{
   \item{x}{
@@ -85,7 +85,11 @@ helpful (though computationally more costly). In particular, extra precision mig
 if the values in the output columns of \code{tailarea} differ noticeably from alpha/2.
 }
 \item{verbose}{
-Print out progress along the way? Default is FALSE}
+Print out progress along the way? Default is FALSE
+}
+\item{linesearch.try}{
+When running type="full" (i.e. debiased LASSO) how many attempts in the line search?
+}
 }
 
 \details{

@@ -1,6 +1,9 @@
 #include <Rcpp.h>      // need to include the main Rcpp header file 
 #include <debias.h>    // where find_one_row_void is defined
 
+// Below, the gradient should be equal to Sigma * theta + linear_func!!
+// No check is done on this.
+
 // [[Rcpp::export]]
 Rcpp::List solve_QP(Rcpp::NumericMatrix Sigma,
 		    double bound,
