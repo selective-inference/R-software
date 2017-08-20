@@ -34,13 +34,13 @@ double objective_qp(double *Sigma_ptr,       /* A covariance matrix: X^TX/n */
   for (irow=0; irow<nactive; irow++) {
 
     active_row_ptr = ((int *) ever_active_ptr + irow);
-    active_row = *active_row_ptr;
+    active_row = *active_row_ptr - 1;          // Ever-active is 1-based
     theta_row_ptr = ((double *) theta + active_row);
 
     for (icol=0; icol<nactive; icol++) {
       
       active_col_ptr = ((int *) ever_active_ptr + icol);
-      active_col = *active_col_ptr;
+      active_col = *active_col_ptr - 1;          // Ever-active is 1-based
       theta_col_ptr = ((double *) theta + active_col);
 
       Sigma_ptr_tmp = ((double *) Sigma_ptr + nrow * active_col + active_row); // Matrices are column-major order
@@ -59,6 +59,8 @@ double objective_qp(double *Sigma_ptr,       /* A covariance matrix: X^TX/n */
   return(value);
 }
 
+// Ever-active is 1-based
+// coord is 0-based
 int update_ever_active_qp(int coord,
 			  int *ever_active_ptr,
 			  int *nactive_ptr) {
@@ -70,7 +72,7 @@ int update_ever_active_qp(int coord,
   for (iactive=0; iactive<nactive; iactive++) {
     ever_active_ptr_tmp = ((int *) ever_active_ptr + iactive);
     active_var = *ever_active_ptr_tmp;
-    if (active_var == coord) {
+    if (active_var - 1 == coord) {          // Ever-active is 1-based
       return(1);
     }
   }
@@ -82,7 +84,7 @@ int update_ever_active_qp(int coord,
   // number of active variables
 
   ever_active_ptr_tmp = ((int *) ever_active_ptr + *nactive_ptr);
-  *ever_active_ptr_tmp = coord;
+  *ever_active_ptr_tmp = coord + 1;         // Ever-active is 1-based
   *nactive_ptr += 1;
 
   return(0);
@@ -130,13 +132,13 @@ double update_one_coord_qp(double *Sigma_ptr,           /* A covariance matrix: 
 			   double *linear_func_ptr,     /* Linear term in objective */
 			   double *Sigma_diag_ptr,      /* Diagonal entries of Sigma */
 			   double *gradient_ptr,        /* Sigma times theta */
-			   int *ever_active_ptr,        /* Ever active set: 0-based */ 
+			   int *ever_active_ptr,        /* Ever active set: 1-based */ 
 			   int *nactive_ptr,            /* Size of ever active set */
 			   int nrow,                    /* How many rows in Sigma */
 			   double bound,                /* feasibility parameter */
 			   double *theta,               /* current value */
 			   int coord,                   /* which coordinate to update: 0-based */
-			   int is_active)               /* Is this part of ever_active */     
+			   int is_active)               /* Is this coord in ever_active */     
 {
 
   double delta;
@@ -211,7 +213,7 @@ int solve_qp(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 	     double *linear_func_ptr,    /* Linear term in objective */
 	     double *Sigma_diag_ptr,     /* Diagonal entry of covariance matrix */
 	     double *gradient_ptr,       /* Sigma times theta */
-	     int *ever_active_ptr,       /* Ever active set: 0-based */ 
+	     int *ever_active_ptr,       /* Ever active set: 1-based */ 
 	     int *nactive_ptr,           /* Size of ever active set */
 	     int nrow,                   /* How many rows in Sigma */
 	     double bound,               /* feasibility parameter */
@@ -259,7 +261,7 @@ int solve_qp(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 			  nrow,
 			  bound,
 			  theta,
-			  *active_ptr,
+			  *active_ptr - 1,   // Ever-active is 1-based
 			  1);
       active_ptr++;
     }

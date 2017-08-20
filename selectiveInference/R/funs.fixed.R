@@ -348,7 +348,7 @@ InverseLinftyOneRow <- function (Sigma, i, mu, maxiter=50, soln_result=NULL, kkt
   if (is.null(soln_result)) {
      soln = rep(0, p)
      ever_active = rep(0, p)
-     ever_active[1] = i-1             # 0-based
+     ever_active[1] = i      # 1-based
      ever_active = as.integer(ever_active)
      nactive = as.integer(1)
      if (use_QP) {
@@ -373,7 +373,7 @@ InverseLinftyOneRow <- function (Sigma, i, mu, maxiter=50, soln_result=NULL, kkt
   if (use_QP) {
       result = solve_QP(Sigma, mu, maxiter, soln, linear_func, gradient, ever_active, nactive, kkt_tol, objective_tol) 
   } else {
-      result = find_one_row_debiasingM(Sigma, i-1, mu, maxiter, soln, gradient, ever_active, nactive, kkt_tol, objective_tol) # C function uses 0-based indexing
+      result = find_one_row_debiasingM(Sigma, i, mu, maxiter, soln, gradient, ever_active, nactive, kkt_tol, objective_tol) # C function uses 1-based indexing for active set
   }
 
   # Check feasibility

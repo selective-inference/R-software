@@ -11,12 +11,12 @@
 // Update one coordinate 
 
 double objective(double *Sigma_ptr,       /* A covariance matrix: X^TX/n */
-		 int *ever_active_ptr,    /* Ever active set: 0-based */ 
-		 int *nactive_ptr,    /* Size of ever active set */
-		 int nrow,            /* how many rows in Sigma */
-		 int row,             /* which row: 0-based */
-		 double bound,        /* Lagrange multipler for \ell_1 */
-		 double *theta)       /* current value */
+		 int *ever_active_ptr,    /* Ever active set: 1-based */ 
+		 int *nactive_ptr,        /* Size of ever active set */
+		 int nrow,                /* how many rows in Sigma */
+		 int row,                 /* which row: 1-based */
+		 double bound,            /* Lagrange multipler for \ell_1 */
+		 double *theta)           /* current value */
 {
   int irow, icol;
   double value = 0;
@@ -32,13 +32,13 @@ double objective(double *Sigma_ptr,       /* A covariance matrix: X^TX/n */
   for (irow=0; irow<nactive; irow++) {
 
     active_row_ptr = ((int *) ever_active_ptr + irow);
-    active_row = *active_row_ptr;
+    active_row = *active_row_ptr - 1;    // Ever-active set is 1-based
     theta_row_ptr = ((double *) theta + active_row);
 
     for (icol=0; icol<nactive; icol++) {
       
       active_col_ptr = ((int *) ever_active_ptr + icol);
-      active_col = *active_col_ptr;
+      active_col = *active_col_ptr - 1;    // Ever-active set is 1-based
       theta_col_ptr = ((double *) theta + active_col);
 
       Sigma_ptr_tmp = ((double *) Sigma_ptr + nrow * active_col + active_row); // Matrices are column-major order
@@ -48,14 +48,15 @@ double objective(double *Sigma_ptr,       /* A covariance matrix: X^TX/n */
     value = value + bound * fabs((*theta_row_ptr)); // the \ell_1 term
   }
 
-  theta_row_ptr = ((double *) theta + row);
+  theta_row_ptr = ((double *) theta + (row - 1));     // row is 1-based index
   value -= (*theta_row_ptr); // the elementary basis vector term
 
   return(value);
 }
 
 // Check if active and add it to active list if necessary
-
+// Ever active set is stored as 1-based indices
+// coord is 0-based
 int update_ever_active(int coord,
 		       int *ever_active_ptr,
 		       int *nactive_ptr) {
@@ -67,7 +68,7 @@ int update_ever_active(int coord,
   for (iactive=0; iactive<nactive; iactive++) {
     ever_active_ptr_tmp = ((int *) ever_active_ptr + iactive);
     active_var = (*ever_active_ptr_tmp);
-    if (active_var == coord) {
+    if (active_var - 1 == coord) {       // Indices in active set are 1-based
       return(1);
     }
   }
@@ -79,7 +80,7 @@ int update_ever_active(int coord,
   // number of active variables
 
   ever_active_ptr_tmp = ((int *) ever_active_ptr + *nactive_ptr);
-  *ever_active_ptr_tmp = coord;
+  *ever_active_ptr_tmp = coord + 1;     // Indices are 1-based
   *nactive_ptr += 1;
 
   return(0);
@@ -88,7 +89,7 @@ int update_ever_active(int coord,
 int check_KKT(double *theta,        /* current theta */
 	      double *gradient_ptr, /* Sigma times theta */
 	      int nrow,             /* how many rows in Sigma */
-	      int row,              /* which row: 0-based */
+	      int row,              /* which row: 1-based */
 	      double bound,         /* Lagrange multipler for \ell_1 */
 	      double tol)           /* precision for checking KKT conditions */
 {
@@ -108,7 +109,7 @@ int check_KKT(double *theta,        /* current theta */
 
     // For the basis vector
 
-    if (row == irow) {
+    if (row - 1 == irow) {                // Row is a 1-based index
        gradient -= 1;
     }
 
@@ -139,7 +140,7 @@ double update_one_coord(double *Sigma_ptr,           /* A covariance matrix: X^T
 			int nrow,                    /* How many rows in Sigma */
 			double bound,                /* feasibility parameter */
 			double *theta,               /* current value */
-			int row,                     /* which row: 0-based */
+			int row,                     /* which row: 1-based */
 			int coord,                   /* which coordinate to update: 0-based */
 			int is_active)               /* Is this part of ever_active */     
 {
@@ -156,8 +157,6 @@ double update_one_coord(double *Sigma_ptr,           /* A covariance matrix: X^T
   double *quadratic_ptr = ((double *) Sigma_diag_ptr + coord);
   double quadratic_term = *quadratic_ptr;
 
-  // int *ever_active_ptr_tmp;
-
   gradient_ptr_tmp = ((double *) gradient_ptr + coord);
   linear_term = *gradient_ptr_tmp;
 
@@ -167,9 +166,10 @@ double update_one_coord(double *Sigma_ptr,           /* A covariance matrix: X^T
   // The coord entry of gradient_ptr term has a diagonal term in it:
   // Sigma[coord, coord] * theta[coord]
   // This removes it. 
+
   linear_term -= quadratic_term * old_value;
 
-  if (row == coord) {
+  if (row - 1 == coord) {              // Row is 1-based
     linear_term -= 1;
   }
 
@@ -220,13 +220,13 @@ double update_one_coord(double *Sigma_ptr,           /* A covariance matrix: X^T
 int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 		  double *Sigma_diag_ptr,     /* Diagonal entry of covariance matrix */
 		  double *gradient_ptr,       /* Sigma times theta */
-		  int *ever_active_ptr,       /* Ever active set: 0-based */ 
+		  int *ever_active_ptr,       /* Ever active set: 1-based */ 
 		  int *nactive_ptr,           /* Size of ever active set */
 		  int nrow,                   /* How many rows in Sigma */
 		  double bound,               /* feasibility parameter */
 		  double *theta,              /* current value */
 		  int maxiter,                /* how many iterations */
-		  int row,                    /* which coordinate to update: 0-based */
+		  int row,                    /* which coordinate to solve: 1-based */
 		  double kkt_tol,             /* precision for checking KKT conditions */
 		  double objective_tol)       /* precision for checking relative decrease in objective value */
 {
@@ -267,7 +267,7 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 		       bound,
 		       theta,
 		       row,
-		       *active_ptr,
+		       *active_ptr-1,  // Ever active set is 1-based
 		       1);
       active_ptr++;
     }
