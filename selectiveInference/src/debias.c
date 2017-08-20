@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <math.h> // for fabs
 
 // Find an approximate row of \hat{Sigma}^{-1}
@@ -68,7 +67,6 @@ int update_ever_active(int coord,
   for (iactive=0; iactive<nactive; iactive++) {
     ever_active_ptr_tmp = ((int *) ever_active_ptr + iactive);
     active_var = (*ever_active_ptr_tmp);
-    // fprintf(stderr, "%d %d\n", iactive, active_var);
     if (active_var == coord) {
       return(1);
     }

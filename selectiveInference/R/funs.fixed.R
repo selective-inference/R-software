@@ -26,8 +26,6 @@ sigma=NULL, alpha=0.1,
   
   else{
     
-    
-    
     checkargs.xy(x,y)
     if (missing(beta) || is.null(beta)) stop("Must supply the solution beta")
     if (missing(lambda) || is.null(lambda)) stop("Must supply the tuning parameter value lambda")
@@ -338,7 +336,8 @@ InverseLinfty <- function(sigma, n, e, resol=1.2, mu=NULL, maxiter=50, threshold
   return(M)
 }
 
-InverseLinftyOneRow <- function (Sigma, i, mu, maxiter=50, soln_result=NULL, kkt_tol=1.e-6, objective_tol=1.e-6) {
+InverseLinftyOneRow <- function (Sigma, i, mu, maxiter=50, soln_result=NULL, kkt_tol=1.e-6, objective_tol=1.e-6,
+		                 use_QP=TRUE) {
 
   # If soln_result is not Null, it is used as a warm start.
   # It should be a list
@@ -352,31 +351,30 @@ InverseLinftyOneRow <- function (Sigma, i, mu, maxiter=50, soln_result=NULL, kkt
      ever_active[1] = i-1             # 0-based
      ever_active = as.integer(ever_active)
      nactive = as.integer(1)
-     linear_func = rep(0, p)
-     linear_func[i] = -1
-     linear_func = as.numeric(linear_func)
-     gradient = 1. * linear_func
+     if (use_QP) {
+          linear_func = rep(0, p)
+	  linear_func[i] = -1
+	  linear_func = as.numeric(linear_func)
+	  gradient = 1. * linear_func 
+     } else {
+          gradient = rep(0, p)
+     }
   }
   else {
      soln = soln_result$soln
      gradient = soln_result$gradient  
      ever_active = as.integer(soln_result$ever_active)
      nactive = as.integer(soln_result$nactive)
-     linear_func = soln_result$linear_func
+     if (use_QP) { 
+         linear_func = soln_result$linear_func
+     }
   }
 
-  soln1 = rep(0, p)
-  gradient1 = rep(0, p)
-  ever_active1 = rep(0, p)
-  ever_active1[1] = i-1
-  nactive1 = as.integer(1)
-  result1 = find_one_row_debiasingM(Sigma, i-1, mu, maxiter, soln1, gradient1, ever_active1, nactive1, kkt_tol, objective_tol) # C function uses 0-based indexing
-  result = solve_QP(Sigma, mu, maxiter, soln, linear_func, gradient, ever_active, nactive, kkt_tol, objective_tol) 
-  print("close?")
-  print(c(sqrt(sum((result1$soln-result$soln)^2)/sum(result$soln^2)), sum(result$soln^2)))
-  print(c(result1$iter, result$iter, sum(result1$soln^2)))
-
-  #result = find_one_row_debiasingM(Sigma, i-1, mu, maxiter, soln, gradient, ever_active, nactive, kkt_tol, objective_tol) # C function uses 0-based indexing
+  if (use_QP) {
+      result = solve_QP(Sigma, mu, maxiter, soln, linear_func, gradient, ever_active, nactive, kkt_tol, objective_tol) 
+  } else {
+      result = find_one_row_debiasingM(Sigma, i-1, mu, maxiter, soln, gradient, ever_active, nactive, kkt_tol, objective_tol) # C function uses 0-based indexing
+  }
 
   # Check feasibility
 
