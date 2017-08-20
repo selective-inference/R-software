@@ -3,9 +3,9 @@
 # min 1/2 || y - \beta_0 - X \beta ||_2^2 + \lambda || \beta ||_1
 
 fixedLassoInf <- function(x, y, beta, lambda, family=c("gaussian","binomial","cox"),intercept=TRUE, add.targets=NULL, status=NULL,
-sigma=NULL, alpha=0.1,
-                     type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
-                     gridrange=c(-100,100), bits=NULL, verbose=FALSE) {
+                          sigma=NULL, alpha=0.1,
+                          type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
+                          gridrange=c(-100,100), bits=NULL, verbose=FALSE, linesearch.try=5) {
 
   family = match.arg(family)
   this.call = match.call()
@@ -158,7 +158,7 @@ sigma=NULL, alpha=0.1,
 
       # Approximate inverse covariance matrix for when (n < p) from lasso_Inference.R
 
-      htheta <- InverseLinfty(hsigma, n, length(S), verbose=FALSE)
+      htheta <- InverseLinfty(hsigma, n, length(S), verbose=FALSE, max.try=linesearch.try)
       # htheta <- InverseLinfty(hsigma, n, verbose=FALSE)
       
       FS = rbind(diag(length(S)),matrix(0,pp-length(S),length(S)))
@@ -268,7 +268,7 @@ fixedLasso.poly=
 ### Functions borrowed and slightly modified from lasso_inference.R
 
 ## Approximates inverse covariance matrix theta
-InverseLinfty <- function(sigma, n, e, resol=1.2, mu=NULL, maxiter=50, threshold=1e-2, verbose = TRUE) {
+InverseLinfty <- function(sigma, n, e, resol=1.2, mu=NULL, maxiter=50, threshold=1e-2, verbose = TRUE, max.try=10) {
     isgiven <- 1;
   if (is.null(mu)){
     isgiven <- 0;
@@ -293,13 +293,12 @@ InverseLinfty <- function(sigma, n, e, resol=1.2, mu=NULL, maxiter=50, threshold
 
     output = NULL
 
-    while ((mu.stop != 1)&&(try.no<10)){
+    while ((mu.stop != 1) && (try.no<max.try) ){
       last.beta <- beta
-      #print(c("#######################trying ", try.no))
       output <- InverseLinftyOneRow(sigma, i, mu, maxiter=maxiter, soln_result=output) # uses a warm start
       beta <- output$soln
       iter <- output$iter
-      if (isgiven==1){
+      if (isgiven==1) {
         mu.stop <- 1
       }
       else{
