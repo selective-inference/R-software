@@ -12,7 +12,7 @@ fixed value of the tuning parameter lambda
 fixedLassoInf(x, y, beta, lambda, family = c("gaussian", "binomial", 
          "cox"),intercept=TRUE, add.targets=NULL, status=NULL, sigma=NULL, alpha=0.1,
          type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
-         gridrange=c(-100,100), bits=NULL, verbose=FALSE, linesearch.try=5) 
+         gridrange=c(-100,100), bits=NULL, verbose=FALSE, linesearch.try=10) 
 }
 \arguments{
   \item{x}{
