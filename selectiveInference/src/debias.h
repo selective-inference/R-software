@@ -14,8 +14,8 @@ int solve_qp(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 	     double *theta,              /* current value */
 	     int maxiter,                /* how many iterations */
 	     double kkt_tol,             /* precision for checking KKT conditions */
-	     double objective_tol);      /* precision for checking relative decrease in objective value */
-
+	     double objective_tol,       /* precision for checking relative decrease in objective value */
+	     int max_active);            /* Upper limit for size of active set -- otherwise break */
 
 int check_KKT_qp(double *theta,           /* current theta */
 		 double *gradient_ptr,    /* Current gradient of quadratic loss */
@@ -34,7 +34,8 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 		  int maxiter,                /* how many iterations */
 		  int row,                    /* which coordinate to update: 0-based */
 		  double kkt_tol,             /* precision for checking KKT conditions */
-		  double objective_tol);      /* precision for checking relative decrease in objective value */
+		  double objective_tol,       /* precision for checking relative decrease in objective value */
+                  int max_active);            /* Upper limit for size of active set -- otherwise break */
 
 int check_KKT(double *theta,           /* current theta */
 	      double *gradient_ptr,    /* Current gradient of quadratic loss */

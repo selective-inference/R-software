@@ -14,7 +14,8 @@ Rcpp::List solve_QP(Rcpp::NumericMatrix Sigma,
 		    Rcpp::IntegerVector ever_active,
 		    Rcpp::IntegerVector nactive,
 		    double kkt_tol,
-		    double objective_tol
+		    double objective_tol,
+		    int max_active
 		    ) {
 
   int nrow = Sigma.nrow(); // number of features
@@ -44,7 +45,8 @@ Rcpp::List solve_QP(Rcpp::NumericMatrix Sigma,
 		      (double *) theta.begin(),
 		      maxiter,
 		      kkt_tol,
-		      objective_tol);
+		      objective_tol,
+		      max_active);
   
   // Check whether feasible
 
@@ -54,13 +56,16 @@ Rcpp::List solve_QP(Rcpp::NumericMatrix Sigma,
 			       bound,
 			       kkt_tol);
 
+  int max_active_check = (*(nactive.begin()) >= max_active);
+
   return(Rcpp::List::create(Rcpp::Named("soln") = theta,
 			    Rcpp::Named("gradient") = gradient,
 			    Rcpp::Named("linear_func") = linear_func,
 			    Rcpp::Named("iter") = iter,
 			    Rcpp::Named("kkt_check") = kkt_check,
 			    Rcpp::Named("ever_active") = ever_active,
-			    Rcpp::Named("nactive") = nactive));
+			    Rcpp::Named("nactive") = nactive,
+			    Rcpp::Named("max_active_check") = max_active_check));
 
 }
 
@@ -74,7 +79,8 @@ Rcpp::List find_one_row_debiasingM(Rcpp::NumericMatrix Sigma,
 				   Rcpp::IntegerVector ever_active,
 				   Rcpp::IntegerVector nactive,
 				   double kkt_tol,
-				   double objective_tol
+				   double objective_tol,
+				   int max_active
 				   ) {
 
   int nrow = Sigma.nrow(); // number of features
@@ -104,7 +110,8 @@ Rcpp::List find_one_row_debiasingM(Rcpp::NumericMatrix Sigma,
 			   maxiter,
 			   row,
 			   kkt_tol,
-			   objective_tol);
+			   objective_tol,
+			   max_active);
   
   // Check whether feasible
 
@@ -115,11 +122,14 @@ Rcpp::List find_one_row_debiasingM(Rcpp::NumericMatrix Sigma,
 			    bound,
 			    kkt_tol);
 
+  int max_active_check = (*(nactive.begin()) >= max_active);
+
   return(Rcpp::List::create(Rcpp::Named("soln") = theta,
 			    Rcpp::Named("gradient") = gradient,
 			    Rcpp::Named("iter") = iter,
 			    Rcpp::Named("kkt_check") = kkt_check,
 			    Rcpp::Named("ever_active") = ever_active,
-			    Rcpp::Named("nactive") = nactive));
+			    Rcpp::Named("nactive") = nactive,
+			    Rcpp::Named("max_active_check") = max_active_check));
 
 }
