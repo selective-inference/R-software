@@ -271,7 +271,9 @@ fixedLasso.poly=
 ## Approximates inverse covariance matrix theta
 InverseLinfty <- function(sigma, n, e, resol=1.2, mu=NULL, maxiter=50, threshold=1e-2, verbose = TRUE, max.try=10) {
 
-    isgiven <- 1;
+  max_active = max(50, 2 * sqrt(n))
+
+  isgiven <- 1;
   if (is.null(mu)){
     isgiven <- 0;
   }
@@ -295,17 +297,19 @@ InverseLinfty <- function(sigma, n, e, resol=1.2, mu=NULL, maxiter=50, threshold
 
     output = NULL
 
-    while ((mu.stop != 1) && (try.no<max.try) ){
-      last.beta <- beta
+    last.beta = NULL
 
-      output <- InverseLinftyOneRow(sigma, i, mu, maxiter=maxiter, soln_result=output) # uses a warm start
+    while ((mu.stop != 1) && (try.no<max.try) ){
+
+      output <- InverseLinftyOneRow(sigma, i, mu, maxiter=maxiter, soln_result=output, max_active=max_active) # uses a warm start
       beta <- output$soln
 
       iter <- output$iter
+
       if (isgiven==1) {
         mu.stop <- 1
       }
-      else{
+      else {
         if (try.no==1){
           if (iter == (maxiter+1)){
             incr <- 1;
@@ -325,14 +329,19 @@ InverseLinfty <- function(sigma, n, e, resol=1.2, mu=NULL, maxiter=50, threshold
           if ((incr == 0)&&(iter < (maxiter+1))){
             mu <- mu/resol;
           }
-          if ((incr == 0)&&(iter == (maxiter+1))){
+          if ((incr == 0) && (iter == (maxiter+1))){
             mu <- mu*resol;
             beta <- last.beta;
             mu.stop <- 1;
           }
         }
+	if (output$max_active_check) {
+	    mu.stop <- 1;
+	    beta <- last.beta;
+	}
       }
       try.no <- try.no+1
+      last.beta <- beta
     }
     M[i,] <- beta;
   }
@@ -341,13 +350,17 @@ InverseLinfty <- function(sigma, n, e, resol=1.2, mu=NULL, maxiter=50, threshold
 
 
 InverseLinftyOneRow <- function (Sigma, i, mu, maxiter=50, soln_result=NULL, kkt_tol=1.e-6, objective_tol=1.e-6,
-		                 use_QP=TRUE) {
+		                 use_QP=TRUE, max_active=NULL) {
 
   # If soln_result is not Null, it is used as a warm start.
   # It should be a list
   # with entries "soln", "gradient", "ever_active", "nactive"
 
   p = nrow(Sigma)
+
+  if (is.null(max_active)) {
+      max_active = 50 # arbitrary?
+  }
 
   if (is.null(soln_result)) {
      soln = rep(0, p)
@@ -375,9 +388,9 @@ InverseLinftyOneRow <- function (Sigma, i, mu, maxiter=50, soln_result=NULL, kkt
   }
 
   if (use_QP) {
-      result = solve_QP(Sigma, mu, maxiter, soln, linear_func, gradient, ever_active, nactive, kkt_tol, objective_tol) 
+      result = solve_QP(Sigma, mu, maxiter, soln, linear_func, gradient, ever_active, nactive, kkt_tol, objective_tol, max_active) 
   } else {
-      result = find_one_row_debiasingM(Sigma, i, mu, maxiter, soln, gradient, ever_active, nactive, kkt_tol, objective_tol) # C function uses 1-based indexing for active set
+      result = find_one_row_debiasingM(Sigma, i, mu, maxiter, soln, gradient, ever_active, nactive, kkt_tol, objective_tol, max_active) # C function uses 1-based indexing for active set
   }
 
   # Check feasibility
