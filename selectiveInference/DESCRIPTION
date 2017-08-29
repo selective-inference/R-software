@@ -18,3 +18,5 @@ Description: New tools for post-selection inference, for use with forward
     models.
 License: GPL-2
 RoxygenNote: 5.0.1
+LinkingTo: Rcpp
+Imports: Rcpp

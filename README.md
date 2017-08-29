@@ -21,3 +21,11 @@ The latest release of the package can be installed through CRAN:
 install.packages("selectiveInference")
 ```
 Code in repo is under development and may be unstable.
+
+## For development
+
+You will have to run
+
+```
+make Rcpp
+```

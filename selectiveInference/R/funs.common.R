@@ -152,13 +152,7 @@ updateQR <- function(Q1,Q2,R,col) {
   n = ncol(Q1)
   k = ncol(Q2)
 
-  a = .C("update1",
-    Q2=as.double(Q2),
-    w=as.double(t(Q2)%*%col),
-    m=as.integer(m),
-    k=as.integer(k),
-    dup=FALSE,
-    package="selectiveInference")
+  a = update1_(as.matrix(Q2), t(Q2)%*%col, m, k) # Rcpp call
 
   Q2 = matrix(a$Q2,nrow=m)
   w = c(t(Q1)%*%col,a$w)

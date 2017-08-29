@@ -3,9 +3,9 @@
 # min 1/2 || y - \beta_0 - X \beta ||_2^2 + \lambda || \beta ||_1
 
 fixedLassoInf <- function(x, y, beta, lambda, family=c("gaussian","binomial","cox"),intercept=TRUE, add.targets=NULL, status=NULL,
-sigma=NULL, alpha=0.1,
-                     type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
-                     gridrange=c(-100,100), bits=NULL, verbose=FALSE) {
+                          sigma=NULL, alpha=0.1,
+                          type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
+                          gridrange=c(-100,100), bits=NULL, verbose=FALSE, linesearch.try=10) {
 
   family = match.arg(family)
   this.call = match.call()
@@ -25,8 +25,6 @@ sigma=NULL, alpha=0.1,
   }
   
   else{
-    
-    
     
     checkargs.xy(x,y)
     if (missing(beta) || is.null(beta)) stop("Must supply the solution beta")
@@ -159,7 +157,9 @@ sigma=NULL, alpha=0.1,
       hsigmaSinv <- solve(hsigmaS) # pinv(hsigmaS)
 
       # Approximate inverse covariance matrix for when (n < p) from lasso_Inference.R
-      htheta <- InverseLinfty(hsigma, n, length(S), verbose=FALSE)
+
+      htheta <- InverseLinfty(hsigma, n, length(S), verbose=FALSE, max.try=linesearch.try)
+
       # htheta <- InverseLinfty(hsigma, n, verbose=FALSE)
       
       FS = rbind(diag(length(S)),matrix(0,pp-length(S),length(S)))
@@ -269,8 +269,8 @@ fixedLasso.poly=
 ### Functions borrowed and slightly modified from lasso_inference.R
 
 ## Approximates inverse covariance matrix theta
-InverseLinfty <- function(sigma, n, e, resol=1.5, mu=NULL, maxiter=50, threshold=1e-2, verbose = TRUE) {
-  # InverseLinfty <- function(sigma, n, resol=1.5, mu=NULL, maxiter=50, threshold=1e-2, verbose = TRUE) {
+InverseLinfty <- function(sigma, n, e, resol=1.2, mu=NULL, maxiter=50, threshold=1e-2, verbose = TRUE, max.try=10) {
+
     isgiven <- 1;
   if (is.null(mu)){
     isgiven <- 0;
@@ -292,12 +292,17 @@ InverseLinfty <- function(sigma, n, e, resol=1.5, mu=NULL, maxiter=50, threshold
     mu.stop <- 0;
     try.no <- 1;
     incr <- 0;
-    while ((mu.stop != 1)&&(try.no<10)){
+
+    output = NULL
+
+    while ((mu.stop != 1) && (try.no<max.try) ){
       last.beta <- beta
-      output <- InverseLinftyOneRow(sigma, i, mu, maxiter=maxiter, threshold=threshold)
-      beta <- output$optsol
+
+      output <- InverseLinftyOneRow(sigma, i, mu, maxiter=maxiter, soln_result=output) # uses a warm start
+      beta <- output$soln
+
       iter <- output$iter
-      if (isgiven==1){
+      if (isgiven==1) {
         mu.stop <- 1
       }
       else{
@@ -334,103 +339,55 @@ InverseLinfty <- function(sigma, n, e, resol=1.5, mu=NULL, maxiter=50, threshold
   return(M)
 }
 
-InverseLinftyOneRowC <- function (Sigma, i, mu, maxiter=50) {
 
-         p = nrow(Sigma)		
-         basis_vector = rep(0, p)
-	 basis_vector[i] = 1.
-         theta = rep(0, p)     
+InverseLinftyOneRow <- function (Sigma, i, mu, maxiter=50, soln_result=NULL, kkt_tol=1.e-6, objective_tol=1.e-6,
+		                 use_QP=TRUE) {
 
-	 Sigma_ = as.double(Sigma)
-	 Sigma_diag_ = as.double(diag(Sigma))
+  # If soln_result is not Null, it is used as a warm start.
+  # It should be a list
+  # with entries "soln", "gradient", "ever_active", "nactive"
 
-	 val = .C("find_one_row",
-          	 Sigma=Sigma_,
-		 Sigma_diag=Sigma_diag_,
-		 Sigma_theta=as.double(rep(0, p)),
-                 ever_active=as.integer(i),
-		 nactive_ptr=as.integer(1),
-		 nrow=as.integer(p),
-   		 bound=as.double(mu),
-		 theta=as.double(theta),
-		 maxiter=as.integer(50),
-		 row=as.integer(i-1),
-		 coord=as.integer(i-1),
-		 dup=FALSE,
-		 package="selectiveInference")
+  p = nrow(Sigma)
 
-	# Check feasibility
-
-	if (max(abs(Sigma %*% val$theta - basis_vector)) > 1.01 * mu) {
-	   warning("Solution for row of M does not seem to be feasible")
-	}
-
-	return(val$theta)
-}
-
-InverseLinftyOneRow <- function ( sigma, i, mu, maxiter=50, threshold=1e-2 ) {
-  p <- nrow(sigma);
-  rho <- max(abs(sigma[i,-i])) / sigma[i,i];
-  mu0 <- rho/(1+rho);
-  beta <- rep(0,p);
-  
-  #if (mu >= mu0){
-  #  beta[i] <- (1-mu0)/sigma[i,i];
-  #  returnlist <- list("optsol" = beta, "iter" = 0);
-  #  return(returnlist);
-  #}
-  
-  diff.norm2 <- 1;
-  last.norm2 <- 1;
-  iter <- 1;
-  iter.old <- 1;
-  beta[i] <- (1-mu0)/sigma[i,i];
-  beta.old <- beta;
-  sigma.tilde <- sigma;
-  diag(sigma.tilde) <- 0;
-  vs <- -sigma.tilde%*%beta;
-  
-  while ((iter <= maxiter) && (diff.norm2 >= threshold*last.norm2)){
-    
-    for (j in 1:p){
-      oldval <- beta[j];
-      v <- vs[j];
-      if (j==i)
-        v <- v+1;
-      beta[j] <- SoftThreshold(v,mu)/sigma[j,j];
-      if (oldval != beta[j]){
-        vs <- vs + (oldval-beta[j])*sigma.tilde[,j];
-      }
-    }
-    
-    iter <- iter + 1;
-    if (iter==2*iter.old){
-      d <- beta - beta.old;
-      diff.norm2 <- sqrt(sum(d*d));
-      last.norm2 <-sqrt(sum(beta*beta));
-      iter.old <- iter;
-      beta.old <- beta;
-      if (iter>10)
-        vs <- -sigma.tilde%*%beta;
-    }
+  if (is.null(soln_result)) {
+     soln = rep(0, p)
+     ever_active = rep(0, p)
+     ever_active[1] = i      # 1-based
+     ever_active = as.integer(ever_active)
+     nactive = as.integer(1)
+     if (use_QP) {
+          linear_func = rep(0, p)
+	  linear_func[i] = -1
+	  linear_func = as.numeric(linear_func)
+	  gradient = 1. * linear_func 
+     } else {
+          gradient = rep(0, p)
+     }
   }
-  
-  returnlist <- list("optsol" = beta, "iter" = iter)
-  return(returnlist)
-}
-
-SoftThreshold <- function( x, lambda ) {
-  #
-  # Standard soft thresholding
-  #
-  if (x>lambda){
-    return (x-lambda);}
   else {
-    if (x< (-lambda)){
-      return (x+lambda);}
-    else {
-      return (0); }
+     soln = soln_result$soln
+     gradient = soln_result$gradient  
+     ever_active = as.integer(soln_result$ever_active)
+     nactive = as.integer(soln_result$nactive)
+     if (use_QP) { 
+         linear_func = soln_result$linear_func
+     }
   }
+
+  if (use_QP) {
+      result = solve_QP(Sigma, mu, maxiter, soln, linear_func, gradient, ever_active, nactive, kkt_tol, objective_tol) 
+  } else {
+      result = find_one_row_debiasingM(Sigma, i, mu, maxiter, soln, gradient, ever_active, nactive, kkt_tol, objective_tol) # C function uses 1-based indexing for active set
+  }
+
+  # Check feasibility
+
+  if (!result$kkt_check) {
+     warning("Solution for row of M does not seem to be feasible")
+  } 
+
+  return(result)
+
 }
 
 ##############################
