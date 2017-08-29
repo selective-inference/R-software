@@ -1,0 +1,11 @@
+PKG_CFLAGS= -I.
+PKG_CPPFLAGS= -I.
+PKG_LIBS=-L. 
+
+$(SHLIB): Rcpp Rcpp-matrixcomps.o Rcpp-debias.o RcppExports.o debias.o
+
+clean:
+	rm -f *o
+
+Rcpp:
+	Rscript -e "library(Rcpp); Rcpp::compileAttributes('..')"
