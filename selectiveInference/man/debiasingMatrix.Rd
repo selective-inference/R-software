@@ -6,7 +6,9 @@ Find an approximate inverse of a non-negative definite matrix.
 \description{
 Find some rows of an approximate inverse of a non-negative definite 
 symmetric matrix by solving optimization problem described 
-in Javanmard and Montanari (2013).
+in Javanmard and Montanari (2013). Can be used for approximate 
+Newton step from some consistent estimator (such as the LASSO)
+to find a debiased solution.
 }
 \usage{
 debiasingMatrix(Sigma, 
