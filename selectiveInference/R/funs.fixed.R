@@ -264,9 +264,8 @@ fixedLasso.poly=
 
 ##############################
 
-### Functions borrowed and slightly modified from lasso_inference.R
-
 ## Approximates inverse covariance matrix theta
+## using coordinate descent 
 
 debiasingMatrix = function(Sigma, 
                            nsample, 
@@ -332,6 +331,8 @@ debiasingMatrix = function(Sigma,
   }
   return(M)
 }
+
+# Find one row of the debiasing matrix
 
 debiasingRow = function (Sigma, 
                          row, 
