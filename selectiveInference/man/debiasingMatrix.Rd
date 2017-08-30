@@ -99,7 +99,7 @@ set.seed(10)
 n = 50
 p = 100
 X = matrix(rnorm(n * p), n, p)
-S = t(X) %*% X / n
+S = t(X) \%*\% X / n
 M = debiasingMatrix(S, n, c(1,3,5))
 
 }
