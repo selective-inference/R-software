@@ -269,19 +269,19 @@ fixedLasso.poly=
 ## Approximates inverse covariance matrix theta
 
 debiasingMatrix = function(Sigma, 
-                            nsample, 
-                            rows, 
-			    verbose=FALSE, 
-			    mu=NULL,             # starting value of mu
-   			    linesearch=TRUE,     # do a linesearch?
-   		            resol=1.2,           # multiplicative factor for linesearch
-			    max_active=NULL,     # how big can active set get?
-			    max_try=10,          # how many steps in linesearch?
-			    warn_kkt=FALSE,      # warn if KKT does not seem to be satisfied?
-			    max_iter=100,         # how many iterations for each optimization problem
-                            kkt_tol=1.e-4,       # tolerance for the KKT conditions
-			    objective_tol=1.e-4  # tolerance for relative decrease in objective
-                            ) {
+                           nsample, 
+                           rows, 
+		           verbose=FALSE, 
+		           mu=NULL,             # starting value of mu
+   			   linesearch=TRUE,     # do a linesearch?
+   		           scaling_factor=1.5,  # multiplicative factor for linesearch
+			   max_active=NULL,     # how big can active set get?
+			   max_try=10,          # how many steps in linesearch?
+			   warn_kkt=FALSE,      # warn if KKT does not seem to be satisfied?
+			   max_iter=100,        # how many iterations for each optimization problem
+                           kkt_tol=1.e-4,       # tolerance for the KKT conditions
+			   objective_tol=1.e-8  # tolerance for relative decrease in objective
+                           ) {
 
 
   if (is.null(max_active)) {
@@ -310,7 +310,7 @@ debiasingMatrix = function(Sigma,
                           row,
                           mu,
                           linesearch=linesearch,
-                          resol=resol,
+                          scaling_factor=scaling_factor,
 			  max_active=max_active,
 			  max_try=max_try,
 			  warn_kkt=FALSE,
@@ -322,7 +322,12 @@ debiasingMatrix = function(Sigma,
        warning("Solution for row of M does not seem to be feasible")
     } 
   
-    M[idx,] = output$soln;
+    if (!is.null(output$soln)) {
+        M[idx,] = output$soln;
+    } else {
+        stop(paste("Unable to approximate inverse row ", row));
+    }
+
     idx = idx + 1;
   }
   return(M)
@@ -332,13 +337,13 @@ debiasingRow = function (Sigma,
                          row, 
                          mu, 
 		         linesearch=TRUE,     # do a linesearch?
-		         resol=1.2,           # multiplicative factor for linesearch
+		         scaling_factor=1.2,  # multiplicative factor for linesearch
 			 max_active=NULL,     # how big can active set get?
 			 max_try=10,          # how many steps in linesearch?
 			 warn_kkt=FALSE,      # warn if KKT does not seem to be satisfied?
-			 max_iter=100,         # how many iterations for each optimization problem
+			 max_iter=100,        # how many iterations for each optimization problem
                          kkt_tol=1.e-4,       # tolerance for the KKT conditions
-			 objective_tol=1.e-4  # tolerance for relative decrease in objective
+			 objective_tol=1.e-8  # tolerance for relative decrease in objective
                          ) {
 
   p = nrow(Sigma)
@@ -368,7 +373,17 @@ debiasingRow = function (Sigma,
 
   while (counter_idx < max_try) {
 
-      result = solve_QP(Sigma, mu, max_iter, soln, linear_func, gradient, ever_active, nactive, kkt_tol, objective_tol, max_active) 
+      result = solve_QP(Sigma, 
+                        mu, 
+                        max_iter, 
+                        soln, 
+                        linear_func, 
+                        gradient, 
+                        ever_active, 
+                        nactive, 
+                        kkt_tol, 
+                        objective_tol, 
+                        max_active) 
 
       iter = result$iter
 
@@ -390,13 +405,13 @@ debiasingRow = function (Sigma,
          if ((iter < (max_iter+1)) && (counter_idx > 1)) { 
            break;      # we've found a feasible point and solved the problem            
          }
-         mu = mu * resol;
+         mu = mu * scaling_factor;
       } else {         # trying to drop the bound parameter further
          if ((iter == (max_iter + 1)) && (counter_idx > 1)) {
             result = last_output; # problem seems infeasible because we didn't solve it
    	    break;                # so we revert to previously found solution
          }
-         mu = mu / resol;
+         mu = mu / scaling_factor;
       }
 
       # If the active set has grown to a certain size
