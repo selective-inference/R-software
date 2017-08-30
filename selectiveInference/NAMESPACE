@@ -6,8 +6,6 @@ export(lar,fs,
        print.larInf,print.fsInf,
        plot.lar,plot.fs,
        fixedLassoInf,print.fixedLassoInf,
-#      fixedLogitLassoInf,print.fixedLogitLassoInf,
-#       fixedCoxLassoInf,print.fixedCoxLassoInf,
        forwardStop,
        estimateSigma,
        manyMeans,print.manyMeans,
@@ -15,7 +13,8 @@ export(lar,fs,
        scaleGroups,factorDesign,
        TG.pvalue, 
        TG.limits, 
-       TG.interval
+       TG.interval,
+       debiasingMatrix
     )
 
 S3method("coef", "lar")
@@ -44,5 +43,5 @@ importFrom("stats", dnorm, lsfit, pexp, pnorm, predict,
            qnorm, rnorm, sd, uniroot, dchisq, model.matrix, pchisq)
 importFrom("stats", "coef", "df", "lm", "pf")
 importFrom("stats", "glm", "residuals", "vcov")
-
+importFrom("Rcpp", "sourceCpp")
 
