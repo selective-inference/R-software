@@ -158,10 +158,8 @@ fixedLassoInf <- function(x, y, beta, lambda, family=c("gaussian","binomial","co
 
       # Approximate inverse covariance matrix for when (n < p) from lasso_Inference.R
 
-      htheta <- InverseLinfty(hsigma, n, length(S), verbose=FALSE, max.try=linesearch.try)
+      htheta = debiasing_matrix(hsigma, n, 1:length(S), verbose=FALSE, max_try=linesearch.try, warn_kkt=TRUE)
 
-      # htheta <- InverseLinfty(hsigma, n, verbose=FALSE)
-      
       FS = rbind(diag(length(S)),matrix(0,pp-length(S),length(S)))
       GS = cbind(diag(length(S)),matrix(0,length(S),pp-length(S)))
       ithetasigma = (GS-(htheta%*%hsigma))
@@ -269,137 +267,162 @@ fixedLasso.poly=
 ### Functions borrowed and slightly modified from lasso_inference.R
 
 ## Approximates inverse covariance matrix theta
-InverseLinfty <- function(sigma, n, e, resol=1.2, mu=NULL, maxiter=50, threshold=1e-2, verbose = TRUE, max.try=10) {
 
-  max_active = max(50, 2 * sqrt(n))
+debiasing_matrix = function(Sigma, 
+                            nsample, 
+                            rows, 
+			    verbose=FALSE, 
+			    mu=NULL,             # starting value of mu
+   			    linesearch=TRUE,     # do a linesearch?
+   		            resol=1.2,           # multiplicative factor for linesearch
+			    max_active=NULL,     # how big can active set get?
+			    max_try=10,          # how many steps in linesearch?
+			    warn_kkt=FALSE,      # warn if KKT does not seem to be satisfied?
+			    max_iter=100,         # how many iterations for each optimization problem
+                            kkt_tol=1.e-4,       # tolerance for the KKT conditions
+			    objective_tol=1.e-4  # tolerance for relative decrease in objective
+                            ) {
 
-  isgiven <- 1;
-  if (is.null(mu)){
-    isgiven <- 0;
+
+  if (is.null(max_active)) {
+     max_active = max(50, 0.3 * nsample)
+  } 
+
+  p = nrow(Sigma);
+  M = matrix(0, length(rows), p);
+
+  if (is.null(mu)) {
+      mu = (1/sqrt(nsample)) * qnorm(1-(0.1/(p^2)))
   }
-  
-  p <- nrow(sigma);
-  M <- matrix(0, e, p);
+ 
   xperc = 0;
   xp = round(p/10);
-  for (i in 1:e) {
-    if ((i %% xp)==0){
+  idx = 1;
+  for (row in rows) {
+
+    if ((idx %% xp)==0){
       xperc = xperc+10;
       if (verbose) {
         print(paste(xperc,"% done",sep="")); }
     }
-    if (isgiven==0){
-      mu <- (1/sqrt(n)) * qnorm(1-(0.1/(p^2)));
-    }
-    mu.stop <- 0;
-    try.no <- 1;
-    incr <- 0;
 
-    output = NULL
+    output = debiasing_row(Sigma,
+                           row,
+                           mu,
+                           linesearch=linesearch,
+                           resol=resol,
+			   max_active=max_active,
+			   max_try=max_try,
+			   warn_kkt=FALSE,
+			   max_iter=max_iter,
+			   kkt_tol=kkt_tol,
+			   objective_tol=objective_tol)
 
-    last.beta = NULL
-
-    while ((mu.stop != 1) && (try.no<max.try) ){
-
-      output <- InverseLinftyOneRow(sigma, i, mu, maxiter=maxiter, soln_result=output, max_active=max_active) # uses a warm start
-      beta <- output$soln
-
-      iter <- output$iter
-
-      if (isgiven==1) {
-        mu.stop <- 1
-      }
-      else {
-        if (try.no==1){
-          if (iter == (maxiter+1)){
-            incr <- 1;
-            mu <- mu*resol;
-          } else {
-            incr <- 0;
-            mu <- mu/resol;
-          }
-        }
-        if (try.no > 1){
-          if ((incr == 1)&&(iter == (maxiter+1))){
-            mu <- mu*resol;
-          }
-          if ((incr == 1)&&(iter < (maxiter+1))){
-            mu.stop <- 1;
-          }
-          if ((incr == 0)&&(iter < (maxiter+1))){
-            mu <- mu/resol;
-          }
-          if ((incr == 0) && (iter == (maxiter+1))){
-            mu <- mu*resol;
-            beta <- last.beta;
-            mu.stop <- 1;
-          }
-        }
-	if (output$max_active_check) {
-	    mu.stop <- 1;
-	    beta <- last.beta;
-	}
-      }
-      try.no <- try.no+1
-      last.beta <- beta
-    }
-    M[i,] <- beta;
+    if (warn_kkt && (!output$kkt_check)) {
+       warning("Solution for row of M does not seem to be feasible")
+    } 
+  
+    M[idx,] = output$soln;
+    idx = idx + 1;
   }
   return(M)
 }
 
-
-InverseLinftyOneRow <- function (Sigma, i, mu, maxiter=50, soln_result=NULL, kkt_tol=1.e-6, objective_tol=1.e-6,
-		                 use_QP=TRUE, max_active=NULL) {
-
-  # If soln_result is not Null, it is used as a warm start.
-  # It should be a list
-  # with entries "soln", "gradient", "ever_active", "nactive"
+debiasing_row = function (Sigma, 
+                          row, 
+                          mu, 
+			  linesearch=TRUE,     # do a linesearch?
+		          resol=1.2,           # multiplicative factor for linesearch
+			  max_active=NULL,     # how big can active set get?
+			  max_try=10,          # how many steps in linesearch?
+			  warn_kkt=FALSE,      # warn if KKT does not seem to be satisfied?
+			  max_iter=100,         # how many iterations for each optimization problem
+                          kkt_tol=1.e-4,       # tolerance for the KKT conditions
+			  objective_tol=1.e-4  # tolerance for relative decrease in objective
+                          ) {
 
   p = nrow(Sigma)
 
   if (is.null(max_active)) {
-      max_active = 50 # arbitrary?
+      max_active = nrow(Sigma)
   }
 
-  if (is.null(soln_result)) {
-     soln = rep(0, p)
-     ever_active = rep(0, p)
-     ever_active[1] = i      # 1-based
-     ever_active = as.integer(ever_active)
-     nactive = as.integer(1)
-     if (use_QP) {
-          linear_func = rep(0, p)
-	  linear_func[i] = -1
-	  linear_func = as.numeric(linear_func)
-	  gradient = 1. * linear_func 
-     } else {
-          gradient = rep(0, p)
-     }
-  }
-  else {
-     soln = soln_result$soln
-     gradient = soln_result$gradient  
-     ever_active = as.integer(soln_result$ever_active)
-     nactive = as.integer(soln_result$nactive)
-     if (use_QP) { 
-         linear_func = soln_result$linear_func
-     }
-  }
+  # Initialize variables 
 
-  if (use_QP) {
-      result = solve_QP(Sigma, mu, maxiter, soln, linear_func, gradient, ever_active, nactive, kkt_tol, objective_tol, max_active) 
-  } else {
-      result = find_one_row_debiasingM(Sigma, i, mu, maxiter, soln, gradient, ever_active, nactive, kkt_tol, objective_tol, max_active) # C function uses 1-based indexing for active set
-  }
+  soln = rep(0, p)
+
+  ever_active = rep(0, p)
+  ever_active[1] = row      # 1-based
+  ever_active = as.integer(ever_active)
+  nactive = as.integer(1)
+
+  linear_func = rep(0, p)
+  linear_func[row] = -1
+  linear_func = as.numeric(linear_func)
+  gradient = 1. * linear_func 
+
+  counter_idx = 1;
+  incr = 0;
+
+  last_output = NULL
+
+  while (counter_idx < max_try) {
+
+      result = solve_QP(Sigma, mu, max_iter, soln, linear_func, gradient, ever_active, nactive, kkt_tol, objective_tol, max_active) 
+
+      iter = result$iter
+
+      # Logic for whether we should continue the line search
+
+      if (!linesearch) {
+        break
+      }
+
+      if (counter_idx == 1){
+        if (iter == (max_iter+1)){
+           incr = 1; # was the original problem feasible? 1 if not
+         } else {
+           incr = 0; # original problem was feasible
+         }
+      } 
+
+      if (incr == 1) { # trying to find a feasible point
+         if ((iter < (max_iter+1)) && (counter_idx > 1)) { 
+           break;      # we've found a feasible point and solved the problem            
+         }
+         mu = mu * resol;
+      } else {         # trying to drop the bound parameter further
+         if ((iter == (max_iter + 1)) && (counter_idx > 1)) {
+            result = last_output; # problem seems infeasible because we didn't solve it
+   	    break;                # so we revert to previously found solution
+         }
+         mu = mu / resol;
+      }
+
+      # If the active set has grown to a certain size
+      # then we stop, presuming problem has become
+      # infeasible.
+
+      # We revert to the previous solution
+	
+      if (result$max_active_check) {
+	  result = last_output;
+	  break;
+      }
+      
+      counter_idx = counter_idx + 1
+      last_output = list(soln=result$soln,
+                         kkt_check=result$kkt_check)
+    }
 
   # Check feasibility
 
-  if (!result$kkt_check) {
+  if (warn_kkt && (!result$kkt_check)) {
      warning("Solution for row of M does not seem to be feasible")
   } 
 
-  return(result)
+  return(list(soln=result$soln,
+              kkt_check=result$kkt_check))
 
 }
 
