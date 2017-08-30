@@ -158,7 +158,7 @@ fixedLassoInf <- function(x, y, beta, lambda, family=c("gaussian","binomial","co
 
       # Approximate inverse covariance matrix for when (n < p) from lasso_Inference.R
 
-      htheta = debiasing_matrix(hsigma, n, 1:length(S), verbose=FALSE, max_try=linesearch.try, warn_kkt=TRUE)
+      htheta = debiasingMatrix(hsigma, n, 1:length(S), verbose=FALSE, max_try=linesearch.try, warn_kkt=TRUE)
 
       FS = rbind(diag(length(S)),matrix(0,pp-length(S),length(S)))
       GS = cbind(diag(length(S)),matrix(0,length(S),pp-length(S)))
@@ -268,7 +268,7 @@ fixedLasso.poly=
 
 ## Approximates inverse covariance matrix theta
 
-debiasing_matrix = function(Sigma, 
+debiasingMatrix = function(Sigma, 
                             nsample, 
                             rows, 
 			    verbose=FALSE, 
@@ -306,17 +306,17 @@ debiasing_matrix = function(Sigma,
         print(paste(xperc,"% done",sep="")); }
     }
 
-    output = debiasing_row(Sigma,
-                           row,
-                           mu,
-                           linesearch=linesearch,
-                           resol=resol,
-			   max_active=max_active,
-			   max_try=max_try,
-			   warn_kkt=FALSE,
-			   max_iter=max_iter,
-			   kkt_tol=kkt_tol,
-			   objective_tol=objective_tol)
+    output = debiasingRow(Sigma,
+                          row,
+                          mu,
+                          linesearch=linesearch,
+                          resol=resol,
+			  max_active=max_active,
+			  max_try=max_try,
+			  warn_kkt=FALSE,
+			  max_iter=max_iter,
+			  kkt_tol=kkt_tol,
+			  objective_tol=objective_tol)
 
     if (warn_kkt && (!output$kkt_check)) {
        warning("Solution for row of M does not seem to be feasible")
@@ -328,18 +328,18 @@ debiasing_matrix = function(Sigma,
   return(M)
 }
 
-debiasing_row = function (Sigma, 
-                          row, 
-                          mu, 
-			  linesearch=TRUE,     # do a linesearch?
-		          resol=1.2,           # multiplicative factor for linesearch
-			  max_active=NULL,     # how big can active set get?
-			  max_try=10,          # how many steps in linesearch?
-			  warn_kkt=FALSE,      # warn if KKT does not seem to be satisfied?
-			  max_iter=100,         # how many iterations for each optimization problem
-                          kkt_tol=1.e-4,       # tolerance for the KKT conditions
-			  objective_tol=1.e-4  # tolerance for relative decrease in objective
-                          ) {
+debiasingRow = function (Sigma, 
+                         row, 
+                         mu, 
+		         linesearch=TRUE,     # do a linesearch?
+		         resol=1.2,           # multiplicative factor for linesearch
+			 max_active=NULL,     # how big can active set get?
+			 max_try=10,          # how many steps in linesearch?
+			 warn_kkt=FALSE,      # warn if KKT does not seem to be satisfied?
+			 max_iter=100,         # how many iterations for each optimization problem
+                         kkt_tol=1.e-4,       # tolerance for the KKT conditions
+			 objective_tol=1.e-4  # tolerance for relative decrease in objective
+                         ) {
 
   p = nrow(Sigma)
 
