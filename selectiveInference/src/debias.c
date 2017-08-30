@@ -228,7 +228,8 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 		  int maxiter,                /* how many iterations */
 		  int row,                    /* which coordinate to solve: 1-based */
 		  double kkt_tol,             /* precision for checking KKT conditions */
-		  double objective_tol)       /* precision for checking relative decrease in objective value */
+		  double objective_tol,       /* precision for checking relative decrease in objective value */
+		  int max_active)             /* Upper limit for size of active set -- otherwise break */ 
 {
 
   int iter = 0;
@@ -311,6 +312,14 @@ int find_one_row_(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
       break;
     }
 					  
+    // Check size of active set
+
+    if (*nactive_ptr >= max_active) {
+      break;
+    }
+
+    // Check relative decrease of objective
+
     if (check_objective) {
       new_value = objective(Sigma_ptr,
 			    ever_active_ptr,
