@@ -93,14 +93,14 @@ fixedLassoInf <- function(x, y, beta, lambda, family=c("gaussian","binomial","co
                     "'thresh' parameter, for a more accurate convergence."))
     
     # Get lasso polyhedral region, of form Gy >= u
-    if (type == 'full' & p > n) out = fixedLasso.poly(x,y,beta,lambda,vars,inactive=TRUE)
-    else out = fixedLasso.poly(x,y,beta,lambda,vars)
-    G = out$G
-    u = out$u
+    if (type == 'full' & p > n) out = fixedLassoPoly(x,y,lambda,beta,vars,inactive=TRUE)
+    else out = fixedLassoPoly(x,y,lambda,beta,vars)
+    A = out$A
+    b = out$b
     
     # Check polyhedral region
     tol.poly = 0.01
-    if (min(G %*% y - u) < -tol.poly * sqrt(sum(y^2)))
+    if (max(A %*% y - b) > tol.poly * sqrt(sum(y^2)))
       stop(paste("Polyhedral constraints not satisfied; you must recompute beta",
                  "more accurately. With glmnet, make sure to use exact=TRUE in coef(),",
                  "and check whether the specified value of lambda is too small",
@@ -191,7 +191,7 @@ fixedLassoInf <- function(x, y, beta, lambda, family=c("gaussian","binomial","co
     sign[j] = sign(sum(vj*y))
     vj = sign[j] * vj
 
-    limits.info = TG.limits(y, -G, -u, vj, Sigma=diag(rep(sigma^2, n)))
+    limits.info = TG.limits(y, A, b, vj, Sigma=diag(rep(sigma^2, n)))
     a = TG.pvalue.base(limits.info, null_value=null_value[j], bits=bits)
     pv[j] = a$pv
     vlo[j] = a$vlo * mj # Unstandardize (mult by norm of vj)
@@ -221,45 +221,39 @@ fixedLassoInf <- function(x, y, beta, lambda, family=c("gaussian","binomial","co
 #############################
 
 
-fixedLasso.poly=
-  function(x, y, beta, lambda, a, inactive = FALSE) {
-    xa = x[,a,drop=F]
-    xac = x[,!a,drop=F]
-    xai = pinv(crossprod(xa))
-    xap = xai %*% t(xa)
-    za = sign(beta[a])
+fixedLassoPoly =
+  function(X, y, lambda, beta, active, inactive = FALSE) {
+    Xa = X[,active,drop=F]
+    Xac = X[,!active,drop=F]
+    Xai = pinv(crossprod(Xa))
+    Xap = Xai %*% t(Xa)
+
+    za = sign(beta[active])
     if (length(za)>1) dz = diag(za)
     if (length(za)==1) dz = matrix(za,1,1)
     
-    if (inactive) {
-      P = diag(1,nrow(xa)) - xa %*% xap
+    if (inactive) { # should we include the inactive constraints?
+      R = diag(1,nrow(Xa)) - Xa %*% Xap # R is residual forming matrix of selected model
       
-      G = -rbind(
-        1/lambda * t(xac) %*% P,
-        -1/lambda * t(xac) %*% P,
-        -dz %*% xap
+      A = rbind(
+        1/lambda * t(Xac) %*% R,
+        -1/lambda * t(Xac) %*% R,
+        -dz %*% Xap
       )
       lambda2=lambda
-      if(length(lambda)>1) lambda2=lambda[a]
-      u = -c(
-        1 - t(xac) %*% t(xap) %*% za,
-        1 + t(xac) %*% t(xap) %*% za,
-        -lambda2 * dz %*% xai %*% za)
+      if(length(lambda)>1) lambda2=lambda[active]
+      b = c(
+        1 - t(Xac) %*% t(Xap) %*% za,
+        1 + t(Xac) %*% t(Xap) %*% za,
+        -lambda2 * dz %*% Xai %*% za)
     } else {
-      G = -rbind(
-        #   1/lambda * t(xac) %*% P,
-        # -1/lambda * t(xac) %*% P,
-        -dz %*% xap
-      )
+      A = -dz %*% Xap
       lambda2=lambda
-      if(length(lambda)>1) lambda2=lambda[a]
-      u = -c(
-        #   1 - t(xac) %*% t(xap) %*% za,
-        #   1 + t(xac) %*% t(xap) %*% za,
-        -lambda2 * dz %*% xai %*% za)
+      if(length(lambda)>1) lambda2=lambda[active]
+      b = -lambda2 * dz %*% Xai %*% za
     }
     
-    return(list(G=G,u=u))
+    return(list(A=A, b=b))
   }
 
 ##############################
