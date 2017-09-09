@@ -4,7 +4,7 @@ Rcpp:
 	Rscript -e "library(Rcpp); Rcpp::compileAttributes('selectiveInference')"
 
 install: Rcpp
-	R CMD install selectiveInference
+	R CMD INSTALL selectiveInference
 
 build: 
 	R CMD build selectiveInference
