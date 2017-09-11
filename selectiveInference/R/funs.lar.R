@@ -367,13 +367,13 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
     for (j in 1:k) {
       if (verbose) cat(sprintf("Inference for variable %i ...\n",vars[j]))
 
-      Gj = G[1:nk[j],]
-      uj = rep(0,nk[j])
+      Aj = -G[1:nk[j],]
+      bj = -rep(0,nk[j])
       vj = vreg[j,]
       mj = sqrt(sum(vj^2))
       vj = vj / mj              # Standardize (divide by norm of vj)
 
-      limits.info = TG.limits(y, -Gj, -uj, vj, Sigma=diag(rep(sigma^2, n)))
+      limits.info = TG.limits(y, Aj, bj, vj, Sigma=diag(rep(sigma^2, n)))
       a = TG.pvalue.base(limits.info, bits=bits)
       pv[j] = a$pv
       sxj = sx[vars[j]]
@@ -428,10 +428,10 @@ larInf <- function(obj, sigma=NULL, alpha=0.1, k=NULL, type=c("active","all","ai
       vj = vj / mj             # Standardize (divide by norm of vj)
       sign[j] = sign(sum(vj*y))
       vj = sign[j] * vj
-      Gj = rbind(G,vj)
-      uj = c(u,0)
+      Aj = -rbind(G,vj)
+      bj = -c(u,0)
 
-      limits.info = TG.limits(y, -Gj, -uj, vj, Sigma=diag(rep(sigma^2, n)))
+      limits.info = TG.limits(y, Aj, bj, vj, Sigma=diag(rep(sigma^2, n)))
       a = TG.pvalue.base(limits.info, bits=bits)
 
       pv[j] = a$pv
