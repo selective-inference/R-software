@@ -14,8 +14,7 @@ export(lar,fs,
        TG.pvalue, 
        TG.limits, 
        TG.interval,
-       debiasingMatrix,
-       fixedLassoPoly
+       debiasingMatrix
     )
 
 S3method("coef", "lar")

@@ -75,6 +75,7 @@ beta = coef(gfit, s=lambda/n, exact=TRUE)[-1]
 active = (beta != 0)
 
 fixedLassoPoly(x, y, lambda, beta, active)
+fixedLassoPoly(x, y, lambda, beta, active, inactive=TRUE)
 
 }
  
