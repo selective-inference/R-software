@@ -10,9 +10,9 @@ fixed value of the tuning parameter lambda
 }
 \usage{
 fixedLassoInf(x, y, beta, lambda, family = c("gaussian", "binomial", 
-         "cox"),intercept=TRUE, add.targets=NULL, status=NULL, sigma=NULL, alpha=0.1,
+    "cox"),intercept=TRUE, status=NULL, sigma=NULL, alpha=0.1,
          type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
-         gridrange=c(-100,100), bits=NULL, verbose=FALSE, linesearch.try=10) 
+         gridrange=c(-100,100), bits=NULL, verbose=FALSE) 
 }
 \arguments{
   \item{x}{
@@ -56,7 +56,6 @@ Significance level for confidence intervals (target is miscoverage alpha/2 in ea
 Was the lasso problem solved (e.g., by glmnet) with an intercept in the model? 
 Default is TRUE. Must be TRUE for "binomial" family. Not used for 'cox" family, where no intercept is assumed.
 }
-\item{add.targets}{Optional vector of predictors to be included as targets of inference, regardless of whether or not they are selected by the lasso. Default is NULL.}
 \item{status}{Censoring status for Cox model; 1=failurem 0=censored}
 \item{type}{Contrast type for p-values and confidence intervals: default is
 "partial"---meaning that the contrasts tested are the partial population 
@@ -85,11 +84,7 @@ helpful (though computationally more costly). In particular, extra precision mig
 if the values in the output columns of \code{tailarea} differ noticeably from alpha/2.
 }
 \item{verbose}{
-Print out progress along the way? Default is FALSE
-}
-\item{linesearch.try}{
-When running type="full" (i.e. debiased LASSO) how many attempts in the line search?
-}
+Print out progress along the way? Default is FALSE}
 }
 
 \details{
@@ -149,7 +144,7 @@ p = 10
 sigma = 1
 
 x = matrix(rnorm(n*p),n,p)
-x = scale(x,TRUE,TRUE)
+x=scale(x,TRUE,TRUE)
 
 beta = c(3,2,rep(0,p-2))
 y = x\%*\%beta + sigma*rnorm(n)
@@ -160,7 +155,7 @@ gfit = glmnet(x,y,standardize=FALSE)
 # extract coef for a given lambda; note the 1/n factor!
 # (and we don't save the intercept term)
 lambda = .8
-beta = coef(gfit, s=lambda/n, exact=TRUE)[-1]
+beta = coef(gfit, s=lambda/n, exact=TRUE,x=x,y=y)[-1]
 
 # compute fixed lambda p-values and selection intervals
 out = fixedLassoInf(x,y,beta,lambda,sigma=sigma)
@@ -169,10 +164,10 @@ out
 
 ## as above, but use lar function instead to get initial 
 ## lasso fit (should get same results)
-lfit = lar(x,y,normalize=FALSE)
-beta = coef(lfit,s=lambda,mode="lambda")
-out2 = fixedLassoInf(x,y,beta,lambda,sigma=sigma)
-out2
+ lfit = lar(x,y,normalize=FALSE)
+ beta = coef(lfit,s=lambda,mode="lambda",x=x,y=y)
+ out2 = fixedLassoInf(x,y,beta,lambda,sigma=sigma)
+ out2
 
 ## mimic different penalty factors by first scaling x
  set.seed(43)
@@ -194,7 +189,7 @@ gfit = glmnet(xs,y,standardize=FALSE)
 # extract coef for a given lambda; note the 1/n factor!
 # (and we don't save the intercept term)
 lambda = .8
-beta_hat = coef(gfit, s=lambda/n, exact=TRUE)[-1]
+beta_hat = coef(gfit, s=lambda/n, exact=TRUE,x=x,y=y)[-1]
 
 # compute fixed lambda p-values and selection intervals
 out = fixedLassoInf(xs,y,beta_hat,lambda,sigma=sigma)
@@ -221,7 +216,7 @@ set.seed(43)
      # extract coef for a given lambda; note the 1/n factor!
      # (and here  we DO  include the intercept term)
      lambda = .8
-     beta_hat = coef(gfit, s=lambda/n, exact=TRUE)
+     beta_hat = coef(gfit, s=lambda/n, exact=TRUE,x=x,y=y)
      
      # compute fixed lambda p-values and selection intervals
      out = fixedLassoInf(x,y,beta_hat,lambda,family="binomial")
@@ -248,35 +243,10 @@ status=sample(c(0,1),size=n,replace=TRUE)
      # extract coef for a given lambda; note the 1/n factor!
    
      lambda = 1.5
-     beta_hat = as.numeric(coef(gfit, s=lambda/n, exact=TRUE))
+     beta_hat = as.numeric(coef(gfit, s=lambda/n, exact=TRUE,x=x,y=Surv(tim,status)))
      
      # compute fixed lambda p-values and selection intervals
      out = fixedLassoInf(x,tim,beta_hat,lambda,status=status,family="cox")
      out
-
-# Debiased lasso or "full"
-
-n = 50
-p = 100
-sigma = 1
-
-x = matrix(rnorm(n*p),n,p)
-x = scale(x,TRUE,TRUE)
-
-beta = c(3,2,rep(0,p-2))
-y = x\%*\%beta + sigma*rnorm(n)
-
-# first run glmnet
-gfit = glmnet(x, y, standardize=FALSE, intercept=FALSE)
-
-# extract coef for a given lambda; note the 1/n factor!
-# (and we don't save the intercept term)
-lambda = 2.8
-beta = coef(gfit, s=lambda/n, exact=TRUE)[-1]
-
-# compute fixed lambda p-values and selection intervals
-out = fixedLassoInf(x, y, beta, lambda, sigma=sigma, type='full', intercept=FALSE)
-out
-
 }
  

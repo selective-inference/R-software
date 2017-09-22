@@ -62,14 +62,14 @@ b1= -(mydiag(s2)%*%MM)%*%s2*lambda
       vj=rep(0,length(bbar));vj[jj]=s2[jj]
 
 
-      junk=TG.pvalue(bbar, A1, b1, vj,MM)
+      junk=mypoly.pval.lee(bbar,A1,b1,vj,MM)
 
        pv[jj] = junk$pv
       vlo[jj]=junk$vlo
        vup[jj]=junk$vup
        sd[jj]=junk$sd
 
-      junk2=TG.interval(bbar, A1, b1, vj, MM, alpha)
+      junk2=mypoly.int.lee(bbar,vj,vlo[jj],vup[jj],sd[jj],alpha)
        ci[jj,]=junk2$int
        tailarea[jj,] = junk2$tailarea
      

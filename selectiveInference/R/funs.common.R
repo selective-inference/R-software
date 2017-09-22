@@ -56,14 +56,14 @@ standardize <- function(x, y, intercept, normalize) {
 
 # Interpolation function to get coefficients
 
-coef.interpolate <- function(beta, s, knots, decreasing=TRUE) {
+coef.interpolate <- function(betas, s, knots, dec=TRUE) {
   # Sort the s values
-  o = order(s,decreasing=decreasing)
+  o = order(s,dec=dec)
   s = s[o]
 
   k = length(s)
   mat = matrix(rep(knots,each=k),nrow=k)
-  if (decreasing) b = s >= mat
+  if (dec) b = s >= mat
   else b = s <= mat
   blo = max.col(b,ties.method="first")
   bhi = pmax(blo-1,1)
@@ -73,7 +73,7 @@ coef.interpolate <- function(beta, s, knots, decreasing=TRUE) {
   p[i] = 0
   p[!i] = ((s-knots[blo])/(knots[bhi]-knots[blo]))[!i]
 
-  beta = t((1-p)*t(beta[,blo,drop=FALSE]) + p*t(beta[,bhi,drop=FALSE]))
+  beta = t((1-p)*t(betas[,blo,drop=FALSE]) + p*t(betas[,bhi,drop=FALSE]))
   colnames(beta) = as.character(round(s,3))
   rownames(beta) = NULL
 
@@ -152,7 +152,13 @@ updateQR <- function(Q1,Q2,R,col) {
   n = ncol(Q1)
   k = ncol(Q2)
 
-  a = update1_(as.matrix(Q2), t(Q2)%*%col, m, k) # Rcpp call
+  a = .C("update1",
+    Q2=as.double(Q2),
+    w=as.double(t(Q2)%*%col),
+    m=as.integer(m),
+    k=as.integer(k),
+    dup=FALSE,
+    package="selectiveInference")
 
   Q2 = matrix(a$Q2,nrow=m)
   w = c(t(Q1)%*%col,a$w)

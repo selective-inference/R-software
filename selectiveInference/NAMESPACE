@@ -6,15 +6,13 @@ export(lar,fs,
        print.larInf,print.fsInf,
        plot.lar,plot.fs,
        fixedLassoInf,print.fixedLassoInf,
+#      fixedLogitLassoInf,print.fixedLogitLassoInf,
+#       fixedCoxLassoInf,print.fixedCoxLassoInf,
        forwardStop,
        estimateSigma,
        manyMeans,print.manyMeans,
        groupfs,groupfsInf,
-       scaleGroups,factorDesign,
-       TG.pvalue, 
-       TG.limits, 
-       TG.interval,
-       debiasingMatrix
+       scaleGroups,factorDesign
     )
 
 S3method("coef", "lar")
@@ -34,7 +32,7 @@ S3method("print", "manyMeans")
 S3method("print", "groupfs")
 S3method("print", "groupfsInf")
 
-useDynLib("selectiveInference")
+useDynLib("selectiveInference",.registration=TRUE)
 import(glmnet)
 import(intervals)
 import(survival)
@@ -43,5 +41,5 @@ importFrom("stats", dnorm, lsfit, pexp, pnorm, predict,
            qnorm, rnorm, sd, uniroot, dchisq, model.matrix, pchisq)
 importFrom("stats", "coef", "df", "lm", "pf")
 importFrom("stats", "glm", "residuals", "vcov")
-importFrom("Rcpp", "sourceCpp")
+
 
