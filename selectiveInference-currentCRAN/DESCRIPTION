@@ -1,0 +1,18 @@
+Package: selectiveInference
+Type: Package
+Title: Tools for Post-Selection Inference
+Version: 1.2.3
+Date: 2017-09-18
+Author: Ryan Tibshirani, Rob Tibshirani, Jonathan Taylor,
+    Joshua Loftus, Stephen Reid
+Maintainer: Rob Tibshirani <tibs@stanford.edu>
+Depends: glmnet, intervals, survival
+Suggests: Rmpfr
+Description: New tools for post-selection inference, for use
+    with forward stepwise regression, least angle regression, the
+    lasso, and the many means problem. The lasso function implements  Gaussian,  logistic and Cox survival models.
+License: GPL-2
+NeedsCompilation: yes
+Packaged: 2017-09-19 23:49:11 UTC; tibs
+Repository: CRAN
+Date/Publication: 2017-09-20 03:14:10 UTC
