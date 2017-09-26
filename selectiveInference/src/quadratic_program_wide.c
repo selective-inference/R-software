@@ -14,6 +14,7 @@
 // Throughout X is a design matrix
 
 double objective_wide(double *X_ptr,           /* A design matrix */
+		      double *X_theta_ptr,     /* Fitted values */
 		      double *linear_func_ptr, /* Linear term in objective */
 		      int *ever_active_ptr,    /* Ever active set: 0-based */ 
 		      int *nactive_ptr,        /* Size of ever active set */
@@ -24,7 +25,7 @@ double objective_wide(double *X_ptr,           /* A design matrix */
 {
   int irow, icol;
   double value = 0;
-  double *X_ptr_tmp = X_ptr;
+  double *X_theta_ptr_tmp = X_theta_ptr;
   double *linear_func_ptr_tmp = linear_func_ptr;
   double *theta_row_ptr, *theta_col_ptr;
   int *active_row_ptr, *active_col_ptr;
@@ -34,28 +35,31 @@ double objective_wide(double *X_ptr,           /* A design matrix */
   theta_row_ptr = theta;
   theta_col_ptr = theta;
 
+  double entry = 0; // An entry of X\theta
+
+  // The term \|X\theta\|^2_2/nrow
+
+  for (irow=0; irow<nrow; irow++) {
+
+    X_theta_ptr = ((double *) X_theta_ptr + irow);
+    value += (*(X_theta_ptr)) * (*(X_theta_ptr));
+
+  }
+
   for (irow=0; irow<nactive; irow++) {
+
+    // The linear term in the objective
 
     active_row_ptr = ((int *) ever_active_ptr + irow);
     active_row = *active_row_ptr - 1;          // Ever-active is 1-based
     theta_row_ptr = ((double *) theta + active_row);
 
-    for (icol=0; icol<nactive; icol++) {
-      
-      active_col_ptr = ((int *) ever_active_ptr + icol);
-      active_col = *active_col_ptr - 1;          // Ever-active is 1-based
-      theta_col_ptr = ((double *) theta + active_col);
-
-      X_ptr_tmp = ((double *) X_ptr + nrow * active_col + active_row); // Matrices are column-major order
-
-      value += 0.5 * (*X_ptr_tmp) * (*theta_row_ptr) * (*theta_col_ptr);
-    }
-    value += bound * fabs((*theta_row_ptr)); // the \ell_1 term
-
-    // The linear term in the objective
-
     linear_func_ptr_tmp = ((double *) linear_func_ptr + active_row);
     value += (*linear_func_ptr_tmp) * (*theta_row_ptr); 
+
+    // The \ell_1 term
+
+    value += bound * fabs((*theta_row_ptr));
 
   }
   
