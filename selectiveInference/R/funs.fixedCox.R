@@ -1,6 +1,10 @@
-fixedCoxLassoInf=function(x,y,status,beta,lambda,alpha=.1, type=c("partial"),tol.beta=1e-5, tol.kkt=0.1,
-                     gridrange=c(-100,100), bits=NULL, verbose=FALSE,this.call=NULL){
-
+fixedCoxLassoInf=function(x, y, status,
+			  beta, lambda,
+                          alpha=.1, type=c("partial"),
+                          tol.beta=1e-5, tol.kkt=0.1,
+                          gridrange=c(-100,100), 
+                          bits=NULL, verbose=FALSE,
+                          this.call=NULL){
 
  checkargs.xy(x,y)
  if(is.null(status)) stop("Must supply `status' argument")
