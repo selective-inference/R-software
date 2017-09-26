@@ -26,6 +26,27 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// solve_QP_wide
+Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X, double bound, int maxiter, Rcpp::NumericVector theta, Rcpp::NumericVector linear_func, Rcpp::NumericVector gradient, Rcpp::IntegerVector ever_active, Rcpp::IntegerVector nactive, double kkt_tol, double objective_tol, int max_active);
+RcppExport SEXP _selectiveInference_solve_QP_wide(SEXP XSEXP, SEXP boundSEXP, SEXP maxiterSEXP, SEXP thetaSEXP, SEXP linear_funcSEXP, SEXP gradientSEXP, SEXP ever_activeSEXP, SEXP nactiveSEXP, SEXP kkt_tolSEXP, SEXP objective_tolSEXP, SEXP max_activeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< double >::type bound(boundSEXP);
+    Rcpp::traits::input_parameter< int >::type maxiter(maxiterSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type theta(thetaSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type linear_func(linear_funcSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type gradient(gradientSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type ever_active(ever_activeSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type nactive(nactiveSEXP);
+    Rcpp::traits::input_parameter< double >::type kkt_tol(kkt_tolSEXP);
+    Rcpp::traits::input_parameter< double >::type objective_tol(objective_tolSEXP);
+    Rcpp::traits::input_parameter< int >::type max_active(max_activeSEXP);
+    rcpp_result_gen = Rcpp::wrap(solve_QP_wide(X, bound, maxiter, theta, linear_func, gradient, ever_active, nactive, kkt_tol, objective_tol, max_active));
+    return rcpp_result_gen;
+END_RCPP
+}
 // update1_
 Rcpp::List update1_(Rcpp::NumericMatrix Q2, Rcpp::NumericVector w, int m, int k);
 RcppExport SEXP _selectiveInference_update1_(SEXP Q2SEXP, SEXP wSEXP, SEXP mSEXP, SEXP kSEXP) {
@@ -58,6 +79,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_selectiveInference_solve_QP", (DL_FUNC) &_selectiveInference_solve_QP, 11},
+    {"_selectiveInference_solve_QP_wide", (DL_FUNC) &_selectiveInference_solve_QP_wide, 11},
     {"_selectiveInference_update1_", (DL_FUNC) &_selectiveInference_update1_, 4},
     {"_selectiveInference_downdate1_", (DL_FUNC) &_selectiveInference_downdate1_, 5},
     {NULL, NULL, 0}

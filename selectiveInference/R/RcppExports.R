@@ -5,6 +5,10 @@ solve_QP <- function(Sigma, bound, maxiter, theta, linear_func, gradient, ever_a
     .Call('_selectiveInference_solve_QP', PACKAGE = 'selectiveInference', Sigma, bound, maxiter, theta, linear_func, gradient, ever_active, nactive, kkt_tol, objective_tol, max_active)
 }
 
+solve_QP_wide <- function(X, bound, maxiter, theta, linear_func, gradient, ever_active, nactive, kkt_tol, objective_tol, max_active) {
+    .Call('_selectiveInference_solve_QP_wide', PACKAGE = 'selectiveInference', X, bound, maxiter, theta, linear_func, gradient, ever_active, nactive, kkt_tol, objective_tol, max_active)
+}
+
 update1_ <- function(Q2, w, m, k) {
     .Call('_selectiveInference_update1_', PACKAGE = 'selectiveInference', Q2, w, m, k)
 }
