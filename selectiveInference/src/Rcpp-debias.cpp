@@ -77,6 +77,7 @@ Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X,
 			 Rcpp::NumericVector theta,
 			 Rcpp::NumericVector linear_func,
 			 Rcpp::NumericVector gradient,
+			 Rcpp::NumericVector X_theta,
 			 Rcpp::IntegerVector ever_active,
 			 Rcpp::IntegerVector nactive,
 			 double kkt_tol,
@@ -84,35 +85,41 @@ Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X,
 			 int max_active
 			 ) {
 
-  int nrow = X.nrow(); // number of cases
-  int ncol = X.ncol(); // number of features
+  int ncase = X.nrow(); // number of cases
+  int nfeature = X.ncol(); // number of features
 
   // Active set
 
-  int irow, icol;
+  int icase, ifeature;
+
+  // A vector to keep track of gradient updates
+
+  Rcpp::IntegerVector need_update(nfeature);
 
   // Extract the diagonal
-  Rcpp::NumericVector X_diag(ncol);
+  Rcpp::NumericVector X_diag(nfeature);
   double *X_diag_p = X_diag.begin();
 
-  for (icol=0; icol<ncol; icol++) {
-    X_diag_p[irow] = 0;
-    for (irow=0; irow<nrow; irow++) {
-      X_diag_p[irow] += X(irow, icol) * X(irow, icol);
+  for (icase=0; icase<ncase; icase++) {
+    X_diag_p[icase] = 0;
+    for (ifeature=0; ifeature<nfeature; ifeature++) {
+      X_diag_p[icase] += X(icase, ifeature) * X(icase, ifeature);
     }
-    X_diag_p[irow] = X_diag_p[irow] / nrow;
+    X_diag_p[icase] = X_diag_p[icase] / ncase;
   }
   
   // Now call our C function
 
   int iter = solve_wide((double *) X.begin(),
+			(double *) X_theta.begin(),
 			(double *) linear_func.begin(),
 			(double *) X_diag.begin(),
 			(double *) gradient.begin(),
+			(int *) need_update.begin(),
 			(int *) ever_active.begin(),
 			(int *) nactive.begin(),
-			nrow,
-			ncol,
+			ncase,
+			nfeature,
 			bound,
 			(double *) theta.begin(),
 			maxiter,
@@ -122,16 +129,32 @@ Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X,
   
   // Check whether feasible
 
-  int kkt_check = check_KKT_wide(theta.begin(), // This is the same function as check_KKT_qp at the moment!!
-				 gradient.begin(),
-				 nrow,
+  int kkt_check = check_KKT_wide((double *) theta.begin(),
+				 (double *) gradient.begin(),
+				 (double *) X_theta.begin(),
+				 (double *) X.begin(),
+				 (double *) linear_func.begin(),
+				 (int *) need_update.begin(),
+				 nfeature,
+				 ncase,
 				 bound,
 				 kkt_tol);
 
   int max_active_check = (*(nactive.begin()) >= max_active);
 
+  // Make sure gradient is updated -- essentially a matrix multiply
+
+  update_gradient_wide((double *) gradient.begin(),
+		       (double *) X_theta.begin(),
+		       (double *) X.begin(),
+		       (double *) linear_func.begin(),
+		       (int *) need_update.begin(),
+		       nfeature,
+		       ncase);
+
   return(Rcpp::List::create(Rcpp::Named("soln") = theta,
 			    Rcpp::Named("gradient") = gradient,
+			    Rcpp::Named("X_theta") = X_theta,
 			    Rcpp::Named("linear_func") = linear_func,
 			    Rcpp::Named("iter") = iter,
 			    Rcpp::Named("kkt_check") = kkt_check,

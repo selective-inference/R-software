@@ -1,4 +1,5 @@
 #include <math.h> // for fabs
+#include <stdio.h>
 
 // Find an approximate row of \hat{Sigma}^{-1}
 
@@ -13,64 +14,113 @@
 
 // Throughout X is a design matrix
 
-double objective_wide(double *X_ptr,           /* A design matrix */
-		      double *X_theta_ptr,     /* Fitted values */
+double objective_wide(double *X_theta_ptr,     /* Fitted values */
 		      double *linear_func_ptr, /* Linear term in objective */
 		      int *ever_active_ptr,    /* Ever active set: 0-based */ 
 		      int *nactive_ptr,        /* Size of ever active set */
-		      int nrow,                /* how many rows in X */
-		      int ncol,                /* how many columns in X */
+		      int ncase,               /* how many rows in X */
+		      int nfeature,            /* how many columns in X */
 		      double bound,            /* Lagrange multipler for \ell_1 */
-		      double *theta)           /* current value */
+		      double *theta_ptr)       /* current value */
 {
-  int irow, icol;
+  int icase, iactive;
   double value = 0;
   double *X_theta_ptr_tmp = X_theta_ptr;
   double *linear_func_ptr_tmp = linear_func_ptr;
-  double *theta_row_ptr, *theta_col_ptr;
-  int *active_row_ptr, *active_col_ptr;
-  int active_row, active_col;
+  double *theta_ptr_tmp;
+  int *active_feature_ptr;
+  int active_feature;
   int nactive = *nactive_ptr;
 
-  theta_row_ptr = theta;
-  theta_col_ptr = theta;
+  // The term \|X\theta\|^2_2/n, with n=ncase
 
-  double entry = 0; // An entry of X\theta
+  for (icase=0; icase<ncase; icase++) {
 
-  // The term \|X\theta\|^2_2/nrow
-
-  for (irow=0; irow<nrow; irow++) {
-
-    X_theta_ptr = ((double *) X_theta_ptr + irow);
-    value += (*(X_theta_ptr)) * (*(X_theta_ptr));
+    X_theta_ptr_tmp = ((double *) X_theta_ptr + icase);
+    value += (*(X_theta_ptr_tmp)) * (*(X_theta_ptr_tmp));
 
   }
 
-  for (irow=0; irow<nactive; irow++) {
+  value *= 0.5 / ncase;
+
+  for (iactive=0; iactive<nactive; iactive++) {
 
     // The linear term in the objective
 
-    active_row_ptr = ((int *) ever_active_ptr + irow);
-    active_row = *active_row_ptr - 1;          // Ever-active is 1-based
-    theta_row_ptr = ((double *) theta + active_row);
+    active_feature_ptr = ((int *) ever_active_ptr + iactive);
+    active_feature = *active_feature_ptr - 1;          // Ever-active is 1-based
 
-    linear_func_ptr_tmp = ((double *) linear_func_ptr + active_row);
-    value += (*linear_func_ptr_tmp) * (*theta_row_ptr); 
+    // fprintf(stderr, "active %d\n", active_feature);
+
+    theta_ptr_tmp = ((double *) theta_ptr + active_feature);
+    linear_func_ptr_tmp = ((double *) linear_func_ptr + active_feature);
+    value += (*linear_func_ptr_tmp) * (*theta_ptr_tmp); 
 
     // The \ell_1 term
 
-    value += bound * fabs((*theta_row_ptr));
+    value += bound * fabs((*theta_ptr_tmp));
 
   }
   
   return(value);
 }
 
+// Compute, update and return one coordinate of the gradient of \|X\theta\|^2_2/2n
+
+double compute_gradient_coord(double *gradient_ptr,        /* Gradient -- one coordinate will be updated if needed */
+			      double *X_theta_ptr,         /* Current fitted values */
+			      double *X_ptr,               /* A design matrix */
+			      double *linear_func_ptr,     /* Linear term in objective */   
+			      int *need_update_ptr,        /* Which coordinates need to be updated? */
+			      int coord,                   /* Coordinate we are trying to update */
+			      int ncase)                   /* How many rows in X */
+{
+
+  double *gradient_ptr_tmp;
+  double *X_theta_ptr_tmp;
+  double *X_ptr_tmp;  
+  double *linear_func_ptr_tmp;  
+  int *need_update_ptr_tmp;
+  int icase;
+  double value = 0.;
+
+  need_update_ptr_tmp = ((int *) need_update_ptr + coord);
+  // Check if this coordinate needs updating
+  if (*need_update_ptr_tmp == 1) {
+
+    // fprintf(stderr, "compute grad %d %d\n", ncase, coord);
+
+    for (icase=0; icase<ncase; icase++) {
+      X_ptr_tmp = ((double *) X_ptr + coord * ncase + icase);
+      X_theta_ptr_tmp = ((double *) X_theta_ptr + icase);
+      value += (*X_ptr_tmp) * (*X_theta_ptr_tmp);
+    }
+
+    value /= ncase;
+
+    linear_func_ptr_tmp = ((double *) linear_func_ptr + coord);
+    value += *linear_func_ptr_tmp;
+
+    gradient_ptr_tmp = ((double *) gradient_ptr + coord);
+    *gradient_ptr_tmp = value;
+
+    *need_update_ptr_tmp = 0;
+  }
+  else {
+    gradient_ptr_tmp = ((double *) gradient_ptr + coord);
+    value = *gradient_ptr_tmp;
+  }
+
+  // fprintf(stderr, "grad %d, %f\n", coord, value);
+  return(value);
+}
+
+
 // Ever-active is 1-based
 // coord is 0-based
 int update_ever_active_wide(int coord,
-			  int *ever_active_ptr,
-			  int *nactive_ptr) {
+			    int *ever_active_ptr,
+			    int *nactive_ptr) {
   int iactive;
   int active_var;
   int nactive = *nactive_ptr;
@@ -79,6 +129,7 @@ int update_ever_active_wide(int coord,
   for (iactive=0; iactive<nactive; iactive++) {
     ever_active_ptr_tmp = ((int *) ever_active_ptr + iactive);
     active_var = *ever_active_ptr_tmp;
+    // fprintf(stderr, "active check %d\n", active_var-1);
     if (active_var - 1 == coord) {          // Ever-active is 1-based
       return(1);
     }
@@ -97,36 +148,62 @@ int update_ever_active_wide(int coord,
   return(0);
 }
 
-int check_KKT_wide(double *theta,        /* current theta */
-		 double *gradient_ptr, /* X^TX/n times theta */
-		 int nrow,             /* how many rows in X */
-		 double bound,         /* Lagrange multipler for \ell_1 */
-		 double tol)           /* precision for checking KKT conditions */        
+void update_gradient_wide(double *gradient_ptr,     /* X^TX/n times theta */
+			  double *X_theta_ptr,      /* Current fitted values */
+			  double *X_ptr,            /* A design matrix */
+			  double *linear_func_ptr,     /* Linear term in objective */   
+			  int *need_update_ptr,     /* Which coordinates need to be updated? */
+			  int nfeature,             /* how many columns in X */
+			  int ncase)                /* how many rows in X */
+{
+  int ifeature;
+
+  for (ifeature=0; ifeature<nfeature; ifeature++) {
+    compute_gradient_coord(gradient_ptr, X_theta_ptr, X_ptr, linear_func_ptr, need_update_ptr, ifeature, ncase);
+  }
+
+}
+
+int check_KKT_wide(double *theta_ptr,        /* current theta */
+		   double *gradient_ptr,     /* X^TX/n times theta */
+		   double *X_theta_ptr,      /* Current fitted values */
+		   double *X_ptr,            /* A design matrix */
+		   double *linear_func_ptr,     /* Linear term in objective */   
+		   int *need_update_ptr,     /* Which coordinates need to be updated? */
+		   int nfeature,             /* how many columns in X */
+		   int ncase,                /* how many rows in X */
+   		   double bound,             /* Lagrange multipler for \ell_1 */
+		   double tol)               /* precision for checking KKT conditions */        
 {
   // First check inactive
 
-  int irow;
-  double *theta_ptr, *gradient_ptr_tmp;
+  int ifeature;
+  double *theta_ptr_tmp;
   double gradient;
 
-  for (irow=0; irow<nrow; irow++) {
-    theta_ptr = ((double *) theta + irow);
-    gradient_ptr_tmp = ((double *) gradient_ptr + irow);
+  for (ifeature=0; ifeature<nfeature; ifeature++) {
+
+    theta_ptr_tmp = ((double *) theta_ptr + ifeature);
 
     // Compute this coordinate of the gradient
 
-    gradient = *gradient_ptr_tmp;
+    // fprintf(stderr, "%d \n", ifeature);
+    gradient = compute_gradient_coord(gradient_ptr, X_theta_ptr, X_ptr, linear_func_ptr, need_update_ptr, ifeature, ncase);
 
-    if (*theta_ptr != 0) { // these coordinates of gradients should be equal to -bound
-      if ((*theta_ptr > 0) &&  (fabs(gradient + bound) > tol * bound)) {
+    if (*theta_ptr_tmp != 0) { // these coordinates of gradients should be equal to -bound
+      // fprintf(stderr, "WTF\n");
+      if ((*theta_ptr_tmp > 0) &&  (fabs(gradient + bound) > tol * bound)) {
+	// fprintf(stderr, "WTF2\n");
 	return(0);
       }
-      else if ((*theta_ptr < 0) && (fabs(gradient - bound) > tol * bound)) {
+      else if ((*theta_ptr_tmp < 0) && (fabs(gradient - bound) > tol * bound)) {
+	// fprintf(stderr, "WTF3\n");
 	return(0);
       }
     }
     else {
       if (fabs(gradient) > (1. + tol) * bound) {
+	// fprintf(stderr, "inactive\n");
 	return(0);
       }
     }
@@ -141,10 +218,12 @@ double update_one_coord_wide(double *X_ptr,               /* A design matrix*/
 			     double *gradient_ptr,        /* X^TX/n times theta */
 			     int *ever_active_ptr,        /* Ever active set: 1-based */ 
 			     int *nactive_ptr,            /* Size of ever active set */
-			     int nrow,                    /* How many rows in X */
-			     int ncol,                    /* How many rows in X */
+			     double *X_theta_ptr,         /* X\theta -- fitted values */
+			     int *need_update_ptr,        /* Whether a gradient coordinate needs update or not */
+			     int ncase,                    /* How many rows in X */
+			     int nfeature,                    /* How many rows in X */
 			     double bound,                /* feasibility parameter */
-			     double *theta,               /* current value */
+			     double *theta_ptr,               /* current value */
 			     int coord,                   /* which coordinate to update: 0-based */
 			     int is_active)               /* Is this coord in ever_active */     
 {
@@ -154,18 +233,18 @@ double update_one_coord_wide(double *X_ptr,               /* A design matrix*/
   double value = 0;
   double old_value;
   double *X_ptr_tmp;
-  double *gradient_ptr_tmp;
-  double *theta_ptr;
-  int icol = 0;
+  double *X_theta_ptr_tmp;
+  int *need_update_ptr_tmp;
+  double *theta_ptr_tmp;
+  int ifeature, icase;
 
   double *quadratic_ptr = ((double *) X_diag_ptr + coord);
   double quadratic_term = *quadratic_ptr;
 
-  gradient_ptr_tmp = ((double *) gradient_ptr + coord);
-  linear_term = *gradient_ptr_tmp;
+  linear_term = compute_gradient_coord(gradient_ptr, X_theta_ptr, X_ptr, linear_func_ptr, need_update_ptr, coord, ncase);
 
-  theta_ptr = ((double *) theta + coord);
-  old_value = *theta_ptr;
+  theta_ptr_tmp = ((double *) theta_ptr + coord);
+  old_value = *theta_ptr_tmp;
 
   // The coord entry of gradient_ptr term has a diagonal term in it:
   // X[coord, coord] * theta[coord]
@@ -198,18 +277,26 @@ double update_one_coord_wide(double *X_ptr,               /* A design matrix*/
 
   if (fabs(old_value - value) > 1.e-6 * (fabs(value) + fabs(old_value))) { 
 
-    delta = value - old_value;
-    X_ptr_tmp = ((double *) X_ptr + coord * nrow);
-    gradient_ptr_tmp = ((double *) gradient_ptr);
+    // Set the update_gradient_ptr to 1
 
-    for (icol=0; icol<nrow; icol++) {
-      *gradient_ptr_tmp = *gradient_ptr_tmp + delta * (*X_ptr_tmp);
-      gradient_ptr_tmp += 1;
-      X_ptr_tmp += 1;
+    need_update_ptr_tmp = need_update_ptr;
+    for (ifeature=0; ifeature<nfeature; ifeature++) {
+      *need_update_ptr_tmp = 1;
+      need_update_ptr_tmp++;
     }
 
-    theta_ptr = ((double *) theta + coord);
-    *theta_ptr = value;
+    // Update X\theta
+
+    delta = value - old_value;
+
+    for (icase=0; icase<ncase; icase++) {
+      X_theta_ptr_tmp = ((double *) X_theta_ptr + icase);
+      X_ptr_tmp = ((double *) X_ptr + coord * ncase + icase);
+      *X_theta_ptr_tmp = (*X_theta_ptr_tmp) + delta * (*X_ptr_tmp);
+    }
+
+    theta_ptr_tmp = ((double *) theta_ptr + coord);
+    *theta_ptr_tmp = value;
 
   }
 
@@ -218,15 +305,17 @@ double update_one_coord_wide(double *X_ptr,               /* A design matrix*/
 }
 
 int solve_wide(double *X_ptr,              /* A design matrix */
+	       double *X_theta_ptr,        /* Fitted values   */
 	       double *linear_func_ptr,    /* Linear term in objective */
 	       double *X_diag_ptr,         /* Diagonal entry of covariance matrix */
 	       double *gradient_ptr,       /* X times theta */
+	       int *need_update_ptr,       /* Keeps track of updated gradient coords */
 	       int *ever_active_ptr,       /* Ever active set: 1-based */ 
 	       int *nactive_ptr,           /* Size of ever active set */
-	       int nrow,                   /* How many rows in X */
-	       int ncol,                   /* How many columns in X */
+	       int ncase,                  /* How many rows in X */
+	       int nfeature,               /* How many columns in X */
 	       double bound,               /* feasibility parameter */
-	       double *theta,              /* current value */
+	       double *theta_ptr,          /* current value */
 	       int maxiter,                /* max number of iterations */
 	       double kkt_tol,             /* precision for checking KKT conditions */
 	       double objective_tol,       /* precision for checking relative decrease in objective value */
@@ -234,7 +323,7 @@ int solve_wide(double *X_ptr,              /* A design matrix */
 {
 
   int iter = 0;
-  int icoord = 0;
+  int ifeature = 0;
   int iactive = 0;
   int *active_ptr;
 
@@ -242,19 +331,24 @@ int solve_wide(double *X_ptr,              /* A design matrix */
 
   double old_value, new_value; 
 
-  if (check_objective) {
+  // fprintf(stderr, "here1\n");
 
-    old_value = objective_wide(X_ptr,
+  if (check_objective) {
+    // fprintf(stderr, "here9 %d %d\n", ncase, nfeature);
+
+    old_value = objective_wide(X_theta_ptr,
 			       linear_func_ptr,
 			       ever_active_ptr,
 			       nactive_ptr,
-			       nrow,
-			       ncol,
+			       ncase,
+			       nfeature,
 			       bound,
-			       theta);
+			       theta_ptr);
 
   }
 
+
+  // fprintf(stderr, "here2\n");
 
   for (iter=0; iter<maxiter; iter++) {
 
@@ -269,48 +363,67 @@ int solve_wide(double *X_ptr,              /* A design matrix */
 			    gradient_ptr,
 			    ever_active_ptr,
 			    nactive_ptr,
-			    nrow,
-			    ncol,
+			    X_theta_ptr,
+			    need_update_ptr,
+			    ncase,
+			    nfeature,
 			    bound,
-			    theta,
+			    theta_ptr,
 			    *active_ptr - 1,   // Ever-active is 1-based
 			    1);
       active_ptr++;
     }
 
+  // fprintf(stderr, "here3\n");
+
     // Check KKT
 
-    if (check_KKT_wide(theta,
-		     gradient_ptr,
-		     nrow,
-		     bound,
-		     kkt_tol) == 1) {
+    if (check_KKT_wide(theta_ptr,
+		       gradient_ptr,
+		       X_theta_ptr,
+		       X_ptr,
+		       linear_func_ptr,
+		       need_update_ptr,
+		       nfeature,
+		       ncase,
+		       bound,
+		       kkt_tol) == 1) {
       break;
     }
-					  
+
     // Update all variables 
 
-    for (icoord=0; icoord<nrow; icoord++) {
+    for (ifeature=0; ifeature<nfeature; ifeature++) {
 
+      // fprintf(stderr, "updating %d\n", ifeature);
       update_one_coord_wide(X_ptr,
 			    linear_func_ptr,
 			    X_diag_ptr,
 			    gradient_ptr,
 			    ever_active_ptr,
 			    nactive_ptr,
-			    nrow,
-			    ncol,
+			    X_theta_ptr,
+			    need_update_ptr,
+			    ncase,
+			    nfeature,
 			    bound,
-			    theta,
-			    icoord,
+			    theta_ptr,
+			    ifeature,
 			    0);
     }
 
+    // fprintf(stderr, "here6\n");
+
     // Check KKT
 
-    if (check_KKT_wide(theta,
+    if (check_KKT_wide(theta_ptr,
 		       gradient_ptr,
-		       nrow,
+		       X_theta_ptr,
+		       X_ptr,
+		       linear_func_ptr,
+		       need_update_ptr,
+		       nfeature,
+		       ncase,
 		       bound,
 		       kkt_tol) == 1) {
       break;
@@ -318,27 +431,36 @@ int solve_wide(double *X_ptr,              /* A design matrix */
 					  
     // Check size of active set
 
+    // fprintf(stderr, "here18 %d\n", *nactive_ptr);
+
     if (*nactive_ptr >= max_active) {
       break;
     }
 
     // Check relative decrease of objective
 
+    // fprintf(stderr, "here7\n");
+
     if (check_objective) {
-      new_value = objective_wide(X_ptr,
+      new_value = objective_wide(X_theta_ptr,
 				 linear_func_ptr,
 				 ever_active_ptr,
 				 nactive_ptr,
-				 nrow,
-				 ncol,
+				 ncase,
+				 nfeature,
 				 bound,
-				 theta);
+				 theta_ptr);
+
+      // fprintf(stderr, "here8\n");
 
       if ((fabs(old_value - new_value) < objective_tol * fabs(new_value)) && (iter > 0)) {
 	break;
       }
       old_value = new_value;
     }
+
+      // fprintf(stderr, "here10\n");
+
   }
   return(iter);
 }
