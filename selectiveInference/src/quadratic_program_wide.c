@@ -388,6 +388,7 @@ int solve_wide(double *X_ptr,              /* A design matrix */
 		       ncase,
 		       bound,
 		       kkt_tol) == 1) {
+      fprintf(stderr, "break1\n");
       break;
     }
 
@@ -426,6 +427,7 @@ int solve_wide(double *X_ptr,              /* A design matrix */
 		       ncase,
 		       bound,
 		       kkt_tol) == 1) {
+      fprintf(stderr, "break2\n");
       break;
     }
 					  
@@ -434,6 +436,7 @@ int solve_wide(double *X_ptr,              /* A design matrix */
     // fprintf(stderr, "here18 %d\n", *nactive_ptr);
 
     if (*nactive_ptr >= max_active) {
+      fprintf(stderr, "break3\n");
       break;
     }
 
@@ -454,6 +457,7 @@ int solve_wide(double *X_ptr,              /* A design matrix */
       // fprintf(stderr, "here8\n");
 
       if ((fabs(old_value - new_value) < objective_tol * fabs(new_value)) && (iter > 0)) {
+	fprintf(stderr, "break5 %f %f %f %d\n", old_value, new_value, objective_tol, iter);
 	break;
       }
       old_value = new_value;
