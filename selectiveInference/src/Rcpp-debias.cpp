@@ -1,5 +1,5 @@
 #include <Rcpp.h>      // need to include the main Rcpp header file 
-#include <debias.h>    // where find_one_row_void is defined
+#include <debias.h>    // where solve_QP, solve_QP_wide are defined
 
 // Below, the gradient should be equal to Sigma * theta + linear_func!!
 // No check is done on this.
@@ -97,15 +97,15 @@ Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X,
   Rcpp::IntegerVector need_update(nfeature);
 
   // Extract the diagonal
-  Rcpp::NumericVector X_diag(nfeature);
-  double *X_diag_p = X_diag.begin();
+  Rcpp::NumericVector nndef_diag(nfeature);
+  double *nndef_diag_p = nndef_diag.begin();
 
-  for (icase=0; icase<ncase; icase++) {
-    X_diag_p[icase] = 0;
-    for (ifeature=0; ifeature<nfeature; ifeature++) {
-      X_diag_p[icase] += X(icase, ifeature) * X(icase, ifeature);
+  for (ifeature=0; ifeature<nfeature; ifeature++) {
+    nndef_diag_p[ifeature] = 0;
+    for (icase=0; icase<ncase; icase++) {
+      nndef_diag_p[ifeature] += X(icase, ifeature) * X(icase, ifeature);
     }
-    X_diag_p[icase] = X_diag_p[icase] / ncase;
+    nndef_diag_p[ifeature] = nndef_diag_p[ifeature] / ncase;
   }
   
   // Now call our C function
@@ -113,7 +113,7 @@ Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X,
   int iter = solve_wide((double *) X.begin(),
 			(double *) X_theta.begin(),
 			(double *) linear_func.begin(),
-			(double *) X_diag.begin(),
+			(double *) nndef_diag.begin(),
 			(double *) gradient.begin(),
 			(int *) need_update.begin(),
 			(int *) ever_active.begin(),
