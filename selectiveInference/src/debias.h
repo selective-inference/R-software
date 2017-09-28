@@ -21,7 +21,7 @@ int check_KKT_qp(double *theta,        /* current theta */
 		 double *gradient_ptr, /* nndef times theta + linear_func */
 		 int nrow,             /* how many rows in nndef */
 		 double bound,         /* Lagrange multipler for \ell_1 */
-		 double tol)           /* precision for checking KKT conditions */        
+		 double tol);          /* precision for checking KKT conditions */        
 
 int solve_wide(double *X_ptr,              /* Sqrt of non-neg def matrix -- X^TX/ncase = nndef */
 	       double *X_theta_ptr,        /* Fitted values   */
@@ -49,7 +49,7 @@ int check_KKT_wide(double *theta_ptr,        /* current theta */
 		   int nfeature,             /* how many columns in X */
 		   int ncase,                /* how many rows in X */
    		   double bound,             /* Lagrange multipler for \ell_1 */
-		   double tol)               /* precision for checking KKT conditions */        
+		   double tol);              /* precision for checking KKT conditions */        
   
 void update_gradient_wide(double *gradient_ptr,     /* X^TX/ncase times theta + linear_func */
 			  double *X_theta_ptr,      /* Current fitted values */

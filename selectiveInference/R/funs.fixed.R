@@ -154,20 +154,24 @@ fixedLassoInf <- function(x, y, beta,
       
       # Reorder so that active set S is first
       Xordered = Xint[,c(S,notS,recursive=T)]
+      hsigmaS = 1/n*(t(XS)%*%XS) # hsigma[S,S]
+      hsigmaSinv = solve(hsigmaS) # pinv(hsigmaS)
       
-      hsigma <- 1/n*(t(Xordered)%*%Xordered)
-      hsigmaS <- 1/n*(t(XS)%*%XS) # hsigma[S,S]
-      hsigmaSinv <- solve(hsigmaS) # pinv(hsigmaS)
-
-      # Approximate inverse covariance matrix for when (n < p) from lasso_Inference.R
-
-      htheta = debiasingMatrix(hsigma, n, 1:length(S), verbose=FALSE, max_try=linesearch.try, warn_kkt=TRUE)
-
       FS = rbind(diag(length(S)),matrix(0,pp-length(S),length(S)))
       GS = cbind(diag(length(S)),matrix(0,length(S),pp-length(S)))
-      ithetasigma = (GS-(htheta%*%hsigma))
-      # ithetasigma = (diag(pp) - (htheta%*%hsigma))
-      
+
+      is_wide = n < (2 * p) # somewhat arbitrary decision -- it is really for when we don't want to form with pxp matrices
+
+      # Approximate inverse covariance matrix for when (n < p) from lasso_Inference.R
+      if (!is_wide) {
+           hsigma = 1/n*(t(Xordered)%*%Xordered)
+           htheta = debiasingMatrix(hsigma, is_wide, n, 1:length(S), verbose=FALSE, max_try=linesearch.try, warn_kkt=TRUE)
+           ithetasigma = (GS-(htheta%*%hsigma))
+      } else {
+           htheta = debiasingMatrix(Xordered, is_wide, n, 1:length(S), verbose=FALSE, max_try=linesearch.try, warn_kkt=TRUE)
+           ithetasigma = (GS-((htheta%*%t(Xordered)) %*% Xordered)/n)
+      }
+
       M <- (((htheta%*%t(Xordered))+ithetasigma%*%FS%*%hsigmaSinv%*%t(XS))/n)
       # vector which is offset for testing debiased beta's
       null_value <- (((ithetasigma%*%FS%*%hsigmaSinv)%*%sign(hbetaS))*lambda/n)
@@ -264,10 +268,11 @@ fixedLassoPoly =
 ## Approximates inverse covariance matrix theta
 ## using coordinate descent 
 
-debiasingMatrix = function(Sigma, 
+debiasingMatrix = function(Xinfo,               # could be X or t(X) %*% X / n depending on is_wide
+                           is_wide,
                            nsample, 
                            rows, 
-		           verbose=FALSE, 
+ 		           verbose=FALSE, 
 		           mu=NULL,             # starting value of mu
    			   linesearch=TRUE,     # do a linesearch?
    		           scaling_factor=1.5,  # multiplicative factor for linesearch
@@ -284,7 +289,7 @@ debiasingMatrix = function(Sigma,
      max_active = max(50, 0.3 * nsample)
   } 
 
-  p = nrow(Sigma);
+  p = ncol(Xinfo);
   M = matrix(0, length(rows), p);
 
   if (is.null(mu)) {
@@ -302,12 +307,13 @@ debiasingMatrix = function(Sigma,
         print(paste(xperc,"% done",sep="")); }
     }
 
-    output = debiasingRow(Sigma,
+    output = debiasingRow(Xinfo,               # could be X or t(X) %*% X / n depending on is_wide
+                          is_wide,
                           row,
                           mu,
                           linesearch=linesearch,
                           scaling_factor=scaling_factor,
-			  max_active=max_active,
+                          max_active=max_active,
 			  max_try=max_try,
 			  warn_kkt=FALSE,
 			  max_iter=max_iter,
@@ -329,14 +335,15 @@ debiasingMatrix = function(Sigma,
   return(M)
 }
 
-# Find one row of the debiasing matrix
+# Find one row of the debiasing matrix -- assuming X^TX/n is not too large -- i.e. X is tall
 
-debiasingRow = function (Sigma, 
+debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n depending on is_wide
+                         is_wide, 
                          row, 
                          mu, 
-		         linesearch=TRUE,     # do a linesearch?
+	                 linesearch=TRUE,     # do a linesearch?
 		         scaling_factor=1.2,  # multiplicative factor for linesearch
-			 max_active=NULL,     # how big can active set get?
+		         max_active=NULL,     # how big can active set get?
 			 max_try=10,          # how many steps in linesearch?
 			 warn_kkt=FALSE,      # warn if KKT does not seem to be satisfied?
 			 max_iter=100,        # how many iterations for each optimization problem
@@ -344,10 +351,10 @@ debiasingRow = function (Sigma,
 			 objective_tol=1.e-8  # tolerance for relative decrease in objective
                          ) {
 
-  p = nrow(Sigma)
+  p = ncol(Xinfo)
 
   if (is.null(max_active)) {
-      max_active = nrow(Sigma)
+      max_active = nrow(Xinfo)
   }
 
   # Initialize variables 
@@ -371,18 +378,37 @@ debiasingRow = function (Sigma,
 
   while (counter_idx < max_try) {
 
-      result = solve_QP(Sigma, 
-                        mu, 
-                        max_iter, 
-                        soln, 
-                        linear_func, 
-                        gradient, 
-                        ever_active, 
-                        nactive, 
-                        kkt_tol, 
-                        objective_tol, 
-                        max_active) 
+      if (!is_wide) {
+          Sigma = Xinfo
+          result = solve_QP(Sigma, 
+                            mu, 
+                            max_iter, 
+                            soln, 
+                            linear_func, 
+                            gradient, 
+                            ever_active, 
+                            nactive, 
+                            kkt_tol, 
+                            objective_tol, 
+                            max_active) 
+      } else {
+          X = Xinfo
+	  n = nrow(X)
+          Xsoln = rep(0, n)
+          result = solve_QP_wide(X,
+                                 mu, 
+                                 max_iter, 
+                                 soln, 
+                                 linear_func, 
+                                 gradient, 
+                                 Xsoln,
+                                 ever_active, 
+                                 nactive, 
+                                 kkt_tol, 
+                                 objective_tol, 
+                                 max_active) 
 
+      }
       iter = result$iter
 
       # Logic for whether we should continue the line search
@@ -438,6 +464,7 @@ debiasingRow = function (Sigma,
               kkt_check=result$kkt_check))
 
 }
+
 
 ##############################
 
