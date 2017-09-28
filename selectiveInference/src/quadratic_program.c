@@ -1,6 +1,6 @@
 #include <math.h> // for fabs
 
-// Find an approximate row of \hat{Sigma}^{-1}
+// Find an approximate row of \hat{nndef}^{-1}
 
 // Solves a dual version of problem (4) of https://arxiv.org/pdf/1306.3171.pdf
 
@@ -11,17 +11,17 @@
 // Therefore we don't have to negate the answer to get theta.
 // Update one coordinate 
 
-double objective_qp(double *Sigma_ptr,       /* A covariance matrix: X^TX/n */
+double objective_qp(double *nndef_ptr,       /* A non-negative definite matrix */
 		    double *linear_func_ptr, /* Linear term in objective */
 		    int *ever_active_ptr,    /* Ever active set: 0-based */ 
 		    int *nactive_ptr,        /* Size of ever active set */
-		    int nrow,                /* how many rows in Sigma */
+		    int nrow,                /* how many rows in nndef */
 		    double bound,            /* Lagrange multipler for \ell_1 */
 		    double *theta)           /* current value */
 {
   int irow, icol;
   double value = 0;
-  double *Sigma_ptr_tmp = Sigma_ptr;
+  double *nndef_ptr_tmp = nndef_ptr;
   double *linear_func_ptr_tmp = linear_func_ptr;
   double *theta_row_ptr, *theta_col_ptr;
   int *active_row_ptr, *active_col_ptr;
@@ -43,9 +43,9 @@ double objective_qp(double *Sigma_ptr,       /* A covariance matrix: X^TX/n */
       active_col = *active_col_ptr - 1;          // Ever-active is 1-based
       theta_col_ptr = ((double *) theta + active_col);
 
-      Sigma_ptr_tmp = ((double *) Sigma_ptr + nrow * active_col + active_row); // Matrices are column-major order
+      nndef_ptr_tmp = ((double *) nndef_ptr + nrow * active_col + active_row); // Matrices are column-major order
 
-      value += 0.5 * (*Sigma_ptr_tmp) * (*theta_row_ptr) * (*theta_col_ptr);
+      value += 0.5 * (*nndef_ptr_tmp) * (*theta_row_ptr) * (*theta_col_ptr);
     }
     value += bound * fabs((*theta_row_ptr)); // the \ell_1 term
 
@@ -91,8 +91,8 @@ int update_ever_active_qp(int coord,
 }
 
 int check_KKT_qp(double *theta,        /* current theta */
-		 double *gradient_ptr, /* Sigma times theta */
-		 int nrow,             /* how many rows in Sigma */
+		 double *gradient_ptr, /* nndef times theta + linear_func */
+		 int nrow,             /* how many rows in nndef */
 		 double bound,         /* Lagrange multipler for \ell_1 */
 		 double tol)           /* precision for checking KKT conditions */        
 {
@@ -128,13 +128,13 @@ int check_KKT_qp(double *theta,        /* current theta */
   return(1);
 }
 
-double update_one_coord_qp(double *Sigma_ptr,           /* A covariance matrix: X^TX/n */
+double update_one_coord_qp(double *nndef_ptr,           /* A non-negative definite matrix */
 			   double *linear_func_ptr,     /* Linear term in objective */
-			   double *Sigma_diag_ptr,      /* Diagonal entries of Sigma */
-			   double *gradient_ptr,        /* Sigma times theta */
+			   double *nndef_diag_ptr,      /* Diagonal of nndef */
+			   double *gradient_ptr,        /* nndef times theta + linear_func */
 			   int *ever_active_ptr,        /* Ever active set: 1-based */ 
 			   int *nactive_ptr,            /* Size of ever active set */
-			   int nrow,                    /* How many rows in Sigma */
+			   int nrow,                    /* How many rows in nndef */
 			   double bound,                /* feasibility parameter */
 			   double *theta,               /* current value */
 			   int coord,                   /* which coordinate to update: 0-based */
@@ -145,12 +145,12 @@ double update_one_coord_qp(double *Sigma_ptr,           /* A covariance matrix: 
   double linear_term = 0;
   double value = 0;
   double old_value;
-  double *Sigma_ptr_tmp;
+  double *nndef_ptr_tmp;
   double *gradient_ptr_tmp;
   double *theta_ptr;
   int icol = 0;
 
-  double *quadratic_ptr = ((double *) Sigma_diag_ptr + coord);
+  double *quadratic_ptr = ((double *) nndef_diag_ptr + coord);
   double quadratic_term = *quadratic_ptr;
 
   gradient_ptr_tmp = ((double *) gradient_ptr + coord);
@@ -160,7 +160,7 @@ double update_one_coord_qp(double *Sigma_ptr,           /* A covariance matrix: 
   old_value = *theta_ptr;
 
   // The coord entry of gradient_ptr term has a diagonal term in it:
-  // Sigma[coord, coord] * theta[coord]
+  // nndef[coord, coord] * theta[coord]
   // This removes it. 
 
   linear_term -= quadratic_term * old_value;
@@ -191,13 +191,13 @@ double update_one_coord_qp(double *Sigma_ptr,           /* A covariance matrix: 
   if (fabs(old_value - value) > 1.e-6 * (fabs(value) + fabs(old_value))) { 
 
     delta = value - old_value;
-    Sigma_ptr_tmp = ((double *) Sigma_ptr + coord * nrow);
+    nndef_ptr_tmp = ((double *) nndef_ptr + coord * nrow);
     gradient_ptr_tmp = ((double *) gradient_ptr);
 
     for (icol=0; icol<nrow; icol++) {
-      *gradient_ptr_tmp = *gradient_ptr_tmp + delta * (*Sigma_ptr_tmp);
+      *gradient_ptr_tmp = *gradient_ptr_tmp + delta * (*nndef_ptr_tmp);
       gradient_ptr_tmp += 1;
-      Sigma_ptr_tmp += 1;
+      nndef_ptr_tmp += 1;
     }
 
     theta_ptr = ((double *) theta + coord);
@@ -209,13 +209,13 @@ double update_one_coord_qp(double *Sigma_ptr,           /* A covariance matrix: 
 
 }
 
-int solve_qp(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
+int solve_qp(double *nndef_ptr,          /* A non-negative definite matrix */
 	     double *linear_func_ptr,    /* Linear term in objective */
-	     double *Sigma_diag_ptr,     /* Diagonal entry of covariance matrix */
-	     double *gradient_ptr,       /* Sigma times theta */
+	     double *nndef_diag_ptr,     /* Diagonal of nndef */
+	     double *gradient_ptr,       /* nndef times theta */
 	     int *ever_active_ptr,       /* Ever active set: 1-based */ 
 	     int *nactive_ptr,           /* Size of ever active set */
-	     int nrow,                   /* How many rows in Sigma */
+	     int nrow,                   /* How many rows in nndef */
 	     double bound,               /* feasibility parameter */
 	     double *theta,              /* current value */
 	     int maxiter,                /* max number of iterations */
@@ -235,7 +235,7 @@ int solve_qp(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 
   if (check_objective) {
 
-    old_value = objective_qp(Sigma_ptr,
+    old_value = objective_qp(nndef_ptr,
 			     linear_func_ptr,
 			     ever_active_ptr,
 			     nactive_ptr,
@@ -253,9 +253,9 @@ int solve_qp(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
     active_ptr = (int *) ever_active_ptr;
 
     for (iactive=0; iactive < *nactive_ptr; iactive++) {
-      update_one_coord_qp(Sigma_ptr,
+      update_one_coord_qp(nndef_ptr,
 			  linear_func_ptr,
-			  Sigma_diag_ptr,
+			  nndef_diag_ptr,
 			  gradient_ptr,
 			  ever_active_ptr,
 			  nactive_ptr,
@@ -281,9 +281,9 @@ int solve_qp(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
 
     for (icoord=0; icoord<nrow; icoord++) {
 
-      update_one_coord_qp(Sigma_ptr,
+      update_one_coord_qp(nndef_ptr,
 			  linear_func_ptr,
-			  Sigma_diag_ptr,
+			  nndef_diag_ptr,
 			  gradient_ptr,
 			  ever_active_ptr,
 			  nactive_ptr,
@@ -313,7 +313,7 @@ int solve_qp(double *Sigma_ptr,          /* A covariance matrix: X^TX/n */
     // Check relative decrease of objective
 
     if (check_objective) {
-      new_value = objective_qp(Sigma_ptr,
+      new_value = objective_qp(nndef_ptr,
 			       linear_func_ptr,
 			       ever_active_ptr,
 			       nactive_ptr,
