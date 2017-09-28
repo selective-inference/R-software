@@ -300,7 +300,6 @@ debiasingMatrix = function(Xinfo,               # could be X or t(X) %*% X / n d
   xp = round(p/10);
   idx = 1;
   for (row in rows) {
-
     if ((idx %% xp)==0){
       xperc = xperc+10;
       if (verbose) {
@@ -354,13 +353,13 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
   p = ncol(Xinfo)
 
   if (is.null(max_active)) {
-      max_active = nrow(Xinfo)
+      max_active = min(nrow(Xinfo), ncol(Xinfo))
   }
 
   # Initialize variables 
 
   soln = rep(0, p)
-
+  Xsoln = rep(0, n)
   ever_active = rep(0, p)
   ever_active[1] = row      # 1-based
   ever_active = as.integer(ever_active)
@@ -379,8 +378,7 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
   while (counter_idx < max_try) {
 
       if (!is_wide) {
-          Sigma = Xinfo
-          result = solve_QP(Sigma, 
+          result = solve_QP(Xinfo, # this is non-neg-def matrix
                             mu, 
                             max_iter, 
                             soln, 
@@ -392,10 +390,7 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
                             objective_tol, 
                             max_active) 
       } else {
-          X = Xinfo
-	  n = nrow(X)
-          Xsoln = rep(0, n)
-          result = solve_QP_wide(X,
+          result = solve_QP_wide(Xinfo, # this is a design matrix
                                  mu, 
                                  max_iter, 
                                  soln, 
@@ -409,6 +404,7 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
                                  max_active) 
 
       }
+
       iter = result$iter
 
       # Logic for whether we should continue the line search

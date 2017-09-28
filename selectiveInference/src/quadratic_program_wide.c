@@ -1,6 +1,6 @@
 #include <math.h> // for fabs
 
-// Find an approximate row of \hat{Sigma}^{-1}
+// Find an approximate row of \hat{nndef}^{-1}
 
 // Solves a dual version of problem (4) of https://arxiv.org/pdf/1306.3171.pdf
 
@@ -222,7 +222,6 @@ int check_KKT_wide_active(int *ever_active_ptr,           /* Ever active set: 0-
   int iactive;
   double *theta_ptr_tmp;
   double gradient;
-  int ever_active_ptr_tmp;
   int nactive = *nactive_ptr;
   int active_feature;
   int *active_feature_ptr;
@@ -259,16 +258,16 @@ int check_KKT_wide_active(int *ever_active_ptr,           /* Ever active set: 0-
 
 double update_one_coord_wide(double *X_ptr,               /* A design matrix*/
 			     double *linear_func_ptr,     /* Linear term in objective */
-			     double *nndef_diag_ptr,          /* Diagonal entries of Sigma */
-			     double *gradient_ptr,     /* X^TX/ncase times theta + linear_func*/
+			     double *nndef_diag_ptr,      /* Diagonal of nndef */
+			     double *gradient_ptr,        /* X^TX/ncase times theta + linear_func*/
 			     int *ever_active_ptr,        /* Ever active set: 1-based */ 
 			     int *nactive_ptr,            /* Size of ever active set */
 			     double *X_theta_ptr,         /* X\theta -- fitted values */
 			     int *need_update_ptr,        /* Whether a gradient coordinate needs update or not */
-			     int ncase,                    /* How many rows in X */
-			     int nfeature,                    /* How many rows in X */
+			     int ncase,                   /* How many rows in X */
+			     int nfeature,                /* How many rows in X */
 			     double bound,                /* feasibility parameter */
-			     double *theta_ptr,               /* current value */
+			     double *theta_ptr,           /* current value */
 			     int coord,                   /* which coordinate to update: 0-based */
 			     int is_active)               /* Is this coord in ever_active */     
 {

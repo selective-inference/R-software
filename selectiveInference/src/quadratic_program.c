@@ -17,7 +17,7 @@ double objective_qp(double *nndef_ptr,       /* A non-negative definite matrix *
 		    int *nactive_ptr,        /* Size of ever active set */
 		    int nrow,                /* how many rows in nndef */
 		    double bound,            /* Lagrange multipler for \ell_1 */
-		    double *theta)           /* current value */
+		    double *theta_ptr)           /* current value */
 {
   int irow, icol;
   double value = 0;
@@ -28,20 +28,20 @@ double objective_qp(double *nndef_ptr,       /* A non-negative definite matrix *
   int active_row, active_col;
   int nactive = *nactive_ptr;
 
-  theta_row_ptr = theta;
-  theta_col_ptr = theta;
+  theta_row_ptr = theta_ptr;
+  theta_col_ptr = theta_ptr;
 
   for (irow=0; irow<nactive; irow++) {
 
     active_row_ptr = ((int *) ever_active_ptr + irow);
     active_row = *active_row_ptr - 1;          // Ever-active is 1-based
-    theta_row_ptr = ((double *) theta + active_row);
+    theta_row_ptr = ((double *) theta_ptr + active_row);
 
     for (icol=0; icol<nactive; icol++) {
       
       active_col_ptr = ((int *) ever_active_ptr + icol);
       active_col = *active_col_ptr - 1;          // Ever-active is 1-based
-      theta_col_ptr = ((double *) theta + active_col);
+      theta_col_ptr = ((double *) theta_ptr + active_col);
 
       nndef_ptr_tmp = ((double *) nndef_ptr + nrow * active_col + active_row); // Matrices are column-major order
 
@@ -90,7 +90,7 @@ int update_ever_active_qp(int coord,
   return(0);
 }
 
-int check_KKT_qp(double *theta,        /* current theta */
+int check_KKT_qp(double *theta_ptr,        /* current theta */
 		 double *gradient_ptr, /* nndef times theta + linear_func */
 		 int nrow,             /* how many rows in nndef */
 		 double bound,         /* Lagrange multipler for \ell_1 */
@@ -99,22 +99,22 @@ int check_KKT_qp(double *theta,        /* current theta */
   // First check inactive
 
   int irow;
-  double *theta_ptr, *gradient_ptr_tmp;
+  double *theta_ptr_tmp, *gradient_ptr_tmp;
   double gradient;
 
   for (irow=0; irow<nrow; irow++) {
-    theta_ptr = ((double *) theta + irow);
+    theta_ptr_tmp = ((double *) theta_ptr + irow);
     gradient_ptr_tmp = ((double *) gradient_ptr + irow);
 
     // Compute this coordinate of the gradient
 
     gradient = *gradient_ptr_tmp;
 
-    if (*theta_ptr != 0) { // these coordinates of gradients should be equal to -bound
-      if ((*theta_ptr > 0) &&  (fabs(gradient + bound) > tol * bound)) {
+    if (*theta_ptr_tmp != 0) { // these coordinates of gradients should be equal to -bound
+      if ((*theta_ptr_tmp > 0) &&  (fabs(gradient + bound) > tol * bound)) {
 	return(0);
       }
-      else if ((*theta_ptr < 0) && (fabs(gradient - bound) > tol * bound)) {
+      else if ((*theta_ptr_tmp < 0) && (fabs(gradient - bound) > tol * bound)) {
 	return(0);
       }
     }
@@ -128,6 +128,57 @@ int check_KKT_qp(double *theta,        /* current theta */
   return(1);
 }
 
+int check_KKT_qp_active(int *ever_active_ptr,           /* Ever active set: 0-based */ 
+		        int *nactive_ptr,               /* Size of ever active set */
+			double *theta_ptr,        /* current theta */
+			double *gradient_ptr, /* nndef times theta + linear_func */
+			int nrow,             /* how many rows in nndef */
+			double bound,         /* Lagrange multipler for \ell_1 */
+			double tol)           /* precision for checking KKT conditions */        
+{
+  // First check inactive
+
+  int iactive;
+  double *theta_ptr_tmp;
+  double gradient;
+  double *gradient_ptr_tmp;
+  int nactive = *nactive_ptr;
+  int active_feature;
+  int *active_feature_ptr;
+
+  for (iactive=0; iactive<nactive; iactive++) {
+
+    active_feature_ptr = ((int *) ever_active_ptr + iactive);
+    active_feature = *active_feature_ptr - 1;          // Ever-active is 1-based
+    theta_ptr_tmp = ((double *) theta_ptr + active_feature);
+
+    gradient_ptr_tmp = ((double *) gradient_ptr + active_feature);
+
+    // Compute this coordinate of the gradient
+
+    gradient = *gradient_ptr_tmp;
+
+    if (*theta_ptr_tmp != 0) { // these coordinates of gradients should be equal to -bound
+
+      if ((*theta_ptr_tmp > 0) &&  (fabs(gradient + bound) > tol * bound)) {
+	return(0);
+      }
+      else if ((*theta_ptr_tmp < 0) && (fabs(gradient - bound) > tol * bound)) {
+	return(0);
+      }
+
+    }
+    else {
+      if (fabs(gradient) > (1. + tol) * bound) {
+	return(0);
+      }
+    }
+  }
+
+  return(1);
+}
+
+
 double update_one_coord_qp(double *nndef_ptr,           /* A non-negative definite matrix */
 			   double *linear_func_ptr,     /* Linear term in objective */
 			   double *nndef_diag_ptr,      /* Diagonal of nndef */
@@ -136,7 +187,7 @@ double update_one_coord_qp(double *nndef_ptr,           /* A non-negative defini
 			   int *nactive_ptr,            /* Size of ever active set */
 			   int nrow,                    /* How many rows in nndef */
 			   double bound,                /* feasibility parameter */
-			   double *theta,               /* current value */
+			   double *theta_ptr,               /* current value */
 			   int coord,                   /* which coordinate to update: 0-based */
 			   int is_active)               /* Is this coord in ever_active */     
 {
@@ -147,7 +198,7 @@ double update_one_coord_qp(double *nndef_ptr,           /* A non-negative defini
   double old_value;
   double *nndef_ptr_tmp;
   double *gradient_ptr_tmp;
-  double *theta_ptr;
+  double *theta_ptr_tmp;
   int icol = 0;
 
   double *quadratic_ptr = ((double *) nndef_diag_ptr + coord);
@@ -156,8 +207,8 @@ double update_one_coord_qp(double *nndef_ptr,           /* A non-negative defini
   gradient_ptr_tmp = ((double *) gradient_ptr + coord);
   linear_term = *gradient_ptr_tmp;
 
-  theta_ptr = ((double *) theta + coord);
-  old_value = *theta_ptr;
+  theta_ptr_tmp = ((double *) theta_ptr + coord);
+  old_value = *theta_ptr_tmp;
 
   // The coord entry of gradient_ptr term has a diagonal term in it:
   // nndef[coord, coord] * theta[coord]
@@ -200,8 +251,8 @@ double update_one_coord_qp(double *nndef_ptr,           /* A non-negative defini
       nndef_ptr_tmp += 1;
     }
 
-    theta_ptr = ((double *) theta + coord);
-    *theta_ptr = value;
+    theta_ptr_tmp = ((double *) theta_ptr + coord);
+    *theta_ptr_tmp = value;
 
   }
 
@@ -230,6 +281,8 @@ int solve_qp(double *nndef_ptr,          /* A non-negative definite matrix */
   int *active_ptr;
 
   int check_objective = 1;
+  int iter_active;
+  int niter_active=5;
 
   double old_value, new_value; 
 
@@ -248,23 +301,38 @@ int solve_qp(double *nndef_ptr,          /* A non-negative definite matrix */
 
   for (iter=0; iter<maxiter; iter++) {
 
-    // Update the active variables first
+    // Update the active variables first -- do this niter_active times
 
-    active_ptr = (int *) ever_active_ptr;
+    for (iter_active=0; iter_active<niter_active; iter_active++) { 
 
-    for (iactive=0; iactive < *nactive_ptr; iactive++) {
-      update_one_coord_qp(nndef_ptr,
-			  linear_func_ptr,
-			  nndef_diag_ptr,
-			  gradient_ptr,
-			  ever_active_ptr,
-			  nactive_ptr,
-			  nrow,
-			  bound,
-			  theta,
-			  *active_ptr - 1,   // Ever-active is 1-based
-			  1);
-      active_ptr++;
+        active_ptr = (int *) ever_active_ptr;
+        for (iactive=0; iactive < *nactive_ptr; iactive++) {
+
+	  update_one_coord_qp(nndef_ptr,
+			      linear_func_ptr,
+			      nndef_diag_ptr,
+			      gradient_ptr,
+			      ever_active_ptr,
+			      nactive_ptr,
+			      nrow,
+			      bound,
+			      theta,
+			      *active_ptr - 1,   // Ever-active is 1-based
+			      1);
+	  active_ptr++;
+	}
+
+	// Check KKT of active subproblem
+
+	if (check_KKT_qp_active(ever_active_ptr,
+				nactive_ptr,
+				theta,
+				gradient_ptr,
+				nrow,
+				bound,
+				kkt_tol) == 1) {
+	  break;
+	}
     }
 
     // Check KKT
