@@ -163,11 +163,11 @@ int check_KKT_wide(double *theta_ptr,        /* current theta */
 		   double *gradient_ptr,     /* X^TX/ncase times theta + linear_func*/
 		   double *X_theta_ptr,      /* Current fitted values */
 		   double *X_ptr,            /* Sqrt of non-neg def matrix -- X^TX/ncase = nndef */
-		   double *linear_func_ptr,     /* Linear term in objective */   
+		   double *linear_func_ptr,  /* Linear term in objective */   
 		   int *need_update_ptr,     /* Which coordinates need to be updated? */
 		   int nfeature,             /* how many columns in X */
 		   int ncase,                /* how many rows in X */
-   		   double bound,             /* Lagrange multipler for \ell_1 */
+		   double bound,             /* Lagrange multipler for \ell_1 */
 		   double tol)               /* precision for checking KKT conditions */        
 {
   // First check inactive
@@ -183,6 +183,59 @@ int check_KKT_wide(double *theta_ptr,        /* current theta */
     // Compute this coordinate of the gradient
 
     gradient = compute_gradient_coord(gradient_ptr, X_theta_ptr, X_ptr, linear_func_ptr, need_update_ptr, ifeature, ncase);
+
+    if (*theta_ptr_tmp != 0) { // these coordinates of gradients should be equal to -bound
+
+      if ((*theta_ptr_tmp > 0) &&  (fabs(gradient + bound) > tol * bound)) {
+	return(0);
+      }
+      else if ((*theta_ptr_tmp < 0) && (fabs(gradient - bound) > tol * bound)) {
+	return(0);
+      }
+
+    }
+    else {
+      if (fabs(gradient) > (1. + tol) * bound) {
+	return(0);
+      }
+    }
+  }
+
+  return(1);
+}
+
+int check_KKT_wide_active(int *ever_active_ptr,           /* Ever active set: 0-based */ 
+			  int *nactive_ptr,               /* Size of ever active set */
+			  double *theta_ptr,              /* current theta */
+			  double *gradient_ptr,           /* X^TX/ncase times theta + linear_func*/
+			  double *X_theta_ptr,            /* Current fitted values */
+			  double *X_ptr,                  /* Sqrt of non-neg def matrix -- X^TX/ncase = nndef */
+			  double *linear_func_ptr,        /* Linear term in objective */   
+			  int *need_update_ptr,           /* Which coordinates need to be updated? */
+			  int nfeature,                   /* how many columns in X */
+			  int ncase,                      /* how many rows in X */
+			  double bound,                   /* Lagrange multipler for \ell_1 */
+			  double tol)                     /* precision for checking KKT conditions */        
+{
+  // First check inactive
+
+  int iactive;
+  double *theta_ptr_tmp;
+  double gradient;
+  int ever_active_ptr_tmp;
+  int nactive = *nactive_ptr;
+  int active_feature;
+  int *active_feature_ptr;
+
+  for (iactive=0; iactive<nactive; iactive++) {
+
+    active_feature_ptr = ((int *) ever_active_ptr + iactive);
+    active_feature = *active_feature_ptr - 1;          // Ever-active is 1-based
+    theta_ptr_tmp = ((double *) theta_ptr + active_feature);
+
+    // Compute this coordinate of the gradient
+
+    gradient = compute_gradient_coord(gradient_ptr, X_theta_ptr, X_ptr, linear_func_ptr, need_update_ptr, active_feature, ncase);
 
     if (*theta_ptr_tmp != 0) { // these coordinates of gradients should be equal to -bound
 
@@ -323,10 +376,10 @@ int solve_wide(double *X_ptr,              /* Sqrt of non-neg def matrix -- X^TX
   int ifeature = 0;
   int iactive = 0;
   int *active_ptr;
-
   int check_objective = 1;
-
   double old_value, new_value; 
+  int niter_active = 5;
+  int iter_active;
 
   if (check_objective) {
 
@@ -343,26 +396,47 @@ int solve_wide(double *X_ptr,              /* Sqrt of non-neg def matrix -- X^TX
 
   for (iter=0; iter<maxiter; iter++) {
 
-    // Update the active variables first
+    // Update the active variables first -- do this niter_active times
 
-    active_ptr = (int *) ever_active_ptr;
-    for (iactive=0; iactive < *nactive_ptr; iactive++) {
+    for (iter_active=0; iter_active<niter_active; iter_active++) { 
 
-      update_one_coord_wide(X_ptr,
-			    linear_func_ptr,
-			    nndef_diag_ptr,
-			    gradient_ptr,
-			    ever_active_ptr,
-			    nactive_ptr,
-			    X_theta_ptr,
-			    need_update_ptr,
-			    ncase,
-			    nfeature,
-			    bound,
-			    theta_ptr,
-			    *active_ptr - 1,   // Ever-active is 1-based
-			    1);
-      active_ptr++;
+        active_ptr = (int *) ever_active_ptr;
+        for (iactive=0; iactive < *nactive_ptr; iactive++) {
+
+          update_one_coord_wide(X_ptr,
+    			        linear_func_ptr,
+				nndef_diag_ptr,
+				gradient_ptr,
+				ever_active_ptr,
+				nactive_ptr,
+				X_theta_ptr,
+				need_update_ptr,
+				ncase,
+				nfeature,
+				bound,
+				theta_ptr,
+				*active_ptr - 1,   // Ever-active is 1-based
+				1);
+	  active_ptr++;
+	}
+
+	// Check KKT of active subproblem
+
+	if (check_KKT_wide_active(ever_active_ptr,
+				  nactive_ptr,
+				  theta_ptr,
+				  gradient_ptr,
+				  X_theta_ptr,
+				  X_ptr,
+				  linear_func_ptr,
+				  need_update_ptr,
+				  nfeature,
+				  ncase,
+				  bound,
+				  kkt_tol) == 1) {
+	  break;
+	}
+
     }
 
     // Check KKT
