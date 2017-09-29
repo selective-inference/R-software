@@ -11,7 +11,8 @@ Newton step from some consistent estimator (such as the LASSO)
 to find a debiased solution.
 }
 \usage{
-debiasingMatrix(Sigma, 
+debiasingMatrix(Xinfo, 
+                is_wide,			
                 nsample, 
                 rows, 
 		verbose=FALSE, 
@@ -26,8 +27,14 @@ debiasingMatrix(Sigma,
 		objective_tol=1.e-8)
 }
 \arguments{
-\item{Sigma}{
-A symmetric non-negative definite matrix, often a cross-covariance matrix.
+\item{Xinfo}{
+Either a non-negative definite matrix S=t(X) %*% X / n or X itself. If 
+is_wide is TRUE, then Xinfo should be X, otherwise it should be S.
+}
+\item{is_wide}{
+Are we solving for rows of the debiasing matrix assuming it is 
+a wide matrix so that Xinfo=X and the non-negative definite
+matrix of interest is t(X) %*% X / nrow(X).
 }
 \item{nsample}{
 Number of samples used in forming the cross-covariance matrix.
@@ -101,8 +108,9 @@ set.seed(10)
 n = 50
 p = 100
 X = matrix(rnorm(n * p), n, p)
-S = t(X) \%*\% X / n
-M = debiasingMatrix(S, n, c(1,3,5))
-
+S = t(X) %*% X / n
+M = debiasingMatrix(S, FALSE, n, c(1,3,5))
+M2 = debiasingMatrix(X, TRUE, n, c(1,3,5))
+max(M - M2)
 }
  
