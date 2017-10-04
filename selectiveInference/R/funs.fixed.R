@@ -82,8 +82,8 @@ fixedLassoInf <- function(x, y, beta,
     
     tol.coef = tol.beta * sqrt(n^2 / colSums(x^2))
     # print(tol.coef)
-   #   vars = which(abs(beta) > tol.coef)
-       vars = abs(beta) > tol.coef
+      vars = which(abs(beta) > tol.coef)
+   #    vars = abs(beta) > tol.coef
     # print(beta)
     # print(vars)
     if(sum(vars)==0){
@@ -97,8 +97,10 @@ fixedLassoInf <- function(x, y, beta,
                     "'thresh' parameter, for a more accurate convergence."))
     
     # Get lasso polyhedral region, of form Gy >= u
-    if (type == 'full') out = fixedLassoPoly(x,y,lambda,beta,vars,inactive=TRUE)
-    else out = fixedLassoPoly(x,y,lambda,beta,vars)
+logical.vars=rep(FALSE,p)
+logical.vars[vars]=TRUE
+    if (type == 'full') out = fixedLassoPoly(x,y,lambda,beta,logical.vars,inactive=TRUE)
+    else out = fixedLassoPoly(x,y,lambda,beta,logical.vars)
     A = out$A
     b = out$b
     
@@ -128,8 +130,7 @@ fixedLassoInf <- function(x, y, beta,
     # add additional targets for inference if provided
     if (!is.null(add.targets)) vars = sort(unique(c(vars,add.targets,recursive=T)))
     
-   #   k = length(vars)
-      k=sum(vars)
+      k = length(vars)
     pv = vlo = vup = numeric(k)
     vmat = matrix(0,k,n)
     ci = tailarea = matrix(0,k,2)
