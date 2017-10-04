@@ -97,17 +97,10 @@ fixedLassoInf <- function(x, y, beta,
                     "'thresh' parameter, for a more accurate convergence."))
     
     # Get lasso polyhedral region, of form Gy >= u
-<<<<<<< HEAD
-    if (type == 'full') out = fixedLasso.poly(x,y,beta,lambda,vars,inactive=TRUE)
-    else out = fixedLasso.poly(x,y,beta,lambda,vars)
-    G = out$G
-    u = out$u
-=======
-    if (type == 'full' & p > n) out = fixedLassoPoly(x,y,lambda,beta,vars,inactive=TRUE)
+    if (type == 'full') out = fixedLassoPoly(x,y,lambda,beta,vars,inactive=TRUE)
     else out = fixedLassoPoly(x,y,lambda,beta,vars)
     A = out$A
     b = out$b
->>>>>>> 726b917649c7aaabd030b2cab062836ca774ef57
     
     # Check polyhedral region
     tol.poly = 0.01
@@ -135,7 +128,7 @@ fixedLassoInf <- function(x, y, beta,
     # add additional targets for inference if provided
     if (!is.null(add.targets)) vars = sort(unique(c(vars,add.targets,recursive=T)))
     
-      k = length(vars)
+   #   k = length(vars)
       k=sum(vars)
     pv = vlo = vup = numeric(k)
     vmat = matrix(0,k,n)
@@ -510,4 +503,3 @@ print.fixedLassoInf <- function(x, tailarea=TRUE, ...) {
  # lambda = 2*mean(apply(t(x)%*%eps,2,max))
  # return(lambda)
 #}
-
