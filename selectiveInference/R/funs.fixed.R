@@ -237,15 +237,13 @@ fixedLassoInf <- function(x, y, beta,
 
 fixedLassoPoly =
   function(X, y, lambda, beta, active, inactive = FALSE) {
-    Xa = X[, active, drop=FALSE]
-    Xac = X[, !active, drop=FALSE]
-    Xai = pinv(crossprod(Xa))
-    Xap = Xai %*% t(Xa)
 
-    za = sign(beta[active])
-    if (length(za)>1) dz = diag(za)
-    if (length(za)==1) dz = matrix(za,1,1)
-    
+    XA = X[, active, drop=FALSE]
+    XI = X[, !active, drop=FALSE]
+    XAi = pinv(crossprod(XA))
+    XAp = XAi %*% t(XA)
+    Ir = t(XI) %*% t(XAp)  # matrix in the "irrepresentable" condition
+
     if(length(lambda)>1) {
        lambdaA= lambda[active]
        lambdaI = lambda[!active]
@@ -253,23 +251,29 @@ fixedLassoPoly =
        lambdaA = rep(lambda, sum(active))
        lambdaI = rep(lambda, sum(!active))
     }
+
+    penalized = lambdaA != 0
+    signA = sign(beta[active])
+    active_subgrad = signA * lambdaA
+    if (length(signA)>1) sign_diag = diag(signA)
+    if (length(signA)==1) sign_diag = matrix(signA, 1, 1)
+    
     if (inactive) { # should we include the inactive constraints?
-      R = diag(rep(1, nrow(Xa))) - Xa %*% Xap # R is residual forming matrix of selected model
+      RA = diag(rep(1, nrow(XA))) - XA %*% XAp # RA is residual forming matrix of selected model
       
       A = rbind(
-        1/lambdaI * t(Xac) %*% R,
-        -1/lambdaI * t(Xac) %*% R,
-        -dz %*% Xap
+        t(XI) %*% RA,
+        -t(XI) %*% RA,
+        -(sign_diag %*% XAp)[penalized,] # no constraints for unpenalized
       )
-      lambda2=lambda
 
       b = c(
-        1 - t(Xac) %*% t(Xap) %*% za,
-        1 + t(Xac) %*% t(Xap) %*% za,
-        -lambdaA * dz %*% Xai %*% za)
+        lambdaI - Ir %*% active_subgrad,
+        lambdaI + Ir %*% active_subgrad,
+        -(sign_diag %*% XAi %*% active_subgrad)[penalized])
     } else {
-      A = -dz %*% Xap
-      b = -lambdaA * dz %*% Xai %*% za
+      A = -(sign_diag %*% XAp)[penalized,]  # no constraints for unpenalized
+      b = -(sign_diag %*% XAi %*% active_subgrad)[penalized]
     }
     
     return(list(A=A, b=b))
