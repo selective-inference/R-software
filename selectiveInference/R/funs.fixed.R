@@ -375,7 +375,6 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
   # Initialize variables 
 
   soln = rep(0, p)
-  Xsoln = rep(0, n)
   ever_active = rep(0, p)
   ever_active[1] = row      # 1-based
   ever_active = as.integer(ever_active)
@@ -406,6 +405,7 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
                             objective_tol, 
                             max_active) 
       } else {
+          Xsoln = rep(0, nrow(Xinfo))
           result = solve_QP_wide(Xinfo, # this is a design matrix
                                  mu, 
                                  max_iter, 
