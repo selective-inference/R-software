@@ -108,7 +108,7 @@ set.seed(10)
 n = 50
 p = 100
 X = matrix(rnorm(n * p), n, p)
-S = t(X) %*% X / n
+S = t(X) \%*\% X / n
 M = debiasingMatrix(S, FALSE, n, c(1,3,5))
 M2 = debiasingMatrix(X, TRUE, n, c(1,3,5))
 max(M - M2)
