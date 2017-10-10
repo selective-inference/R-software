@@ -80,12 +80,9 @@ fixedLassoInf <- function(x, y, beta,
       warning(paste("Solution beta does not satisfy the KKT conditions",
                     "(to within specified tolerances)"))
     
-    tol.coef = tol.beta * sqrt(n^2 / colSums(x^2))
-    # print(tol.coef)
-      vars = which(abs(beta) > tol.coef)
-   #    vars = abs(beta) > tol.coef
-    # print(beta)
-    # print(vars)
+    tol.coef = tol.beta * sqrt(n / colSums(x^2))
+    vars = which(abs(beta) > tol.coef)
+
     if(sum(vars)==0){
       cat("Empty model",fill=T)
       return()
@@ -97,10 +94,17 @@ fixedLassoInf <- function(x, y, beta,
                     "'thresh' parameter, for a more accurate convergence."))
     
     # Get lasso polyhedral region, of form Gy >= u
-logical.vars=rep(FALSE,p)
-logical.vars[vars]=TRUE
-    if (type == 'full') out = fixedLassoPoly(x,y,lambda,beta,logical.vars,inactive=TRUE)
-    else out = fixedLassoPoly(x,y,lambda,beta,logical.vars)
+
+    logical.vars=rep(FALSE,p)
+    logical.vars[vars]=TRUE
+    
+    if (type == 'full') {
+       out = fixedLassoPoly(x, y, lambda, beta, logical.vars, inactive=TRUE)
+    } 
+    else {
+       out = fixedLassoPoly(x, y, lambda, beta, logical.vars)
+    }
+    
     A = out$A
     b = out$b
     
@@ -233,8 +237,8 @@ logical.vars[vars]=TRUE
 
 fixedLassoPoly =
   function(X, y, lambda, beta, active, inactive = FALSE) {
-    Xa = X[,active,drop=F]
-    Xac = X[,!active,drop=F]
+    Xa = X[, active, drop=FALSE]
+    Xac = X[, !active, drop=FALSE]
     Xai = pinv(crossprod(Xa))
     Xap = Xai %*% t(Xa)
 
@@ -242,25 +246,30 @@ fixedLassoPoly =
     if (length(za)>1) dz = diag(za)
     if (length(za)==1) dz = matrix(za,1,1)
     
+    if(length(lambda)>1) {
+       lambdaA= lambda[active]
+       lambdaI = lambda[!active]
+    } else {
+       lambdaA = rep(lambda, sum(active))
+       lambdaI = rep(lambda, sum(!active))
+    }
     if (inactive) { # should we include the inactive constraints?
-      R = diag(1,nrow(Xa)) - Xa %*% Xap # R is residual forming matrix of selected model
+      R = diag(rep(1, nrow(Xa))) - Xa %*% Xap # R is residual forming matrix of selected model
       
       A = rbind(
-        1/lambda * t(Xac) %*% R,
-        -1/lambda * t(Xac) %*% R,
+        1/lambdaI * t(Xac) %*% R,
+        -1/lambdaI * t(Xac) %*% R,
         -dz %*% Xap
       )
       lambda2=lambda
-      if(length(lambda)>1) lambda2=lambda[active]
+
       b = c(
         1 - t(Xac) %*% t(Xap) %*% za,
         1 + t(Xac) %*% t(Xap) %*% za,
-        -lambda2 * dz %*% Xai %*% za)
+        -lambdaA * dz %*% Xai %*% za)
     } else {
       A = -dz %*% Xap
-      lambda2=lambda
-      if(length(lambda)>1) lambda2=lambda[active]
-      b = -lambda2 * dz %*% Xai %*% za
+      b = -lambdaA * dz %*% Xai %*% za
     }
     
     return(list(A=A, b=b))
