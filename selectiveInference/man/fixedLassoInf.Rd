@@ -257,29 +257,54 @@ set.seed(43)
      out = fixedLassoInf(x, tim, beta_hat, lambda, status=status, family="cox")
      out
 
-# Debiased lasso or "full"
+     # Debiased lasso or "full"
 
-n = 50
-p = 100
-sigma = 1
+     n = 50
+     p = 100
+     sigma = 1
 
-x = matrix(rnorm(n*p),n,p)
-x = scale(x,TRUE,TRUE)
+     x = matrix(rnorm(n*p),n,p)
+     x = scale(x,TRUE,TRUE)
 
-beta = c(3,2,rep(0,p-2))
-y = x\%*\%beta + sigma*rnorm(n)
+     beta = c(3,2,rep(0,p-2))
+     y = x\%*\%beta + sigma*rnorm(n)
 
-# first run glmnet
-gfit = glmnet(x, y, standardize=FALSE, intercept=FALSE)
+     # first run glmnet
+     gfit = glmnet(x, y, standardize=FALSE, intercept=FALSE)
 
-# extract coef for a given lambda; note the 1/n factor!
-# (and we don't save the intercept term)
-lambda = 2.8
-beta = coef(gfit, x=x, y=y, s=lambda/n, exact=TRUE)[-1]
+     # extract coef for a given lambda; note the 1/n factor!
+     # (and we don't save the intercept term)
+     lambda = 2.8
+     beta = coef(gfit, x=x, y=y, s=lambda/n, exact=TRUE)[-1]
 
-# compute fixed lambda p-values and selection intervals
-out = fixedLassoInf(x, y, beta, lambda, sigma=sigma, type='full', intercept=FALSE)
-out
+     # compute fixed lambda p-values and selection intervals
+     out = fixedLassoInf(x, y, beta, lambda, sigma=sigma, type='full', intercept=FALSE)
+     out
+
+     # When n > p and "full" we use the full inverse
+     # instead of Javanmard and Montanari's approximate inverse
+
+     n = 200
+     p = 50
+     sigma = 1
+
+     x = matrix(rnorm(n*p),n,p)
+     x = scale(x,TRUE,TRUE)
+
+     beta = c(3,2,rep(0,p-2))
+     y = x\%*\%beta + sigma*rnorm(n)
+
+     # first run glmnet
+     gfit = glmnet(x, y, standardize=FALSE, intercept=FALSE)
+
+     # extract coef for a given lambda; note the 1/n factor!
+     # (and we don't save the intercept term)
+     lambda = 2.8
+     beta = coef(gfit, x=x, y=y, s=lambda/n, exact=TRUE)[-1]
+
+     # compute fixed lambda p-values and selection intervals
+     out = fixedLassoInf(x, y, beta, lambda, sigma=sigma, type='full', intercept=FALSE)
+     out
 
 }
  
