@@ -2,7 +2,7 @@ PKG_CFLAGS= -I.
 PKG_CPPFLAGS= -I.
 PKG_LIBS=-L. 
 
-$(SHLIB): Rcpp Rcpp-matrixcomps.o Rcpp-debias.o RcppExports.o quadratic_program.o
+$(SHLIB): Rcpp Rcpp-matrixcomps.o Rcpp-debias.o RcppExports.o quadratic_program.o quadratic_program_wide.o
 
 clean:
 	rm -f *o
