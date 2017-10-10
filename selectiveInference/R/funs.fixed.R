@@ -80,12 +80,9 @@ fixedLassoInf <- function(x, y, beta,
       warning(paste("Solution beta does not satisfy the KKT conditions",
                     "(to within specified tolerances)"))
     
-    tol.coef = tol.beta * sqrt(n^2 / colSums(x^2))
-    # print(tol.coef)
-      vars = which(abs(beta) > tol.coef)
-   #    vars = abs(beta) > tol.coef
-    # print(beta)
-    # print(vars)
+    tol.coef = tol.beta * sqrt(n / colSums(x^2))
+    vars = which(abs(beta) > tol.coef)
+
     if(sum(vars)==0){
       cat("Empty model",fill=T)
       return()
@@ -97,10 +94,17 @@ fixedLassoInf <- function(x, y, beta,
                     "'thresh' parameter, for a more accurate convergence."))
     
     # Get lasso polyhedral region, of form Gy >= u
-logical.vars=rep(FALSE,p)
-logical.vars[vars]=TRUE
-    if (type == 'full') out = fixedLassoPoly(x,y,lambda,beta,logical.vars,inactive=TRUE)
-    else out = fixedLassoPoly(x,y,lambda,beta,logical.vars)
+
+    logical.vars=rep(FALSE,p)
+    logical.vars[vars]=TRUE
+    
+    if (type == 'full') {
+       out = fixedLassoPoly(x, y, lambda, beta, logical.vars, inactive=TRUE)
+    } 
+    else {
+       out = fixedLassoPoly(x, y, lambda, beta, logical.vars)
+    }
+    
     A = out$A
     b = out$b
     
@@ -233,34 +237,43 @@ logical.vars[vars]=TRUE
 
 fixedLassoPoly =
   function(X, y, lambda, beta, active, inactive = FALSE) {
-    Xa = X[,active,drop=F]
-    Xac = X[,!active,drop=F]
-    Xai = pinv(crossprod(Xa))
-    Xap = Xai %*% t(Xa)
 
-    za = sign(beta[active])
-    if (length(za)>1) dz = diag(za)
-    if (length(za)==1) dz = matrix(za,1,1)
+    XA = X[, active, drop=FALSE]
+    XI = X[, !active, drop=FALSE]
+    XAi = pinv(crossprod(XA))
+    XAp = XAi %*% t(XA)
+    Ir = t(XI) %*% t(XAp)  # matrix in the "irrepresentable" condition
+
+    if(length(lambda)>1) {
+       lambdaA= lambda[active]
+       lambdaI = lambda[!active]
+    } else {
+       lambdaA = rep(lambda, sum(active))
+       lambdaI = rep(lambda, sum(!active))
+    }
+
+    penalized = lambdaA != 0
+    signA = sign(beta[active])
+    active_subgrad = signA * lambdaA
+    if (length(signA)>1) sign_diag = diag(signA)
+    if (length(signA)==1) sign_diag = matrix(signA, 1, 1)
     
     if (inactive) { # should we include the inactive constraints?
-      R = diag(1,nrow(Xa)) - Xa %*% Xap # R is residual forming matrix of selected model
+      RA = diag(rep(1, nrow(XA))) - XA %*% XAp # RA is residual forming matrix of selected model
       
       A = rbind(
-        1/lambda * t(Xac) %*% R,
-        -1/lambda * t(Xac) %*% R,
-        -dz %*% Xap
+        t(XI) %*% RA,
+        -t(XI) %*% RA,
+        -(sign_diag %*% XAp)[penalized,] # no constraints for unpenalized
       )
-      lambda2=lambda
-      if(length(lambda)>1) lambda2=lambda[active]
+
       b = c(
-        1 - t(Xac) %*% t(Xap) %*% za,
-        1 + t(Xac) %*% t(Xap) %*% za,
-        -lambda2 * dz %*% Xai %*% za)
+        lambdaI - Ir %*% active_subgrad,
+        lambdaI + Ir %*% active_subgrad,
+        -(sign_diag %*% XAi %*% active_subgrad)[penalized])
     } else {
-      A = -dz %*% Xap
-      lambda2=lambda
-      if(length(lambda)>1) lambda2=lambda[active]
-      b = -lambda2 * dz %*% Xai %*% za
+      A = -(sign_diag %*% XAp)[penalized,]  # no constraints for unpenalized
+      b = -(sign_diag %*% XAi %*% active_subgrad)[penalized]
     }
     
     return(list(A=A, b=b))
@@ -362,7 +375,6 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
   # Initialize variables 
 
   soln = rep(0, p)
-  Xsoln = rep(0, n)
   ever_active = rep(0, p)
   ever_active[1] = row      # 1-based
   ever_active = as.integer(ever_active)
@@ -393,6 +405,7 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
                             objective_tol, 
                             max_active) 
       } else {
+          Xsoln = rep(0, nrow(Xinfo))
           result = solve_QP_wide(Xinfo, # this is a design matrix
                                  mu, 
                                  max_iter, 
