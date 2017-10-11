@@ -32,7 +32,7 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial"), tol.bet
  m=beta[-1]!=0  #active set
          
     bhat=c(beta[1],beta[-1][beta[-1]!=0]) # intcpt plus active vars
-     s2=sign(bhat)
+     sign_bhat=sign(bhat)
      lam2m=diag(c(0,rep(lambda,sum(m))))
  
 
@@ -66,14 +66,14 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial"), tol.bet
  # MM=solve(t(xxm)%*%w%*%xxm)
    MM=solve(scale(t(xxm),F,1/ww)%*%xxm)
   gm = c(0,-g[vars]*lambda) # gradient at LASSO solution, first entry is 0 because intercept is unpenalized
-                            # at exact LASSO solution it should be s2[-1]
+                            # at exact LASSO solution it should be sign_bhat[-1]
   dbeta = MM %*% gm
 
-  # bbar=(bhat+lam2m%*%MM%*%s2)  # JT: this is wrong, shouldn't use sign of intercept anywhere...
+  # bbar=(bhat+lam2m%*%MM%*%sign_bhat)  # JT: this is wrong, shouldn't use sign of intercept anywhere...
   bbar = bhat - dbeta
 
-  A1=-(mydiag(s2))[-1,]
-  b1= (s2 * dbeta)[-1]
+  A1=-(mydiag(sign_bhat))[-1,]
+  b1= (sign_bhat * dbeta)[-1]
 
   tol.poly = 0.01 
   if (max((A1 %*% bbar) - b1) > tol.poly)
@@ -87,7 +87,7 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial"), tol.bet
 
   
     for(jj in 1:sum(m)){
-       vj=c(rep(0,sum(m)+1));vj[jj+1]=s2[jj+1]
+       vj=c(rep(0,sum(m)+1));vj[jj+1]=sign_bhat[jj+1]
       # compute p-values
       junk=TG.pvalue(bbar, A1, b1, vj, MM)
       pv[jj] = junk$pv
