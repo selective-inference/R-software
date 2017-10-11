@@ -82,17 +82,20 @@ fixedLassoInf <- function(x, y, beta,
     
     tol.coef = tol.beta * sqrt(n / colSums(x^2))
     vars = which(abs(beta) > tol.coef)
+    sign_vars = sign(beta[vars])
 
     if(sum(vars)==0){
       cat("Empty model",fill=T)
       return()
     }
-    if (any(sign(g[vars]) != sign(beta[vars])))
+
+    if (any(sign(g[vars]) != sign_vars)) {
       warning(paste("Solution beta does not satisfy the KKT conditions",
                     "(to within specified tolerances). You might try rerunning",
                     "glmnet with a lower setting of the",
                     "'thresh' parameter, for a more accurate convergence."))
-    
+    }
+
     # Get lasso polyhedral region, of form Gy >= u
 
     logical.vars=rep(FALSE,p)
@@ -132,13 +135,19 @@ fixedLassoInf <- function(x, y, beta,
     }
     
     # add additional targets for inference if provided
-    if (!is.null(add.targets)) vars = sort(unique(c(vars,add.targets,recursive=T)))
-    
-      k = length(vars)
+    if (!is.null(add.targets)) {
+       # vars is boolean...
+       old_vars = vars & TRUE
+       vars[add.targets] = TRUE
+       sign_vars = sign(beta[vars]) 
+       sign_vars[!old_vars] = NA
+       stop("`add.targets` not fully implemented yet")
+    }
+
+    k = length(vars)
     pv = vlo = vup = numeric(k)
     vmat = matrix(0,k,n)
     ci = tailarea = matrix(0,k,2)
-    sign = numeric(k)
       
     if (type=="full" & p > n) {
       if (intercept == T) {
@@ -202,20 +211,28 @@ fixedLassoInf <- function(x, y, beta,
     vj = M[j,]
     mj = sqrt(sum(vj^2))
     vj = vj / mj        # Standardize (divide by norm of vj)
-    sign[j] = sign(sum(vj*y))
-    vj = sign[j] * vj
+
+    if (!is.na(sign_vars[j])) {
+        vj = sign_vars[j] * vj
+    }
 
     limits.info = TG.limits(y, A, b, vj, Sigma=diag(rep(sigma^2, n)))
     a = TG.pvalue.base(limits.info, null_value=null_value[j], bits=bits)
     pv[j] = a$pv
+    if (is.na(sign_vars[j])) { # for variables not in the active set, report 2-sided pvalue
+       pv[j] = 2 * min(pv[j], 1 - pv[j])
+    }
     vlo[j] = a$vlo * mj # Unstandardize (mult by norm of vj)
     vup[j] = a$vup * mj # Unstandardize (mult by norm of vj)
-    vmat[j,] = vj * mj * sign[j]  # Unstandardize (mult by norm of vj)
-
+    if (!is.na(sign_vars[j])) { 
+        vmat[j,] = vj * mj * sign_vars[j]  # Unstandardize (mult by norm of vj) and fix sign
+    } else {
+        vmat[j,] = vj * mj # Unstandardize (mult by norm of vj)
+    }
     a = TG.interval.base(limits.info, 
                          alpha=alpha,
                          gridrange=gridrange,
-			 flip=(sign[j]==-1),
+			 flip=(sign_vars[j]==-1),
                          bits=bits)
     ci[j,] = (a$int-null_value[j]) * mj # Unstandardize (mult by norm of vj)
     tailarea[j,] = a$tailarea
@@ -223,7 +240,7 @@ fixedLassoInf <- function(x, y, beta,
 
   out = list(type=type,lambda=lambda,pv=pv,ci=ci,
     tailarea=tailarea,vlo=vlo,vup=vup,vmat=vmat,y=y,
-    vars=vars,sign=sign,sigma=sigma,alpha=alpha,
+    vars=vars,sign=sign_vars,sigma=sigma,alpha=alpha,
     sd=sigma*sqrt(rowSums(vmat^2)),
     coef0=vmat%*%y,
     call=this.call)
