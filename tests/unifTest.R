@@ -106,3 +106,9 @@ lines(qqlist,fdr.by,type="b",col=3)
 abline(0,1,lty=2)
 title(paste("n=",as.character(n)," p=",as.character(p),"  ",as.character(type)))
 legend("bottomright",c("BH","BY"),col=c(1,3),lty=1)
+
+
+pv=pvals[ii,]
+pvv=sort(pv)
+oo=which(pvv<=.2*(1:length(pvv))/length(pvv))
+oo=oo[length(oo)]
