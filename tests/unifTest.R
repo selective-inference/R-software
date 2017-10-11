@@ -1,15 +1,16 @@
                                       
-library(selectiveInference)
+library(selectiveInference, lib.loc="/Users/tibs/dropbox/git/R-software/mylib")
 
 library(glmnet)
 
 set.seed(424)
 
-#n=100
-#p=30
+n=100
+p=30
 
-n=20
-p=40
+n=100
+p=200
+
 sigma=.4
 beta=c(3,2,-1,4,-2,2,rep(0,p-6))
 #beta=rep(0,p)
@@ -17,7 +18,7 @@ beta=c(3,2,-1,4,-2,2,rep(0,p-6))
 tr=beta!=0
 
 #type="full"
-type="part"
+type="partial"
 
 nsim = 1000
 lambda=.3
@@ -28,7 +29,7 @@ x = scale(x,T,T)/sqrt(n-1)
 mu = x%*%beta
 
 for (i in 1:nsim) {
-    cat(i)
+    cat(i,fill=T)
 y=mu+sigma*rnorm(n)
 y=y-mean(y) 
 # first run  glmnet
@@ -68,26 +69,25 @@ abline(0,1)
 
  # estimate and plot FDR
 
-pvadj=pvadj.by=pvadj.holm=matrix(NA,nsim,p)
+pvadj=pvadj.by=matrix(NA,nsim,p)
 for(ii in 1:nsim){
-    o=!is.na(pvals[ii,])
-    pvadj[ii,o]=p.adjust(pvals[ii,o],method="BH")
-    pvadj.by[ii,o]=p.adjust(pvals[ii,o],method="BY")
-      pvadj.holm[ii,o]=p.adjust(pvals[ii,o],method="holm")
+    oo=!is.na(pvals[ii,])
+    pvadj[ii,oo]=p.adjust(pvals[ii,oo],method="BH")
+    pvadj.by[ii,oo]=p.adjust(pvals[ii,oo],method="BY")
+   
     }
-qqlist=fdr=se=fdr.by=se.by=fdr.holm=se.holm=c(.05, .1,.15,.2,.25,.3)
+qqlist=c(.05, .1,.15,.2,.25,.3)
+fdr=se=fdr.by=se.by=rep(NA,length(qqlist))
 jj=0
 for(qq in qqlist){
     jj=jj+1
 
-r=v=r.by=v.by=r.holm=v.holm=rep(NA,nsim)
+r=v=r.by=v.by=rep(NA,nsim)
 for(ii in 1:nsim){
     v[ii]=sum( (pvadj[ii,]<qq & !tr), na.rm=T)
     r[ii]=sum( (pvadj[ii,]<qq), na.rm=T)
     v.by[ii]=sum( (pvadj.by[ii,]<qq & !tr), na.rm=T)
     r.by[ii]=sum( (pvadj.by[ii,]<qq), na.rm=T)
-      v.holm[ii]=sum( (pvadj.holm[ii,]<qq & !tr), na.rm=T)
-    r.holm[ii]=sum( (pvadj.holm[ii,]<qq), na.rm=T)
     
 }
 oo=r!=0
@@ -96,15 +96,13 @@ oo=r!=0
     oo=r.by!=0
      fdr.by[jj]=mean((v.by/r.by)[oo])
     se.by[jj]=sqrt(var((v.by/r.by)[oo])/sum(oo))
-     oo=r.by!=0
-     fdr.holm[jj]=mean((v.holm/r.holm)[oo])
-    se.holm[jj]=sqrt(var((v.holm/r.holm)[oo])/sum(oo))
+   
 }
 
 
 plot(qqlist,fdr,type="b",xlab="target FDR",ylab="observed FDR",ylim=c(0,.6),xlim=c(0,.6))
 lines(qqlist,fdr.by,type="b",col=3)
-lines(qqlist,fdr.holm,type="b",col=4)
+
 abline(0,1,lty=2)
 title(paste("n=",as.character(n)," p=",as.character(p),"  ",as.character(type)))
-legend("bottomright",c("BH","BY","Holm"),col=c(1,3,4),lty=1)
+legend("bottomright",c("BH","BY"),col=c(1,3),lty=1)
