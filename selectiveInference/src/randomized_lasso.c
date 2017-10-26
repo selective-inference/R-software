@@ -126,8 +126,6 @@ double log_density_gaussian_conditional(double noise_scale,             // Scale
   double denom = 2 * noise_scale * noise_scale;
   double reconstruction = 0;
   double *offset_ptr;
-  double *internal_linear_ptr;
-  double *internal_state_ptr;
   double *optimization_linear_ptr;
   double *optimization_state_ptr;
 
@@ -164,8 +162,6 @@ double log_density_laplace_conditional(double noise_scale,             // Scale 
   double value = 0;
   double reconstruction = 0;
   double *offset_ptr;
-  double *internal_linear_ptr;
-  double *internal_state_ptr;
   double *optimization_linear_ptr;
   double *optimization_state_ptr;
 
@@ -175,15 +171,6 @@ double log_density_laplace_conditional(double noise_scale,             // Scale 
 
     offset_ptr = ((double *) offset + irow);
     reconstruction = *offset_ptr;
-
-    // Internal (i.e. data) contribution
-    for (icol=0; icol<ninternal; icol++) {
-      
-      internal_linear_ptr = ((double *) internal_linear + icol * ndim + irow);
-      internal_state_ptr = ((double *) internal_state + icol);
-
-      reconstruction += (*internal_linear_ptr) * (*internal_state_ptr);
-    }
 
     // Optimization contribution
     for (icol=0; icol<noptimization; icol++) {

@@ -4,7 +4,7 @@
 
 // Solves a dual version of problem (4) of https://arxiv.org/pdf/1306.3171.pdf
 
-// Dual problem: \text{min}_{\theta} 1/2 \|X\theta\|^2 - l^T\theta + \mu \|\theta\|_1
+// Dual problem: \text{min}_{\theta} 1/2 \|X\theta\|^2 - l^T\theta + \mu \|\theta\|_1 + \frac{\epsilon}{2} \|\theta\|^2_2
 // where l is `linear_func` below
 
 // This is the "negative" of the problem as in https://gist.github.com/jonathan-taylor/07774d209173f8bc4e42aa37712339bf
@@ -19,11 +19,13 @@ double objective_wide(double *X_theta_ptr,     /* Fitted values */
 		      int *nactive_ptr,        /* Size of ever active set */
 		      int ncase,               /* how many rows in X */
 		      int nfeature,            /* how many columns in X */
-		      double bound,            /* Lagrange multipler for \ell_1 */
+		      double *bound_ptr,       /* Lagrange multiplers for \ell_1 */
+		      double ridge_term,       /* Ridge / ENet term */
 		      double *theta_ptr)       /* current value */
 {
   int icase, iactive;
   double value = 0;
+  double *bound_ptr_tmp;
   double *X_theta_ptr_tmp = X_theta_ptr;
   double *linear_func_ptr_tmp = linear_func_ptr;
   double *theta_ptr_tmp;
@@ -55,8 +57,12 @@ double objective_wide(double *X_theta_ptr,     /* Fitted values */
 
     // The \ell_1 term
 
-    value += bound * fabs((*theta_ptr_tmp));
+    bound_ptr_tmp = ((double *) bound_ptr + active_feature);
+    value += (*bound_ptr_tmp) * fabs((*theta_ptr_tmp));
 
+    // The ridge term
+
+    value += 0.5 * ridge_term * (*theta_ptr_tmp) * (*theta_ptr_tmp);
   }
   
   return(value);
@@ -167,34 +173,39 @@ int check_KKT_wide(double *theta_ptr,        /* current theta */
 		   int *need_update_ptr,     /* Which coordinates need to be updated? */
 		   int nfeature,             /* how many columns in X */
 		   int ncase,                /* how many rows in X */
-		   double bound,             /* Lagrange multipler for \ell_1 */
+		   double *bound_ptr,        /* Lagrange multiplers for \ell_1 */
+		   double ridge_term,        /* Ridge / ENet term */
 		   double tol)               /* precision for checking KKT conditions */        
 {
   // First check inactive
 
   int ifeature;
   double *theta_ptr_tmp;
+  double *bound_ptr_tmp;
+  double bound;
   double gradient;
 
   for (ifeature=0; ifeature<nfeature; ifeature++) {
 
     theta_ptr_tmp = ((double *) theta_ptr + ifeature);
+    bound_ptr_tmp = ((double *) bound_ptr + ifeature);
+    bound = *bound_ptr_tmp;
 
     // Compute this coordinate of the gradient
 
     gradient = compute_gradient_coord(gradient_ptr, X_theta_ptr, X_ptr, linear_func_ptr, need_update_ptr, ifeature, ncase);
 
-    if (*theta_ptr_tmp != 0) { // these coordinates of gradients should be equal to -bound
-
-      if ((*theta_ptr_tmp > 0) &&  (fabs(gradient + bound) > tol * bound)) {
+    if ((*theta_ptr_tmp != 0) && (bound != 0)) { // these coordinates of gradients should be equal to -bound
+      
+      if ((*theta_ptr_tmp > 0) &&  (fabs(gradient + ridge_term * (*theta_ptr_tmp) + bound) > tol * bound)) {
 	return(0);
       }
-      else if ((*theta_ptr_tmp < 0) && (fabs(gradient - bound) > tol * bound)) {
+      else if ((*theta_ptr_tmp < 0) && (fabs(gradient + ridge_term * (*theta_ptr_tmp) - bound) > tol * bound)) {
 	return(0);
       }
-
+      
     }
-    else {
+    else if (bound != 0) {
       if (fabs(gradient) > (1. + tol) * bound) {
 	return(0);
       }
@@ -214,13 +225,16 @@ int check_KKT_wide_active(int *ever_active_ptr,           /* Ever active set: 0-
 			  int *need_update_ptr,           /* Which coordinates need to be updated? */
 			  int nfeature,                   /* how many columns in X */
 			  int ncase,                      /* how many rows in X */
-			  double bound,                   /* Lagrange multipler for \ell_1 */
+			  double *bound_ptr,              /* Lagrange multipliers for \ell_1 */
+			  double ridge_term,              /* Ridge / ENet term */
 			  double tol)                     /* precision for checking KKT conditions */        
 {
   // First check inactive
 
   int iactive;
   double *theta_ptr_tmp;
+  double *bound_ptr_tmp;
+  double bound;
   double gradient;
   int nactive = *nactive_ptr;
   int active_feature;
@@ -230,23 +244,26 @@ int check_KKT_wide_active(int *ever_active_ptr,           /* Ever active set: 0-
 
     active_feature_ptr = ((int *) ever_active_ptr + iactive);
     active_feature = *active_feature_ptr - 1;          // Ever-active is 1-based
+
     theta_ptr_tmp = ((double *) theta_ptr + active_feature);
+    bound_ptr_tmp = ((double *) bound_ptr + active_feature);
+    bound = *bound_ptr_tmp;
 
     // Compute this coordinate of the gradient
 
     gradient = compute_gradient_coord(gradient_ptr, X_theta_ptr, X_ptr, linear_func_ptr, need_update_ptr, active_feature, ncase);
 
-    if (*theta_ptr_tmp != 0) { // these coordinates of gradients should be equal to -bound
+    if ((*theta_ptr_tmp != 0) && (bound != 0)) { // these coordinates of gradients should be equal to -bound
 
-      if ((*theta_ptr_tmp > 0) &&  (fabs(gradient + bound) > tol * bound)) {
+      if ((*theta_ptr_tmp > 0) &&  (fabs(gradient + ridge_term * (*theta_ptr_tmp) + bound) > tol * bound)) {
 	return(0);
       }
-      else if ((*theta_ptr_tmp < 0) && (fabs(gradient - bound) > tol * bound)) {
+      else if ((*theta_ptr_tmp < 0) && (fabs(gradient + ridge_term * (*theta_ptr_tmp) - bound) > tol * bound)) {
 	return(0);
       }
 
     }
-    else {
+    else if (bound != 0) {
       if (fabs(gradient) > (1. + tol) * bound) {
 	return(0);
       }
@@ -266,7 +283,8 @@ double update_one_coord_wide(double *X_ptr,               /* A design matrix*/
 			     int *need_update_ptr,        /* Whether a gradient coordinate needs update or not */
 			     int ncase,                   /* How many rows in X */
 			     int nfeature,                /* How many rows in X */
-			     double bound,                /* feasibility parameter */
+			     double *bound_ptr,           /* Lagrange multipliers */
+			     double ridge_term,           /* Ridge / ENet term */
 			     double *theta_ptr,           /* current value */
 			     int coord,                   /* which coordinate to update: 0-based */
 			     int is_active)               /* Is this coord in ever_active */     
@@ -280,6 +298,8 @@ double update_one_coord_wide(double *X_ptr,               /* A design matrix*/
   double *X_theta_ptr_tmp;
   int *need_update_ptr_tmp;
   double *theta_ptr_tmp;
+  double *bound_ptr_tmp;
+  double bound;
   int ifeature, icase;
 
   double *diagonal_ptr = ((double *) nndef_diag_ptr + coord);
@@ -290,6 +310,9 @@ double update_one_coord_wide(double *X_ptr,               /* A design matrix*/
   theta_ptr_tmp = ((double *) theta_ptr + coord);
   old_value = *theta_ptr_tmp;
 
+  bound_ptr_tmp = ((double *) bound_ptr + coord);
+  bound = *bound_ptr_tmp;
+
   // The coord entry of gradient_ptr term has a diagonal term in it:
   // (X^TX)[coord, coord] * theta[coord] / ncase
   // This removes it. 
@@ -298,17 +321,17 @@ double update_one_coord_wide(double *X_ptr,               /* A design matrix*/
 
   // Now soft-threshold the coord entry of theta 
 
-  // Objective is t \mapsto q/2 * t^2 + l * t + bound |t|
-  // with q=diagonal_entry and l=linear_term
+  // Objective is t \mapsto (q+eps)/2 * t^2 + l * t + bound |t| + 
+  // with q=diagonal_entry and l=linear_term and eps=ridge_Term
 
   // With a negative linear term, solution should be
   // positive
 
   if (linear_term < -bound) {
-    value = (-linear_term - bound) / diagonal_entry;
+    value = (-linear_term - bound) / (diagonal_entry + ridge_term);
   }
   else if (linear_term > bound) {
-    value = -(linear_term - bound) / diagonal_entry;
+    value = -(linear_term - bound) / (diagonal_entry + ridge_term);
   }
 
   // Add to active set if necessary
@@ -363,24 +386,36 @@ int solve_wide(double *X_ptr,              /* Sqrt of non-neg def matrix -- X^TX
 	       int *nactive_ptr,           /* Size of ever active set */
 	       int ncase,                  /* How many rows in X */
 	       int nfeature,               /* How many columns in X */
-	       double bound,               /* feasibility parameter */
+	       double *bound_ptr,          /* Lagrange multipliers */
+	       double ridge_term,          /* Ridge / ENet term */
 	       double *theta_ptr,          /* current value */
+	       double *theta_old_ptr,      /* previous value */
 	       int maxiter,                /* max number of iterations */
 	       double kkt_tol,             /* precision for checking KKT conditions */
 	       double objective_tol,       /* precision for checking relative decrease in objective value */
-	       int max_active)             /* Upper limit for size of active set -- otherwise break */ 
+	       int max_active,             /* Upper limit for size of active set -- otherwise break */ 
+	       int objective_stop,         /* Break based on convergence of objective value? */
+	       int kkt_stop,               /* Break based on KKT? */
+	       int param_stop)             /* Break based on parameter convergence? */
 {
 
   int iter = 0;
+  int iter_old = 1;
   int ifeature = 0;
   int iactive = 0;
   int *active_ptr;
-  int check_objective = 1;
+
   double old_value, new_value; 
   int niter_active = 5;
   int iter_active;
 
-  if (check_objective) {
+  double norm_diff = 1.;
+  double norm_last = 1.;
+  double delta;
+  double threshold = 1.e-2;
+  double *theta_ptr_tmp, *theta_old_ptr_tmp;
+
+  if (objective_stop) {
 
     old_value = objective_wide(X_theta_ptr,
 			       linear_func_ptr,
@@ -388,8 +423,10 @@ int solve_wide(double *X_ptr,              /* Sqrt of non-neg def matrix -- X^TX
 			       nactive_ptr,
 			       ncase,
 			       nfeature,
-			       bound,
+			       bound_ptr,
+			       ridge_term,
 			       theta_ptr);
+    new_value = old_value;
 
   }
 
@@ -412,7 +449,8 @@ int solve_wide(double *X_ptr,              /* Sqrt of non-neg def matrix -- X^TX
 				need_update_ptr,
 				ncase,
 				nfeature,
-				bound,
+				bound_ptr,
+				ridge_term,
 				theta_ptr,
 				*active_ptr - 1,   // Ever-active is 1-based
 				1);
@@ -431,7 +469,8 @@ int solve_wide(double *X_ptr,              /* Sqrt of non-neg def matrix -- X^TX
 				  need_update_ptr,
 				  nfeature,
 				  ncase,
-				  bound,
+				  bound_ptr,
+				  ridge_term,
 				  kkt_tol) == 1) {
 	  break;
 	}
@@ -440,17 +479,20 @@ int solve_wide(double *X_ptr,              /* Sqrt of non-neg def matrix -- X^TX
 
     // Check KKT
 
-    if (check_KKT_wide(theta_ptr,
-		       gradient_ptr,
-		       X_theta_ptr,
-		       X_ptr,
-		       linear_func_ptr,
-		       need_update_ptr,
-		       nfeature,
-		       ncase,
-		       bound,
-		       kkt_tol) == 1) {
-      break;
+    if (kkt_stop) { 
+      if (check_KKT_wide(theta_ptr,
+			 gradient_ptr,
+			 X_theta_ptr,
+			 X_ptr,
+			 linear_func_ptr,
+			 need_update_ptr,
+			 nfeature,
+			 ncase,
+			 bound_ptr,
+			 ridge_term,
+			 kkt_tol) == 1) {
+	break;
+      }
     }
 
     // Update all variables 
@@ -467,7 +509,8 @@ int solve_wide(double *X_ptr,              /* Sqrt of non-neg def matrix -- X^TX
 			    need_update_ptr,
 			    ncase,
 			    nfeature,
-			    bound,
+			    bound_ptr,
+			    ridge_term,
 			    theta_ptr,
 			    ifeature,
 			    0);
@@ -475,19 +518,45 @@ int solve_wide(double *X_ptr,              /* Sqrt of non-neg def matrix -- X^TX
 
     // Check KKT
 
-    if (check_KKT_wide(theta_ptr,
-		       gradient_ptr,
-		       X_theta_ptr,
-		       X_ptr,
-		       linear_func_ptr,
-		       need_update_ptr,
-		       nfeature,
-		       ncase,
-		       bound,
-		       kkt_tol) == 1) {
-      break;
+    if (kkt_stop) {
+      if (check_KKT_wide(theta_ptr,
+			 gradient_ptr,
+			 X_theta_ptr,
+			 X_ptr,
+			 linear_func_ptr,
+			 need_update_ptr,
+			 nfeature,
+			 ncase,
+			 bound_ptr,
+			 ridge_term,
+			 kkt_tol) == 1) {
+	break;
+      }
     }
-					  
+
+    // Check based on norm -- from Adel's debiasing code
+
+    if (param_stop) {
+      if (iter == 2 * iter_old) {
+	iter_old = iter;
+	norm_diff = 0;
+	norm_last = 0;
+	for (ifeature=0; ifeature<nfeature; ifeature++) {
+	  theta_old_ptr_tmp = ((double *) theta_old_ptr + ifeature);
+	  theta_ptr_tmp = ((double *) theta_ptr + ifeature);
+	  delta = (*theta_ptr_tmp - *theta_old_ptr_tmp);
+	  norm_diff += delta * delta;
+	  norm_last += (*theta_ptr_tmp) * (*theta_ptr_tmp);
+	  *theta_old_ptr = (*theta_ptr_tmp);
+	}
+	norm_diff = sqrt(norm_diff);
+	norm_last = sqrt(norm_last);
+	
+	if (norm_diff < threshold * norm_last) {
+	  break;
+	}
+      }
+    }
     // Check size of active set
 
     if (*nactive_ptr >= max_active) {
@@ -496,14 +565,15 @@ int solve_wide(double *X_ptr,              /* Sqrt of non-neg def matrix -- X^TX
 
     // Check relative decrease of objective
 
-    if (check_objective) {
+    if (objective_stop) {
       new_value = objective_wide(X_theta_ptr,
 				 linear_func_ptr,
 				 ever_active_ptr,
 				 nactive_ptr,
 				 ncase,
 				 nfeature,
-				 bound,
+				 bound_ptr,
+				 ridge_term,
 				 theta_ptr);
 
       if ((fabs(old_value - new_value) < objective_tol * fabs(new_value)) && (iter > 0)) {

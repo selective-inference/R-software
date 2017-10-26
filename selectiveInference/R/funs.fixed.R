@@ -189,8 +189,10 @@ fixedLassoInf <- function(x, y, beta,
       }
 
       M <- (((htheta%*%t(Xordered))+ithetasigma%*%FS%*%hsigmaSinv%*%t(XS))/n)
+
       # vector which is offset for testing debiased beta's
       null_value <- (((ithetasigma%*%FS%*%hsigmaSinv)%*%sign(hbetaS))*lambda/n)
+
       if (intercept == T) {
         M = M[-1,] # remove intercept row
         null_value = null_value[-1] # remove intercept element
@@ -238,12 +240,23 @@ fixedLassoInf <- function(x, y, beta,
     tailarea[j,] = a$tailarea
   }
 
-  out = list(type=type,lambda=lambda,pv=pv,ci=ci,
-    tailarea=tailarea,vlo=vlo,vup=vup,vmat=vmat,y=y,
-    vars=vars,sign=sign_vars,sigma=sigma,alpha=alpha,
-    sd=sigma*sqrt(rowSums(vmat^2)),
-    coef0=vmat%*%y,
-    call=this.call)
+  out = list(type=type,
+             lambda=lambda,
+             pv=pv,
+             ci=ci,
+             tailarea=tailarea,
+             vlo=vlo,
+             vup=vup,
+             vmat=vmat,
+             y=y,
+             vars=vars,
+             sign=sign_vars,
+             sigma=sigma,
+             alpha=alpha,
+             sd=sigma*sqrt(rowSums(vmat^2)),
+             coef0=vmat%*%y,
+             call=this.call)
+
   class(out) = "fixedLassoInf"
   return(out)
 }
@@ -374,7 +387,7 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
                          row, 
                          mu, 
 	                 linesearch=TRUE,     # do a linesearch?
-		         scaling_factor=1.2,  # multiplicative factor for linesearch
+		         scaling_factor=1.5,  # multiplicative factor for linesearch
 		         max_active=NULL,     # how big can active set get?
 			 max_try=10,          # how many steps in linesearch?
 			 warn_kkt=FALSE,      # warn if KKT does not seem to be satisfied?
@@ -420,11 +433,15 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
                             nactive, 
                             kkt_tol, 
                             objective_tol, 
-                            max_active) 
+                            max_active,
+			    FALSE,        # objective_stop
+			    FALSE,        # kkt_stop
+			    TRUE)         # param_stop
       } else {
           Xsoln = rep(0, nrow(Xinfo))
           result = solve_QP_wide(Xinfo, # this is a design matrix
-                                 mu, 
+                                 rep(mu, p),  # vector of Lagrange multipliers
+				 0,           # ridge_term 
                                  max_iter, 
                                  soln, 
                                  linear_func, 
@@ -434,7 +451,10 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
                                  nactive, 
                                  kkt_tol, 
                                  objective_tol, 
-                                 max_active) 
+                                 max_active,
+				 FALSE,       # objective_stop
+				 FALSE,       # kkt_stop
+				 TRUE)        # param_stop
 
       }
 
