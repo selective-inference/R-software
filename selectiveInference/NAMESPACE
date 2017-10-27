@@ -43,5 +43,6 @@ importFrom("stats", dnorm, lsfit, pexp, pnorm, predict,
            qnorm, rnorm, sd, uniroot, dchisq, model.matrix, pchisq)
 importFrom("stats", "coef", "df", "lm", "pf")
 importFrom("stats", "glm", "residuals", "vcov")
+importFrom("stats", "rbinom", "rexp")
 importFrom("Rcpp", "sourceCpp")
 

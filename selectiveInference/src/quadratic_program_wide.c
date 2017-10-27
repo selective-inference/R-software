@@ -534,10 +534,11 @@ int solve_wide(double *X_ptr,              /* Sqrt of non-neg def matrix -- X^TX
       }
     }
 
-    // Check based on norm -- from Adel's debiasing code
+    if (iter == 2 * iter_old) { // Geometric iterations from Adel's code
 
-    if (param_stop) {
-      if (iter == 2 * iter_old) {
+      // Check based on norm 
+
+      if (param_stop) {
 	iter_old = iter;
 	norm_diff = 0;
 	norm_last = 0;
@@ -556,30 +557,31 @@ int solve_wide(double *X_ptr,              /* Sqrt of non-neg def matrix -- X^TX
 	  break;
 	}
       }
+
+      // Check relative decrease of objective
+
+      if (objective_stop) {
+	new_value = objective_wide(X_theta_ptr,
+				   linear_func_ptr,
+				   ever_active_ptr,
+				   nactive_ptr,
+				   ncase,
+				   nfeature,
+				   bound_ptr,
+				   ridge_term,
+				   theta_ptr);
+
+	if ((fabs(old_value - new_value) < objective_tol * fabs(new_value)) && (iter > 0)) {
+	  break;
+	}
+	old_value = new_value;
+      }
     }
+
     // Check size of active set
 
     if (*nactive_ptr >= max_active) {
       break;
-    }
-
-    // Check relative decrease of objective
-
-    if (objective_stop) {
-      new_value = objective_wide(X_theta_ptr,
-				 linear_func_ptr,
-				 ever_active_ptr,
-				 nactive_ptr,
-				 ncase,
-				 nfeature,
-				 bound_ptr,
-				 ridge_term,
-				 theta_ptr);
-
-      if ((fabs(old_value - new_value) < objective_tol * fabs(new_value)) && (iter > 0)) {
-	break;
-      }
-      old_value = new_value;
     }
 
   }
