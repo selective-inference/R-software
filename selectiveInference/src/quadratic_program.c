@@ -385,10 +385,12 @@ int solve_qp(double *nndef_ptr,          /* A non-negative definite matrix */
       }
     }
 					  
-    // Check based on norm -- from Adel's debiasing code
 
-    if (param_stop) { 
-      if (iter == 2 * iter_old) {
+    if (iter == 2 * iter_old) { // Geometric iterations from Adel's code
+
+      // Check based on norm 
+
+      if (param_stop) { 
 	iter_old = iter;
 	norm_diff = 0;
 	norm_last = 0;
@@ -407,29 +409,30 @@ int solve_qp(double *nndef_ptr,          /* A non-negative definite matrix */
 	  break;
 	}
       }
+
+      // Check relative decrease of objective
+
+      if (objective_stop) {
+	new_value = objective_qp(nndef_ptr,
+				 linear_func_ptr,
+				 ever_active_ptr,
+				 nactive_ptr,
+				 nfeature,
+				 bound,
+				 theta);
+
+	if ((fabs(old_value - new_value) < objective_tol * fabs(new_value)) && (iter > 0)) {
+	  break;
+	}
+	old_value = new_value;
+      }
+
     }
 
     // Check size of active set
 
     if (*nactive_ptr >= max_active) {
       break;
-    }
-
-    // Check relative decrease of objective
-
-    if (objective_stop) {
-      new_value = objective_qp(nndef_ptr,
-			       linear_func_ptr,
-			       ever_active_ptr,
-			       nactive_ptr,
-			       nfeature,
-			       bound,
-			       theta);
-
-      if ((fabs(old_value - new_value) < objective_tol * fabs(new_value)) && (iter > 0)) {
-	break;
-      }
-      old_value = new_value;
     }
 
   }
