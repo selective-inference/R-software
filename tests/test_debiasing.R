@@ -146,14 +146,15 @@ mu = 7.791408e-02
 
 tol = 1.e-12
 
-A1 = debiasingMatrix(S, FALSE, n, 1:5, mu=mu, max_iter=1000, kkt_tol=tol, objective_tol=tol, parameter_tol=tol)
-A2 = debiasingMatrix(S / n, FALSE, n, 1:5, mu=mu, max_iter=1000, kkt_tol=tol, objective_tol=tol, parameter_tol=tol)
+rows = c(1:2)
+A1 = debiasingMatrix(S, FALSE, n, rows, mu=mu, max_iter=1000, kkt_tol=tol, objective_tol=tol, parameter_tol=tol)
+A2 = debiasingMatrix(S / n, FALSE, n, rows, mu=mu, max_iter=1000, kkt_tol=tol, objective_tol=tol, parameter_tol=tol)
 
-B1 = debiasingMatrix(X, TRUE, n, 1:5, mu=mu, max_iter=1000, kkt_tol=tol, objective_tol=tol, parameter_tol=tol)
-B2 = debiasingMatrix(X / sqrt(n), TRUE, n, 1:5, mu=mu, max_iter=1000, kkt_tol=tol, objective_tol=tol, parameter_tol=tol)
+B1 = debiasingMatrix(X, TRUE, n, rows, mu=mu, max_iter=1000, kkt_tol=tol, objective_tol=tol, parameter_tol=tol)
+B2 = debiasingMatrix(X / sqrt(n), TRUE, n, rows, mu=mu, max_iter=1000, kkt_tol=tol, objective_tol=tol, parameter_tol=tol)
 
-C1 = InverseLinfty(S, n, mu=mu, maxiter=1000)[1:5,]
-C2 = InverseLinfty(S / n, n, mu=mu, maxiter=1000)[1:5,]
+C1 = InverseLinfty(S, n, mu=mu, maxiter=1000)[rows,]
+C2 = InverseLinfty(S / n, n, mu=mu, maxiter=1000)[rows,]
 
 par(mfrow=c(2,3))
 
