@@ -22,14 +22,18 @@ fit_randomized_lasso = function(X,
     			
     noise_type = match.arg(noise_type)
 
-    if (noise_type == 'gaussian') {
-       D = Norm(mean=0, sd=noise_scale)
+    if (noise_scale > 0) {
+        if (noise_type == 'gaussian') {
+            D = Norm(mean=0, sd=noise_scale)
+        }
+        else if (noise_type == 'laplace') {
+            D = DExp(rate = 1 / noise_scale) # D is a Laplace distribution with rate = 1.
+        }
+        perturb_ = distr::r(D)(p)
+    } else {
+        perturb_ = rep(0, p)
     }
-    else if (noise_type == 'laplace') {
-       D = DExp(rate = 1 / noise_scale) # D is a Laplace distribution with rate = 1.
-    }
-    perturb_ = distr::r(D)(p)
-			
+
     lam = as.numeric(lam)
     if (length(lam) == 1) {
        lam = rep(lam, p)
