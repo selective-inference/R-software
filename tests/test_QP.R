@@ -7,7 +7,7 @@ X = matrix(rnorm(n * p), n, p)
 Y = rnorm(n)
 lam = 2
 
-soln1 = selectiveInference:::fit_randomized_lasso(X, Y, lam, 1.e-12, 0)$soln
+soln1 = selectiveInference:::fit_randomized_lasso(X, Y, lam, 0, 0)$soln
 G = glmnet(X, Y, intercept=FALSE, standardize=FALSE)
 soln2 = coef(G, s=1/n, exact=TRUE, x=X, y=Y)[-1]
 
