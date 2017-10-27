@@ -4,7 +4,7 @@
 
 // Solves a dual version of problem (4) of https://arxiv.org/pdf/1306.3171.pdf
 
-// Dual problem: \text{min}_{\theta} 1/2 \|X\theta\|^2/n - l^T\theta + \mu \|\theta\|_1 + \frac{\epsilon}{2} \|\theta\|^2_2
+// Dual problem: \text{min}_{\theta} 1/2 \|X\theta\|^2/n + l^T\theta + \mu \|\theta\|_1 + \frac{\epsilon}{2} \|\theta\|^2_2
 // where l is `linear_func` below
 
 // This is the "negative" of the problem as in https://gist.github.com/jonathan-taylor/07774d209173f8bc4e42aa37712339bf

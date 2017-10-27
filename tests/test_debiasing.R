@@ -144,16 +144,19 @@ S = t(X) %*% X / n
 
 mu = 7.791408e-02
 
-A1 = debiasingMatrix(S, FALSE, n, 1:5, mu=mu, max_iter=1000)
-A2 = debiasingMatrix(S / n, FALSE, n, 1:5, mu=mu, max_iter=1000)
+tol = 1.e-12
 
-B1 = debiasingMatrix(X, TRUE, n, 1:5, mu=mu, max_iter=1000)
-B2 = debiasingMatrix(X / sqrt(n), TRUE, n, 1:5, mu=mu, max_iter=1000)
+A1 = debiasingMatrix(S, FALSE, n, 1:5, mu=mu, max_iter=1000, kkt_tol=tol, objective_tol=tol, parameter_tol=tol)
+A2 = debiasingMatrix(S / n, FALSE, n, 1:5, mu=mu, max_iter=1000, kkt_tol=tol, objective_tol=tol, parameter_tol=tol)
+
+B1 = debiasingMatrix(X, TRUE, n, 1:5, mu=mu, max_iter=1000, kkt_tol=tol, objective_tol=tol, parameter_tol=tol)
+B2 = debiasingMatrix(X / sqrt(n), TRUE, n, 1:5, mu=mu, max_iter=1000, kkt_tol=tol, objective_tol=tol, parameter_tol=tol)
 
 C1 = InverseLinfty(S, n, mu=mu, maxiter=1000)[1:5,]
 C2 = InverseLinfty(S / n, n, mu=mu, maxiter=1000)[1:5,]
 
 par(mfrow=c(2,3))
+
 plot(A1[1,], C1[1,])
 plot(A1[1,], B1[1,])
 plot(B1[1,], C1[1,])
@@ -185,6 +188,8 @@ active_KKT = function(S, soln, j, mu) {
      E = rep(0, p)
      E[j] = 1
      G = S %*% soln - E
+     print(which(soln != 0))
+     print(G[j])
      return(c(G[soln != 0] * sign(soln)[soln != 0], mu))
 }
 
