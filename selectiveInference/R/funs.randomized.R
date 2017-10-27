@@ -11,6 +11,7 @@ fit_randomized_lasso = function(X,
                                 noise_type=c('gaussian', 'laplace'),
                                 max_iter=100,        # how many iterations for each optimization problem
                                 kkt_tol=1.e-4,       # tolerance for the KKT conditions
+                                parameter_tol=1.e-8, # tolerance for relative convergence of parameter
                                 objective_tol=1.e-8, # tolerance for relative decrease in objective
                                 objective_stop=FALSE,
                                 kkt_stop=TRUE,
@@ -56,6 +57,7 @@ fit_randomized_lasso = function(X,
                            nactive, 
                            kkt_tol, 
                            objective_tol, 
+			   parameter_tol,
                            p,
 		           objective_stop,     # objective_stop
 			   kkt_stop,           # kkt_stop
