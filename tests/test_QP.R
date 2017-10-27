@@ -1,7 +1,7 @@
 library(selectiveInference)
 ### Test
 
-n = 100; p = 50
+n = 80; p = 50
 
 X = matrix(rnorm(n * p), n, p)
 Y = rnorm(n)
