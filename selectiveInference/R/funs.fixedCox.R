@@ -73,7 +73,7 @@ b1= -(mydiag(s2)%*%MM)%*%s2*lambda
        vup[jj]=junk$vup
        sd[jj]=junk$sd
 
-      junk2=TG.interval(bbar, A1, b1, vj, MM, alpha)
+      junk2=TG.interval(bbar, A1, b1, vj, MM, alpha, flip=(s2[jj]==-1))
        ci[jj,]=junk2$int
        tailarea[jj,] = junk2$tailarea
      
