@@ -22,13 +22,13 @@ debiasingMatrix(Xinfo,
 		max_active=NULL,    
 		max_try=10,         
 		warn_kkt=FALSE,     
-		max_iter=100,       
+		max_iter=50,       
 		kkt_stop=TRUE,
 		parameter_stop=TRUE,
 		objective_stop=TRUE,
                 kkt_tol=1.e-4,      
 		parameter_tol=1.e-4,
-		objective_tol=1.e-8)
+		objective_tol=1.e-4)
 }
 \arguments{
 \item{Xinfo}{
