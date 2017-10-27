@@ -14,3 +14,4 @@ soln2 = coef(G, s=lam/n, exact=TRUE, x=X, y=Y)[-1]
 print(soln1)
 print(soln2)
 plot(soln1, soln2)
+print(summary(lm(soln1 ~ soln2)))
