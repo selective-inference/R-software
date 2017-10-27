@@ -525,7 +525,8 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
   } 
 
   return(list(soln=result$soln,
-              kkt_check=result$kkt_check))
+              kkt_check=result$kkt_check,
+	      gradient=result$gradient))
 
 }
 
