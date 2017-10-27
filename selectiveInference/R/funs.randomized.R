@@ -44,13 +44,13 @@ fit_randomized_lasso = function(X,
 
     soln = rep(0, p)
     Xsoln = rep(0, n)
-    linear_func = (- t(X) %*% y - perturb_)
+    linear_func = (- t(X) %*% y - perturb_) / n
     gradient = 1. * linear_func
     ever_active = rep(0, p)
     nactive = as.integer(0)
 
     result = solve_QP_wide(X,                  # design matrix
-    	                   lam,                # vector of Lagrange multipliers
+    	                   lam / n,                # vector of Lagrange multipliers
 		           ridge_term / n,     # ridge_term 
                            max_iter, 
                            soln, 
