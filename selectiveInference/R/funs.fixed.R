@@ -8,7 +8,7 @@ fixedLassoInf <- function(x, y, beta,
                           sigma=NULL, alpha=0.1,
                           type=c("partial", "full"), tol.beta=1e-5, tol.kkt=0.1,
                           gridrange=c(-100,100), bits=NULL, verbose=FALSE, 
-                          linesearch.try=10) {
+                          linesearch.try=10, offset_correction=TRUE) {
 
   family = match.arg(family)
   this.call = match.call()
@@ -197,6 +197,9 @@ fixedLassoInf <- function(x, y, beta,
         M = M[-1,] # remove intercept row
         null_value = null_value[-1] # remove intercept element
       }
+      if (!offset_correction) {
+        null_value = 0 * null_value
+      }
     } else if (type=="partial" || p > n) {
       xa = x[,vars,drop=F]
       M = pinv(crossprod(xa)) %*% t(xa)
@@ -325,13 +328,13 @@ debiasingMatrix = function(Xinfo,               # could be X or t(X) %*% X / n d
 			   max_active=NULL,     # how big can active set get?
 			   max_try=10,          # how many steps in linesearch?
 			   warn_kkt=FALSE,      # warn if KKT does not seem to be satisfied?
-			   max_iter=100,        # how many iterations for each optimization problem
+			   max_iter=50,         # how many iterations for each optimization problem
                            kkt_stop=TRUE,       # stop based on KKT conditions?
                            parameter_stop=TRUE, # stop based on relative convergence of parameter?
 			   objective_stop=TRUE, # stop based on relative decrease in objective?
                            kkt_tol=1.e-4,       # tolerance for the KKT conditions
                            parameter_tol=1.e-4, # tolerance for relative convergence of parameter
-			   objective_tol=1.e-8  # tolerance for relative decrease in objective
+			   objective_tol=1.e-4  # tolerance for relative decrease in objective
                            ) {
 
 
@@ -399,13 +402,13 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
 		         max_active=NULL,     # how big can active set get?
 			 max_try=10,          # how many steps in linesearch?
 			 warn_kkt=FALSE,      # warn if KKT does not seem to be satisfied?
-			 max_iter=100,        # how many iterations for each optimization problem
+			 max_iter=50,         # how many iterations for each optimization problem
                          kkt_stop=TRUE,       # stop based on KKT conditions?
                          parameter_stop=TRUE, # stop based on relative convergence of parameter?
                          objective_stop=TRUE, # stop based on relative decrease in objective?
                          kkt_tol=1.e-4,       # tolerance for the KKT conditions
 			 parameter_tol=1.e-4, # tolerance for relative convergence of parameter
-			 objective_tol=1.e-8  # tolerance for relative decrease in objective
+			 objective_tol=1.e-4  # tolerance for relative decrease in objective
                          ) {
 
   p = ncol(Xinfo)
