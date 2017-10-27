@@ -319,7 +319,7 @@ debiasingMatrix = function(Xinfo,               # could be X or t(X) %*% X / n d
                            nsample, 
                            rows, 
  		           verbose=FALSE, 
-		           mu=NULL,             # starting value of mu
+		           bound=NULL,             # starting value of bound
    			   linesearch=TRUE,     # do a linesearch?
    		           scaling_factor=1.5,  # multiplicative factor for linesearch
 			   max_active=NULL,     # how big can active set get?
@@ -342,8 +342,8 @@ debiasingMatrix = function(Xinfo,               # could be X or t(X) %*% X / n d
   p = ncol(Xinfo);
   M = matrix(0, length(rows), p);
 
-  if (is.null(mu)) {
-      mu = (1/sqrt(nsample)) * qnorm(1-(0.1/(p^2)))
+  if (is.null(bound)) {
+      bound = (1/sqrt(nsample)) * qnorm(1-(0.1/(p^2)))
   }
  
   xperc = 0;
@@ -359,7 +359,7 @@ debiasingMatrix = function(Xinfo,               # could be X or t(X) %*% X / n d
     output = debiasingRow(Xinfo,               # could be X or t(X) %*% X / n depending on is_wide
                           is_wide,
                           row,
-                          mu,
+                          bound,
                           linesearch=linesearch,
                           scaling_factor=scaling_factor,
                           max_active=max_active,
@@ -393,7 +393,7 @@ debiasingMatrix = function(Xinfo,               # could be X or t(X) %*% X / n d
 debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n depending on is_wide
                          is_wide, 
                          row, 
-                         mu, 
+                         bound, 
 	                 linesearch=TRUE,     # do a linesearch?
 		         scaling_factor=1.5,  # multiplicative factor for linesearch
 		         max_active=NULL,     # how big can active set get?
@@ -414,9 +414,11 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
       max_active = min(nrow(Xinfo), ncol(Xinfo))
   }
 
+   
   # Initialize variables 
 
   soln = rep(0, p)
+  soln = as.numeric(soln)
   ever_active = rep(0, p)
   ever_active[1] = row      # 1-based
   ever_active = as.integer(ever_active)
@@ -432,13 +434,16 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
 
   last_output = NULL
 
-  Xsoln = rep(0, n)
+  if (is_wide) {
+     n = nrow(Xinfo)
+     Xsoln = as.numeric(rep(0, n))
+  }
 
   while (counter_idx < max_try) {
 
       if (!is_wide) {
           result = solve_QP(Xinfo, # this is non-neg-def matrix
-                            mu, 
+                            bound, 
                             max_iter, 
                             soln, 
                             linear_func, 
@@ -453,9 +458,9 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
 			    kkt_stop,
 			    parameter_stop)
       } else {
-          result = solve_QP_wide(Xinfo, # this is a design matrix
-                                 rep(mu, p),  # vector of Lagrange multipliers
-				 0,           # ridge_term 
+          result = solve_QP_wide(Xinfo,                      # this is a design matrix
+                                 as.numeric(rep(bound, p)),  # vector of Lagrange multipliers
+				 0,                          # ridge_term 
                                  max_iter, 
                                  soln, 
                                  linear_func, 
@@ -493,13 +498,13 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
          if ((iter < (max_iter+1)) && (counter_idx > 1)) { 
            break;      # we've found a feasible point and solved the problem            
          }
-         mu = mu * scaling_factor;
+         bound = bound * scaling_factor;
       } else {         # trying to drop the bound parameter further
          if ((iter == (max_iter + 1)) && (counter_idx > 1)) {
             result = last_output; # problem seems infeasible because we didn't solve it
    	    break;                # so we revert to previously found solution
          }
-         mu = mu / scaling_factor;
+         bound = bound / scaling_factor;
       }
 
       # If the active set has grown to a certain size

@@ -9,7 +9,7 @@ Maintainer: Rob Tibshirani <tibs@stanford.edu>
 Depends:
     glmnet,
     intervals,
-    survival
+    survival,
 Suggests:
     Rmpfr
 Description: New tools for post-selection inference, for use with forward
