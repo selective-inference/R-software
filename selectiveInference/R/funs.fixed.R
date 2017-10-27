@@ -326,6 +326,9 @@ debiasingMatrix = function(Xinfo,               # could be X or t(X) %*% X / n d
 			   max_try=10,          # how many steps in linesearch?
 			   warn_kkt=FALSE,      # warn if KKT does not seem to be satisfied?
 			   max_iter=100,        # how many iterations for each optimization problem
+                           kkt_stop=TRUE,       # stop based on KKT conditions?
+                           parameter_stop=TRUE, # stop based on relative convergence of parameter?
+			   objective_stop=TRUE, # stop based on relative decrease in objective?
                            kkt_tol=1.e-4,       # tolerance for the KKT conditions
                            parameter_tol=1.e-4, # tolerance for relative convergence of parameter
 			   objective_tol=1.e-8  # tolerance for relative decrease in objective
@@ -363,6 +366,9 @@ debiasingMatrix = function(Xinfo,               # could be X or t(X) %*% X / n d
 			  max_try=max_try,
 			  warn_kkt=FALSE,
 			  max_iter=max_iter,
+			  kkt_stop=kkt_stop,
+			  parameter_stop=parameter_stop,
+			  objective_stop=objective_stop,
 			  kkt_tol=kkt_tol,
 			  parameter_tol=parameter_tol,
 			  objective_tol=objective_tol)
@@ -394,6 +400,9 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
 			 max_try=10,          # how many steps in linesearch?
 			 warn_kkt=FALSE,      # warn if KKT does not seem to be satisfied?
 			 max_iter=100,        # how many iterations for each optimization problem
+                         kkt_stop=TRUE,       # stop based on KKT conditions?
+                         parameter_stop=TRUE, # stop based on relative convergence of parameter?
+                         objective_stop=TRUE, # stop based on relative decrease in objective?
                          kkt_tol=1.e-4,       # tolerance for the KKT conditions
 			 parameter_tol=1.e-4, # tolerance for relative convergence of parameter
 			 objective_tol=1.e-8  # tolerance for relative decrease in objective
@@ -423,6 +432,8 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
 
   last_output = NULL
 
+  Xsoln = rep(0, n)
+
   while (counter_idx < max_try) {
 
       if (!is_wide) {
@@ -438,11 +449,10 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
                             objective_tol, 
 			    parameter_tol,
                             max_active,
-			    FALSE,        # objective_stop
-			    FALSE,        # kkt_stop
-			    TRUE)         # param_stop
+			    objective_stop,
+			    kkt_stop,
+			    parameter_stop)
       } else {
-          Xsoln = rep(0, nrow(Xinfo))
           result = solve_QP_wide(Xinfo, # this is a design matrix
                                  rep(mu, p),  # vector of Lagrange multipliers
 				 0,           # ridge_term 
@@ -457,9 +467,9 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
                                  objective_tol, 
 				 parameter_tol,
                                  max_active,
-				 FALSE,       # objective_stop
-				 FALSE,       # kkt_stop
-				 TRUE)        # param_stop
+				 objective_stop,	
+				 kkt_stop,
+				 parameter_stop)
 
       }
 
