@@ -8,7 +8,7 @@ fixedLassoInf <- function(x, y, beta,
                           sigma=NULL, alpha=0.1,
                           type=c("partial", "full"), tol.beta=1e-5, tol.kkt=0.1,
                           gridrange=c(-100,100), bits=NULL, verbose=FALSE, 
-                          linesearch.try=10, offset_correction=TRUE) {
+                          linesearch.try=10) {
 
   family = match.arg(family)
   this.call = match.call()
@@ -196,9 +196,6 @@ fixedLassoInf <- function(x, y, beta,
       if (intercept == T) {
         M = M[-1,] # remove intercept row
         null_value = null_value[-1] # remove intercept element
-      }
-      if (!offset_correction) {
-        null_value = 0 * null_value
       }
     } else if (type=="partial" || p > n) {
       xa = x[,vars,drop=F]

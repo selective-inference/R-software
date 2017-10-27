@@ -19,10 +19,9 @@ p=200
 
 sigma=.5
 
-theor_lambda = sigma * sqrt(2 * log(p))
-lambda=c(0.25, 0.5, 1, 0.8 * theor_lambda, theor_lambda)
+lambda=c(0.25, 0.5, 1)
 
-for (j in c(3,4,5,1,2)) {
+for (j in c(3,2,1)) {
 
 thresh = 1e-10
 
@@ -54,12 +53,8 @@ for (i in 1:nsim) {
 
   aa = fixedLassoInf(x,y,bhat,lambda[j]*sqrt(n) / scaling,intercept=F,sigma=sigma,type=type)
   bb = oldFixedLassoInf(x,y,bhat,lambda[j]*sqrt(n) / scaling,intercept=F,sigma=sigma,type=type)
-  cc = fixedLassoInf(x,y,bhat,lambda[j]*sqrt(n) / scaling,intercept=F,sigma=sigma,type=type, offset_correction=FALSE)
-  dd = oldFixedLassoInf(x,y,bhat,lambda[j]*sqrt(n) / scaling,intercept=F,sigma=sigma,type=type, offset_correction=FALSE)
   pvs_new <- c(pvs_new, aa$pv, recursive=TRUE)
   pvs_old <- c(pvs_old, bb$pv,recursive=TRUE)
-  pvs_new_0 <- c(pvs_new_0, cc$pv, recursive=TRUE)
-  pvs_old_0 <- c(pvs_old_0, dd$pv, recursive=TRUE)
 
   cat()
   }
@@ -70,9 +65,7 @@ for (i in 1:nsim) {
 png(paste('comparison_unscaled', j, '.png', sep=''))
 plot(ecdf(pvs_old), pch=23, col='green', xlim=c(0,1), ylim=c(0,1), main='ECDF of p-values')
 plot(ecdf(pvs_new), pch=24, col='purple', add=TRUE)
-plot(ecdf(pvs_old_0), pch=23, col='red', add=TRUE)
-plot(ecdf(pvs_new_0), pch=24, col='black', add=TRUE)
 abline(0,1)
-legend("bottomright", legend=c("Old","New", "Old 0", "New 0"), pch=c(23,24,23,24), pt.bg=c("green","purple","red","black"))
+legend("bottomright", legend=c("Old", "New"), pch=c(23,24), pt.bg=c("green","purple"))
 dev.off()
 }
