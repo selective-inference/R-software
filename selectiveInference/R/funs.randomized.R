@@ -3,19 +3,19 @@
 #
 # min 1/2 || y - \beta_0 - X \beta ||_2^2 + \lambda || \beta ||_1 - \omega^T\beta + \frac{\epsilon}{2} \|\beta\|^2_2
 
-fit_randomized_lasso = function(X, 
-                                y, 
-                                lam, 
-                                noise_scale, 
-                                ridge_term, 
-                                noise_type=c('gaussian', 'laplace'),
-                                max_iter=100,        # how many iterations for each optimization problem
-                                kkt_tol=1.e-4,       # tolerance for the KKT conditions
-                                parameter_tol=1.e-8, # tolerance for relative convergence of parameter
-                                objective_tol=1.e-8, # tolerance for relative decrease in objective
-                                objective_stop=FALSE,
-                                kkt_stop=TRUE,
-                                param_stop=TRUE)
+randomizedLASSO = function(X, 
+                           y, 
+                           lam, 
+                           noise_scale, 
+                           ridge_term, 
+                           noise_type=c('gaussian', 'laplace'),
+                           max_iter=100,        # how many iterations for each optimization problem
+                           kkt_tol=1.e-4,       # tolerance for the KKT conditions
+                           parameter_tol=1.e-8, # tolerance for relative convergence of parameter
+                           objective_tol=1.e-8, # tolerance for relative decrease in objective
+                           objective_stop=FALSE,
+                           kkt_stop=TRUE,
+                           param_stop=TRUE)
 {
 
     n = nrow(X); p = ncol(X)
@@ -24,12 +24,11 @@ fit_randomized_lasso = function(X,
 
     if (noise_scale > 0) {
         if (noise_type == 'gaussian') {
-            D = Norm(mean=0, sd=noise_scale)
+            perturb_ = rnorm(p) * noise_scale
         }
         else if (noise_type == 'laplace') {
-            D = DExp(rate = 1 / noise_scale) # D is a Laplace distribution with rate = 1.
+            perturb_ = rexp(p) * (2 * rbinom(p, 1, 0.5) - 1) * noise_scale
         }
-        perturb_ = distr::r(D)(p)
     } else {
         perturb_ = rep(0, p)
     }

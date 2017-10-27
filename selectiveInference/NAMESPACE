@@ -44,4 +44,4 @@ importFrom("stats", dnorm, lsfit, pexp, pnorm, predict,
 importFrom("stats", "coef", "df", "lm", "pf")
 importFrom("stats", "glm", "residuals", "vcov")
 importFrom("Rcpp", "sourceCpp")
-importFrom("distr", "Norm", "DExp")
+
