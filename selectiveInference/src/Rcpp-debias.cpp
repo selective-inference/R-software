@@ -112,11 +112,12 @@ Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X,
 
   Rcpp::IntegerVector need_update(nfeature);
 
-  // Extract the diagonal
+  Rcpp::NumericVector theta_old(nfeature);
+
+  // Extract the diagonal -- divide by ncase
+
   Rcpp::NumericVector nndef_diag(nfeature);
   double *nndef_diag_p = nndef_diag.begin();
-
-  Rcpp::NumericVector theta_old(nfeature);
 
   for (ifeature=0; ifeature<nfeature; ifeature++) {
     nndef_diag_p[ifeature] = 0;
