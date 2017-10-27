@@ -327,6 +327,7 @@ debiasingMatrix = function(Xinfo,               # could be X or t(X) %*% X / n d
 			   warn_kkt=FALSE,      # warn if KKT does not seem to be satisfied?
 			   max_iter=100,        # how many iterations for each optimization problem
                            kkt_tol=1.e-4,       # tolerance for the KKT conditions
+                           parameter_tol=1.e-4, # tolerance for relative convergence of parameter
 			   objective_tol=1.e-8  # tolerance for relative decrease in objective
                            ) {
 
@@ -363,6 +364,7 @@ debiasingMatrix = function(Xinfo,               # could be X or t(X) %*% X / n d
 			  warn_kkt=FALSE,
 			  max_iter=max_iter,
 			  kkt_tol=kkt_tol,
+			  parameter_tol=parameter_tol,
 			  objective_tol=objective_tol)
 
     if (warn_kkt && (!output$kkt_check)) {
@@ -393,6 +395,7 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
 			 warn_kkt=FALSE,      # warn if KKT does not seem to be satisfied?
 			 max_iter=100,        # how many iterations for each optimization problem
                          kkt_tol=1.e-4,       # tolerance for the KKT conditions
+			 parameter_tol=1.e-4, # tolerance for relative convergence of parameter
 			 objective_tol=1.e-8  # tolerance for relative decrease in objective
                          ) {
 
@@ -433,6 +436,7 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
                             nactive, 
                             kkt_tol, 
                             objective_tol, 
+			    parameter_tol,
                             max_active,
 			    FALSE,        # objective_stop
 			    FALSE,        # kkt_stop
@@ -451,6 +455,7 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
                                  nactive, 
                                  kkt_tol, 
                                  objective_tol, 
+				 parameter_tol,
                                  max_active,
 				 FALSE,       # objective_stop
 				 FALSE,       # kkt_stop
