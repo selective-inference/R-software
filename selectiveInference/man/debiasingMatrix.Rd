@@ -16,14 +16,18 @@ debiasingMatrix(Xinfo,
                 nsample, 
                 rows, 
 		verbose=FALSE, 
-		mu=NULL,            
+		bound=NULL,            
    		linesearch=TRUE,    
    		scaling_factor=1.5, 
 		max_active=NULL,    
 		max_try=10,         
 		warn_kkt=FALSE,     
 		max_iter=100,       
+		kkt_stop=TRUE,
+		parameter_stop=TRUE,
+		objective_stop=TRUE,
                 kkt_tol=1.e-4,      
+		parameter_tol=1.e-4,
 		objective_tol=1.e-8)
 }
 \arguments{
@@ -38,7 +42,7 @@ matrix of interest is t(X) %*% X / nrow(X).
 }
 \item{nsample}{
 Number of samples used in forming the cross-covariance matrix.
-Used for default value of the bound parameter mu.
+Used for default value of the bound parameter.
 }
 \item{rows}{
 Which rows of the approximate inverse to compute.
@@ -46,7 +50,7 @@ Which rows of the approximate inverse to compute.
 \item{verbose}{
 Print out progress as rows are being computed.
 } 
-\item{mu}{
+\item{bound}{
 Initial bound parameter for each row. Will be changed
 if linesearch is TRUE.
 } 
@@ -72,9 +76,24 @@ descent algorithm.
 How many full iterations to run of the coordinate descent for each
 value of the bound parameter.
 }
+\item{kkt_stop}{
+If TRUE, check to stop coordinate descent when KKT conditions are approximately satisfied.
+}
+\item{parameter_stop}{
+If TRUE, check to stop coordinate descent based on relative convergence of parameter vector,
+checked at geometrically spaced iterations 2^k.
+}
+\item{objective_stop}{
+If TRUE, check to stop coordinate descent based on relative decrease of objective value,
+checked at geometrically spaced iterations 2^k.
+}
 \item{kkt_tol}{
 Tolerance value for assessing whether KKT conditions for solving the
 dual problem and feasibility of the original problem.
+}
+\item{parameter_tol}{
+Tolerance value for assessing convergence of the problem using relative
+convergence of the parameter.
 }
 \item{objective_tol}{
 Tolerance value for assessing convergence of the problem using relative
@@ -86,7 +105,7 @@ This function computes an approximate inverse
 as described in Javanmard and Montanari (2013), specifically
 display (4). The problem is solved by considering a dual
 problem which has an objective similar to a LASSO problem and is solvable
-by coordinate descent. For some values of mu the original
+by coordinate descent. For some values of bound the original
 problem may not be feasible, in which case the dual problem has no solution. 
 An attempt to detect this is made by stopping when the active set grows quite
 large, determined by max_active.
