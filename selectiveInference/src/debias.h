@@ -16,6 +16,7 @@ int solve_qp(double *nndef_ptr,          /* A non-negative definite matrix */
 	     int maxiter,                /* max number of iterations */
 	     double kkt_tol,             /* precision for checking KKT conditions */
 	     double objective_tol,       /* precision for checking relative decrease in objective value */
+	     double parameter_tol,       /* precision for checking relative convergence of parameter */
 	     int max_active,             /* Upper limit for size of active set -- otherwise break */ 
 	     int objective_stop,         /* Break based on convergence of objective value? */
              int kkt_stop,               /* Break based on KKT? */
@@ -44,6 +45,7 @@ int solve_wide(double *X_ptr,              /* Sqrt of non-neg def matrix -- X^TX
 	       int maxiter,                /* max number of iterations */
 	       double kkt_tol,             /* precision for checking KKT conditions */
 	       double objective_tol,       /* precision for checking relative decrease in objective value */
+	       double parameter_tol,       /* precision for checking relative convergence of parameter */
 	       int max_active,             /* Upper limit for size of active set -- otherwise break */ 
 	       int objective_stop,         /* Break based on convergence of objective value? */
 	       int kkt_stop,               /* Break based on KKT? */

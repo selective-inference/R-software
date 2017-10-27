@@ -4,7 +4,7 @@
 
 // Solves a dual version of problem (4) of https://arxiv.org/pdf/1306.3171.pdf
 
-// Dual problem: \text{min}_{\theta} 1/2 \|X\theta\|^2 - l^T\theta + \mu \|\theta\|_1 + \frac{\epsilon}{2} \|\theta\|^2_2
+// Dual problem: \text{min}_{\theta} 1/2 \|X\theta\|^2/n - l^T\theta + \mu \|\theta\|_1 + \frac{\epsilon}{2} \|\theta\|^2_2
 // where l is `linear_func` below
 
 // This is the "negative" of the problem as in https://gist.github.com/jonathan-taylor/07774d209173f8bc4e42aa37712339bf
@@ -393,6 +393,7 @@ int solve_wide(double *X_ptr,              /* Sqrt of non-neg def matrix -- X^TX
 	       int maxiter,                /* max number of iterations */
 	       double kkt_tol,             /* precision for checking KKT conditions */
 	       double objective_tol,       /* precision for checking relative decrease in objective value */
+	       double parameter_tol,       /* precision for checking relative convergence of parameter */
 	       int max_active,             /* Upper limit for size of active set -- otherwise break */ 
 	       int objective_stop,         /* Break based on convergence of objective value? */
 	       int kkt_stop,               /* Break based on KKT? */
@@ -412,7 +413,6 @@ int solve_wide(double *X_ptr,              /* Sqrt of non-neg def matrix -- X^TX
   double norm_diff = 1.;
   double norm_last = 1.;
   double delta;
-  double threshold = 1.e-2;
   double *theta_ptr_tmp, *theta_old_ptr_tmp;
 
   if (objective_stop) {
@@ -552,7 +552,7 @@ int solve_wide(double *X_ptr,              /* Sqrt of non-neg def matrix -- X^TX
 	norm_diff = sqrt(norm_diff);
 	norm_last = sqrt(norm_last);
 	
-	if (norm_diff < threshold * norm_last) {
+	if (norm_diff < parameter_tol * norm_last) {
 	  break;
 	}
       }
