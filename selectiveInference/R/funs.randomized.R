@@ -124,7 +124,7 @@ randomizedLASSO = function(X,
                 inactive_set = inactive_set,
                 unpenalized_set = unpenalized_set,
                 sign_soln = sign_soln,
-                opt_transform = opt_transform,
+                optimization_transform = opt_transform,
                 internal_transform = internal_transform
                 ))
 
