@@ -38,3 +38,28 @@ Rcpp::NumericVector log_density_gaussian_(double noise_scale,                   
 
   return(result);
 }
+
+// [[Rcpp::export]]
+Rcpp::NumericVector log_density_gaussian_conditional_(double noise_scale,                         // Scale of randomization
+						      Rcpp::NumericMatrix optimization_linear,    // A_O -- linear part for optimization variables
+						      Rcpp::NumericMatrix optimization_state,     // O -- optimization state -- matrix of shape (ninternal, npts)
+						      Rcpp::NumericMatrix offset) {               // h -- offset in affine transform -- "p" dimensional 
+
+  int npt = optimization_state.ncol();         // Function is vectorized
+  int ndim = optimization_linear.nrow();  
+  int noptimization = optimization_linear.ncol();
+
+  Rcpp::NumericVector result(npt);
+
+  int ipt;
+  for (ipt=0; ipt<npt; ipt++) {
+    result[ipt] = log_density_gaussian_conditional(noise_scale,
+						   ndim,
+						   noptimization,
+						   (double *) optimization_linear.begin(),
+						   ((double *) optimization_state.begin() + ipt * noptimization),
+						   (double *) offset.begin());
+  }
+
+  return(result);
+}
