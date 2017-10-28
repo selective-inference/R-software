@@ -71,33 +71,61 @@ randomizedLASSO = function(X,
     sign_soln = sign(result$soln)
 
     unpenalized = lam == 0
-    active = !unpenalized * (sign_soln != 0)
-    inactive = !unpenzlied * (sign_soln == 0)
+    active = (!unpenalized) & (sign_soln != 0)
+    inactive = (!unpenalized) & (sign_soln == 0)
 
     unpenalized_set = which(unpenalized)
     active_set = which(active)
     inactive_set = which(inactive)
 
-    coef_term = t(X) %*% X[,c(unpenalized_set,  # the coefficients
-                              active_set)]
+    # affine transform for optimization variables
+
+    E = c(unpenalized_set, active_set)
+    I = inactive_set
+    X_E = X[,E]
+    X_I = X[,I]
+    L_E = t(X) %*% X[,E]
+
+    coef_term = L_E
     coef_term = coef_term %*% diag(c(rep(1, sum(unpenalized)), sign_soln[active]))  # coefficients are non-negative
     coef_term[active,] = coef_term[active,] + ridge_term * diag(rep(1, sum(active)))  # ridge term
 
-    subgrad_term = cbind(matrix(0, sum(inactive), sum(active) + sum(unpenalized)),
-                         diag(rep(1, sum(inactive))))
-    linear_term = rbind(coef_term,
+    subgrad_term = matrix(0, p, sum(inactive)) # for subgrad
+    for (i in 1:sum(inactive)) {
+        subgrad_term[inactive_set[i], i] = 1
+    }
+
+    linear_term = cbind(coef_term,
                         subgrad_term)
 
     offset_term = rep(0, p)
     offset_term[active] = lam[active] * sign_soln[active]
 
-    
+    opt_transform = list(linear_term=linear_term,
+                         offset_term=offset_term)
 
-    list(active_set = active_set,
-         inactive_set = inactive_set,
-         unpenalized_set = unpenalized_set,
-         sign_soln = sign_soln)
-         
-         
-    return(result)
+    # affine transform for internal (data) variables
+    # for now just use parametric in terms of
+    # (\bar{\beta}_E, X_{-E}^T(y-X_E\bar{\beta}_E)
+    # 
+    # we have to reconstruct -X^TY from this pair
+    #
+
+    active_term = -L_E                           # for \bar{\beta}_E
+
+    inactive_term = -subgrad_term
+    linear_term = cbind(active_term,
+                        inactive_term)
+    offset_term = rep(0, p)
+    internal_transform = list(linear_term = linear_term,
+                              offset_term = offset_term)
+
+    return(list(active_set = active_set,
+                inactive_set = inactive_set,
+                unpenalized_set = unpenalized_set,
+                sign_soln = sign_soln,
+                opt_transform = opt_transform,
+                internal_transform = internal_transform
+                ))
+
 }
