@@ -11,8 +11,6 @@
 // Laplace is product of IID Laplace with scale noise_scale
 // Also evaluated at A_D D + A_O O + h
 
-// Matrices are assumed in column major order! 
-
 double log_density_gaussian(double noise_scale,             // Scale of randomization
 			    int ndim,                       // Number of features -- "p"
 			    int ninternal,                  // Dimension of internal data representation often 1
