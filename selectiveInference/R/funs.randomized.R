@@ -37,6 +37,7 @@ randomizedLASSO = function(X,
     if (length(lam) == 1) {
        lam = rep(lam, p)
     }
+
     if (length(lam) != p) {
        stop("Lagrange parameter should be single float or of length ncol(X)")
     }    
@@ -65,5 +66,38 @@ randomizedLASSO = function(X,
 		           objective_stop,     # objective_stop
 			   kkt_stop,           # kkt_stop
 			   param_stop)         # param_stop
+
+    
+    sign_soln = sign(result$soln)
+
+    unpenalized = lam == 0
+    active = !unpenalized * (sign_soln != 0)
+    inactive = !unpenzlied * (sign_soln == 0)
+
+    unpenalized_set = which(unpenalized)
+    active_set = which(active)
+    inactive_set = which(inactive)
+
+    coef_term = t(X) %*% X[,c(unpenalized_set,  # the coefficients
+                              active_set)]
+    coef_term = coef_term %*% diag(c(rep(1, sum(unpenalized)), sign_soln[active]))  # coefficients are non-negative
+    coef_term[active,] = coef_term[active,] + ridge_term * diag(rep(1, sum(active)))  # ridge term
+
+    subgrad_term = cbind(matrix(0, sum(inactive), sum(active) + sum(unpenalized)),
+                         diag(rep(1, sum(inactive))))
+    linear_term = rbind(coef_term,
+                        subgrad_term)
+
+    offset_term = rep(0, p)
+    offset_term[active] = lam[active] * sign_soln[active]
+
+    
+
+    list(active_set = active_set,
+         inactive_set = inactive_set,
+         unpenalized_set = unpenalized_set,
+         sign_soln = sign_soln)
+         
+         
     return(result)
 }

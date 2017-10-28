@@ -435,8 +435,7 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
   last_output = NULL
 
   if (is_wide) {
-     n = nrow(Xinfo)
-     Xsoln = as.numeric(rep(0, n))
+     Xsoln = as.numeric(rep(0, nrow(Xinfo)))
   }
 
   while (counter_idx < max_try) {

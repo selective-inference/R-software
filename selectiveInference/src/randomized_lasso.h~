@@ -35,7 +35,7 @@ double log_density_laplace_conditional(double noise_scale,             // Scale 
 				       int noptimization,              // Dimension of optimization variables -- "p"
 				       double *optimization_linear,    // A_O -- linear part for optimization variables
 				       double *optimization_state,     // O -- optimization state
-				       double *offset);                // h -- offset in affine transform -- "p" dimensional 
+				       double *offset).                // h -- offset in affine transform -- "p" dimensional 
 
 #ifdef __cplusplus
 }  /* extern "C" */
