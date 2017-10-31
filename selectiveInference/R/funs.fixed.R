@@ -453,8 +453,8 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
                             objective_tol, 
 			    parameter_tol,
                             max_active,
-			    objective_stop,
 			    kkt_stop,
+			    objective_stop,
 			    parameter_stop)
       } else {
           result = solve_QP_wide(Xinfo,                      # this is a design matrix
@@ -471,8 +471,8 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
                                  objective_tol, 
 				 parameter_tol,
                                  max_active,
-				 objective_stop,	
 				 kkt_stop,
+				 objective_stop,	
 				 parameter_stop)
 
       }

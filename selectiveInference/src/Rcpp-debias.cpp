@@ -17,8 +17,8 @@ Rcpp::List solve_QP(Rcpp::NumericMatrix Sigma,
 		    double objective_tol,
 		    double parameter_tol,
 		    int max_active,
-		    int objective_stop,
 		    int kkt_stop,
+		    int objective_stop,
 		    int param_stop
 		    ) {
 
@@ -55,8 +55,8 @@ Rcpp::List solve_QP(Rcpp::NumericMatrix Sigma,
 		      objective_tol,
 		      parameter_tol,
 		      max_active,
-		      objective_stop,
 		      kkt_stop,
+		      objective_stop,
 		      param_stop);
   
   // Check whether feasible
@@ -96,8 +96,8 @@ Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X,
 			 double objective_tol,
 			 double parameter_tol,
 			 int max_active,
-			 int objective_stop,
 			 int kkt_stop,
+			 int objective_stop,
 			 int param_stop
 			 ) {
 
@@ -148,8 +148,8 @@ Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X,
 			objective_tol,
 			parameter_tol,
 			max_active,
-			objective_stop,
 			kkt_stop,
+			objective_stop,
 			param_stop);
   
   // Check whether feasible
