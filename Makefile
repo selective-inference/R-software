@@ -3,13 +3,14 @@ Rcpp:
 	- rm -f selectiveInference/R/RcppExports.R
 	Rscript -e "library(Rcpp); Rcpp::compileAttributes('selectiveInference')"
 
-install: Rcpp
-	cp C-software/src/* selectiveInference/src
+install: Rcpp src
 	R CMD INSTALL selectiveInference
 
-build: 
-	cp C-software/src/* selectiveInference/src
+build: src 
 	R CMD build selectiveInference
+
+src:
+	cp C-software/src/* selectiveInference/src
 
 check: Rcpp build 
 	R CMD build selectiveInference
