@@ -4,11 +4,13 @@ Rcpp:
 	Rscript -e "library(Rcpp); Rcpp::compileAttributes('selectiveInference')"
 
 install: Rcpp
+	cp C-software/src/* selectiveInference/src
 	R CMD INSTALL selectiveInference
 
 build: 
+	cp C-software/src/* selectiveInference/src
 	R CMD build selectiveInference
 
-check: Rcpp build
+check: Rcpp build 
 	R CMD build selectiveInference
 	R CMD check selectiveInference_1.2.2.tar.gz # fix this to be a script variable

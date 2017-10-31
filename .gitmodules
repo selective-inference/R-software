@@ -1,0 +1,3 @@
+[submodule "C-software"]
+	path = C-software
+	url = https://github.com/selective-inference/C-software.git
