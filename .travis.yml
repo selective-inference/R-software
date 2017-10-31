@@ -12,5 +12,10 @@ warnings_are_errors: true
 before_install:
   - tlmgr install index # for texlive and vignette?
   - R -e 'install.packages(c("Rcpp", "intervals"), repos="http://cloud.r-project.org")'
+  - cd C-software
+  - git submodule init
+  - git submodule update
+  - cd ..
+  - make src
   - make Rcpp
   - cd selectiveInference
