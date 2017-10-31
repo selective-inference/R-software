@@ -6,7 +6,7 @@ fixedLassoInf <- function(x, y, beta,
                           lambda, family=c("gaussian","binomial","cox"),
                           intercept=TRUE, add.targets=NULL, status=NULL,
                           sigma=NULL, alpha=0.1,
-                          type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
+                          type=c("partial", "full"), tol.beta=1e-5, tol.kkt=0.1,
                           gridrange=c(-100,100), bits=NULL, verbose=FALSE, 
                           linesearch.try=10) {
 
@@ -150,7 +150,7 @@ fixedLassoInf <- function(x, y, beta,
     ci = tailarea = matrix(0,k,2)
       
     if (type=="full" & p > n) {
-      if (intercept == T) {
+      if (intercept == TRUE) {
         pp=p+1
         Xint <- cbind(rep(1,n),x)
         # indices of selected predictors
@@ -189,8 +189,10 @@ fixedLassoInf <- function(x, y, beta,
       }
 
       M <- (((htheta%*%t(Xordered))+ithetasigma%*%FS%*%hsigmaSinv%*%t(XS))/n)
+
       # vector which is offset for testing debiased beta's
       null_value <- (((ithetasigma%*%FS%*%hsigmaSinv)%*%sign(hbetaS))*lambda/n)
+
       if (intercept == T) {
         M = M[-1,] # remove intercept row
         null_value = null_value[-1] # remove intercept element
@@ -238,12 +240,23 @@ fixedLassoInf <- function(x, y, beta,
     tailarea[j,] = a$tailarea
   }
 
-  out = list(type=type,lambda=lambda,pv=pv,ci=ci,
-    tailarea=tailarea,vlo=vlo,vup=vup,vmat=vmat,y=y,
-    vars=vars,sign=sign_vars,sigma=sigma,alpha=alpha,
-    sd=sigma*sqrt(rowSums(vmat^2)),
-    coef0=vmat%*%y,
-    call=this.call)
+  out = list(type=type,
+             lambda=lambda,
+             pv=pv,
+             ci=ci,
+             tailarea=tailarea,
+             vlo=vlo,
+             vup=vup,
+             vmat=vmat,
+             y=y,
+             vars=vars,
+             sign=sign_vars,
+             sigma=sigma,
+             alpha=alpha,
+             sd=sigma*sqrt(rowSums(vmat^2)),
+             coef0=vmat%*%y,
+             call=this.call)
+
   class(out) = "fixedLassoInf"
   return(out)
 }
@@ -306,15 +319,19 @@ debiasingMatrix = function(Xinfo,               # could be X or t(X) %*% X / n d
                            nsample, 
                            rows, 
  		           verbose=FALSE, 
-		           mu=NULL,             # starting value of mu
+		           bound=NULL,             # starting value of bound
    			   linesearch=TRUE,     # do a linesearch?
    		           scaling_factor=1.5,  # multiplicative factor for linesearch
 			   max_active=NULL,     # how big can active set get?
 			   max_try=10,          # how many steps in linesearch?
 			   warn_kkt=FALSE,      # warn if KKT does not seem to be satisfied?
-			   max_iter=100,        # how many iterations for each optimization problem
+			   max_iter=50,         # how many iterations for each optimization problem
+                           kkt_stop=TRUE,       # stop based on KKT conditions?
+                           parameter_stop=TRUE, # stop based on relative convergence of parameter?
+			   objective_stop=TRUE, # stop based on relative decrease in objective?
                            kkt_tol=1.e-4,       # tolerance for the KKT conditions
-			   objective_tol=1.e-8  # tolerance for relative decrease in objective
+                           parameter_tol=1.e-4, # tolerance for relative convergence of parameter
+			   objective_tol=1.e-4  # tolerance for relative decrease in objective
                            ) {
 
 
@@ -325,8 +342,8 @@ debiasingMatrix = function(Xinfo,               # could be X or t(X) %*% X / n d
   p = ncol(Xinfo);
   M = matrix(0, length(rows), p);
 
-  if (is.null(mu)) {
-      mu = (1/sqrt(nsample)) * qnorm(1-(0.1/(p^2)))
+  if (is.null(bound)) {
+      bound = (1/sqrt(nsample)) * qnorm(1-(0.1/(p^2)))
   }
  
   xperc = 0;
@@ -342,14 +359,18 @@ debiasingMatrix = function(Xinfo,               # could be X or t(X) %*% X / n d
     output = debiasingRow(Xinfo,               # could be X or t(X) %*% X / n depending on is_wide
                           is_wide,
                           row,
-                          mu,
+                          bound,
                           linesearch=linesearch,
                           scaling_factor=scaling_factor,
                           max_active=max_active,
 			  max_try=max_try,
 			  warn_kkt=FALSE,
 			  max_iter=max_iter,
+			  kkt_stop=kkt_stop,
+			  parameter_stop=parameter_stop,
+			  objective_stop=objective_stop,
 			  kkt_tol=kkt_tol,
+			  parameter_tol=parameter_tol,
 			  objective_tol=objective_tol)
 
     if (warn_kkt && (!output$kkt_check)) {
@@ -372,15 +393,19 @@ debiasingMatrix = function(Xinfo,               # could be X or t(X) %*% X / n d
 debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n depending on is_wide
                          is_wide, 
                          row, 
-                         mu, 
+                         bound, 
 	                 linesearch=TRUE,     # do a linesearch?
-		         scaling_factor=1.2,  # multiplicative factor for linesearch
+		         scaling_factor=1.5,  # multiplicative factor for linesearch
 		         max_active=NULL,     # how big can active set get?
 			 max_try=10,          # how many steps in linesearch?
 			 warn_kkt=FALSE,      # warn if KKT does not seem to be satisfied?
-			 max_iter=100,        # how many iterations for each optimization problem
+			 max_iter=50,         # how many iterations for each optimization problem
+                         kkt_stop=TRUE,       # stop based on KKT conditions?
+                         parameter_stop=TRUE, # stop based on relative convergence of parameter?
+                         objective_stop=TRUE, # stop based on relative decrease in objective?
                          kkt_tol=1.e-4,       # tolerance for the KKT conditions
-			 objective_tol=1.e-8  # tolerance for relative decrease in objective
+			 parameter_tol=1.e-4, # tolerance for relative convergence of parameter
+			 objective_tol=1.e-4  # tolerance for relative decrease in objective
                          ) {
 
   p = ncol(Xinfo)
@@ -389,9 +414,11 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
       max_active = min(nrow(Xinfo), ncol(Xinfo))
   }
 
+   
   # Initialize variables 
 
   soln = rep(0, p)
+  soln = as.numeric(soln)
   ever_active = rep(0, p)
   ever_active[1] = row      # 1-based
   ever_active = as.integer(ever_active)
@@ -407,11 +434,15 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
 
   last_output = NULL
 
+  if (is_wide) {
+     Xsoln = as.numeric(rep(0, nrow(Xinfo)))
+  }
+
   while (counter_idx < max_try) {
 
       if (!is_wide) {
           result = solve_QP(Xinfo, # this is non-neg-def matrix
-                            mu, 
+                            bound, 
                             max_iter, 
                             soln, 
                             linear_func, 
@@ -420,11 +451,15 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
                             nactive, 
                             kkt_tol, 
                             objective_tol, 
-                            max_active) 
+			    parameter_tol,
+                            max_active,
+			    kkt_stop,
+			    objective_stop,
+			    parameter_stop)
       } else {
-          Xsoln = rep(0, nrow(Xinfo))
-          result = solve_QP_wide(Xinfo, # this is a design matrix
-                                 mu, 
+          result = solve_QP_wide(Xinfo,                      # this is a design matrix
+                                 as.numeric(rep(bound, p)),  # vector of Lagrange multipliers
+				 0,                          # ridge_term 
                                  max_iter, 
                                  soln, 
                                  linear_func, 
@@ -434,7 +469,11 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
                                  nactive, 
                                  kkt_tol, 
                                  objective_tol, 
-                                 max_active) 
+				 parameter_tol,
+                                 max_active,
+				 kkt_stop,
+				 objective_stop,	
+				 parameter_stop)
 
       }
 
@@ -458,13 +497,13 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
          if ((iter < (max_iter+1)) && (counter_idx > 1)) { 
            break;      # we've found a feasible point and solved the problem            
          }
-         mu = mu * scaling_factor;
+         bound = bound * scaling_factor;
       } else {         # trying to drop the bound parameter further
          if ((iter == (max_iter + 1)) && (counter_idx > 1)) {
             result = last_output; # problem seems infeasible because we didn't solve it
    	    break;                # so we revert to previously found solution
          }
-         mu = mu / scaling_factor;
+         bound = bound / scaling_factor;
       }
 
       # If the active set has grown to a certain size
@@ -490,7 +529,8 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
   } 
 
   return(list(soln=result$soln,
-              kkt_check=result$kkt_check))
+              kkt_check=result$kkt_check,
+	      gradient=result$gradient))
 
 }
 

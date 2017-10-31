@@ -15,7 +15,11 @@ Rcpp::List solve_QP(Rcpp::NumericMatrix Sigma,
 		    Rcpp::IntegerVector nactive,
 		    double kkt_tol,
 		    double objective_tol,
-		    int max_active
+		    double parameter_tol,
+		    int max_active,
+		    int kkt_stop,
+		    int objective_stop,
+		    int param_stop
 		    ) {
 
   int nrow = Sigma.nrow(); // number of features
@@ -27,6 +31,8 @@ Rcpp::List solve_QP(Rcpp::NumericMatrix Sigma,
   // Extract the diagonal
   Rcpp::NumericVector Sigma_diag(nrow);
   double *sigma_diag_p = Sigma_diag.begin();
+
+  Rcpp::NumericVector theta_old(nrow);
 
   for (irow=0; irow<nrow; irow++) {
     sigma_diag_p[irow] = Sigma(irow, irow);
@@ -43,10 +49,15 @@ Rcpp::List solve_QP(Rcpp::NumericMatrix Sigma,
 		      nrow,
 		      bound,
 		      (double *) theta.begin(),
+		      (double *) theta_old.begin(),
 		      maxiter,
 		      kkt_tol,
 		      objective_tol,
-		      max_active);
+		      parameter_tol,
+		      max_active,
+		      kkt_stop,
+		      objective_stop,
+		      param_stop);
   
   // Check whether feasible
 
@@ -72,7 +83,8 @@ Rcpp::List solve_QP(Rcpp::NumericMatrix Sigma,
 
 // [[Rcpp::export]]
 Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X,
-			 double bound,
+			 Rcpp::NumericVector bound,
+			 double ridge_term,
 			 int maxiter,
 			 Rcpp::NumericVector theta,
 			 Rcpp::NumericVector linear_func,
@@ -82,7 +94,11 @@ Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X,
 			 Rcpp::IntegerVector nactive,
 			 double kkt_tol,
 			 double objective_tol,
-			 int max_active
+			 double parameter_tol,
+			 int max_active,
+			 int kkt_stop,
+			 int objective_stop,
+			 int param_stop
 			 ) {
 
   int ncase = X.nrow(); // number of cases
@@ -96,7 +112,10 @@ Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X,
 
   Rcpp::IntegerVector need_update(nfeature);
 
-  // Extract the diagonal
+  Rcpp::NumericVector theta_old(nfeature);
+
+  // Extract the diagonal -- divide by ncase
+
   Rcpp::NumericVector nndef_diag(nfeature);
   double *nndef_diag_p = nndef_diag.begin();
 
@@ -120,12 +139,18 @@ Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X,
 			(int *) nactive.begin(),
 			ncase,
 			nfeature,
-			bound,
+			(double *) bound.begin(),
+			ridge_term,
 			(double *) theta.begin(),
+			(double *) theta_old.begin(),
 			maxiter,
 			kkt_tol,
 			objective_tol,
-			max_active);
+			parameter_tol,
+			max_active,
+			kkt_stop,
+			objective_stop,
+			param_stop);
   
   // Check whether feasible
 
@@ -137,7 +162,8 @@ Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X,
 				 (int *) need_update.begin(),
 				 nfeature,
 				 ncase,
-				 bound,
+				 (double *) bound.begin(),
+				 ridge_term,
 				 kkt_tol);
 
   int max_active_check = (*(nactive.begin()) >= max_active);
