@@ -96,7 +96,7 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial"), tol.bet
    vup[jj]=junk$vup
        sd[jj]=junk$sd
 
-     junk2=TG.interval(bbar, A1, b1, vj, MM,alpha=alpha, flip=(s2[jj+1]==-1))
+     junk2=TG.interval(bbar, A1, b1, vj, MM,alpha=alpha, flip=(sign_bhat[jj+1]==-1))
 
      ci[jj,]=junk2$int
      tailarea[jj,] = junk2$tailarea
