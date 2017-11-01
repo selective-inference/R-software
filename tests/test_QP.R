@@ -1,7 +1,7 @@
 library(selectiveInference)
 ### Test
-
 n = 80; p = 50
+
 
 X = matrix(rnorm(n * p), n, p)
 Y = rnorm(n)
@@ -15,3 +15,4 @@ print(soln1)
 print(soln2)
 plot(soln1, soln2)
 print(summary(lm(soln1 ~ soln2)))
+
