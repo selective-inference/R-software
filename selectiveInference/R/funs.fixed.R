@@ -405,11 +405,7 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
                          objective_stop=TRUE, # stop based on relative decrease in objective?
                          kkt_tol=1.e-4,       # tolerance for the KKT conditions
 			 parameter_tol=1.e-4, # tolerance for relative convergence of parameter
-<<<<<<< HEAD
-			 objective_tol=1.e-8  # tolerance for relative decrease in objective
-=======
 			 objective_tol=1.e-4  # tolerance for relative decrease in objective
->>>>>>> 232760d6aef5182e040b82e30555f4af5ad6803c
                          ) {
 
   p = ncol(Xinfo)
@@ -457,16 +453,6 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
                             objective_tol, 
 			    parameter_tol,
                             max_active,
-<<<<<<< HEAD
-			    FALSE,        # objective_stop
-			    FALSE,        # kkt_stop
-			    TRUE)         # param_stop
-      } else {
-          Xsoln = rep(0, nrow(Xinfo))
-          result = solve_QP_wide(Xinfo, # this is a design matrix
-                                 rep(mu, p),  # vector of Lagrange multipliers
-				 0,           # ridge_term 
-=======
 			    kkt_stop,
 			    objective_stop,
 			    parameter_stop)
@@ -474,7 +460,6 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
           result = solve_QP_wide(Xinfo,                      # this is a design matrix
                                  as.numeric(rep(bound, p)),  # vector of Lagrange multipliers
 				 0,                          # ridge_term 
->>>>>>> 232760d6aef5182e040b82e30555f4af5ad6803c
                                  max_iter, 
                                  soln, 
                                  linear_func, 
@@ -486,15 +471,9 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
                                  objective_tol, 
 				 parameter_tol,
                                  max_active,
-<<<<<<< HEAD
-				 FALSE,       # objective_stop
-				 FALSE,       # kkt_stop
-				 TRUE)        # param_stop
-=======
 				 kkt_stop,
 				 objective_stop,	
 				 parameter_stop)
->>>>>>> 232760d6aef5182e040b82e30555f4af5ad6803c
 
       }
 
