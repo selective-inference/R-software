@@ -67,7 +67,7 @@ randomizedLASSO = function(X,
 		           objective_stop,     # objective_stop
 			   kkt_stop,           # kkt_stop
 			   param_stop)         # param_stop
-    
+
     sign_soln = sign(result$soln)
 
     unpenalized = lam == 0
@@ -77,6 +77,14 @@ randomizedLASSO = function(X,
     unpenalized_set = which(unpenalized)
     active_set = which(active)
     inactive_set = which(inactive)
+
+    # observed opt state
+
+    observed_scalings = abs(result$soln)[active]
+    observed_unpen = result$soln[unpenalized]
+    observed_subgrad = result$gradient[inactive]
+
+    observed_opt_state = c(observed_unpen, observed_scalings, observed_subgrad)
 
     # affine transform for optimization variables
 
@@ -120,12 +128,97 @@ randomizedLASSO = function(X,
     internal_transform = list(linear_term = linear_term,
                               offset_term = offset_term)
 
+    # density for sampling optimization variables
+
+    observed_raw = -t(X) %*% Y
+    inactive_lam = lam[inactive_set]
+    inactive_start = sum(unpenalized) + sum(active)
+    active_start = sum(unpenalized)
+
+    # XXX only for Gaussian so far
+
+    log_optimization_density = function(opt_state 
+                                        ) {
+
+
+        if ((sum(abs(opt_state[(inactive_start + 1):p]) > inactive_lam) > 0) ||
+            (sum(opt_state[(active_start+1):inactive_start] < 0) > 0)) {
+            return(-Inf)
+        }
+
+        D = log_density_gaussian_conditional_(noise_scale,
+                                              opt_transform$linear_term,
+                                              as.matrix(opt_state),
+                                              observed_raw)
+        return(D)
+    }
+
     return(list(active_set = active_set,
                 inactive_set = inactive_set,
                 unpenalized_set = unpenalized_set,
                 sign_soln = sign_soln,
                 optimization_transform = opt_transform,
-                internal_transform = internal_transform
+                internal_transform = internal_transform,
+                log_optimization_density = log_optimization_density,
+		observed_opt_state = observed_opt_state,
+                observed_raw = observed_raw
                 ))
 
 }
+
+sample_opt_variables = function(randomizedLASSO_obj, jump_scale, nsample=10000) {
+      return(MCMC(randomizedLASSO_obj$log_optimization_density, 
+                  nsample,
+		  randomizedLASSO_obj$observed_opt_state,
+                  acc.rate=0.2,
+                  scale=jump_scale))
+}
+
+# Carry out a linear decompositon of an internal
+# representation with respect to a target
+
+# Returns an affine transform into raw coordinates (i.e. \omega or randomization coordinates)
+
+linear_decomposition = function(observed_target,
+                                observed_internal,
+                                var_target,
+                                cov_target_internal,
+                                internal_transform) {
+    var_target = as.matrix(var_target) 
+    if (nrow(var_target) == 1) {
+        nuisance = observed_internal - cov_target_internal * observed_target / var_target
+        target_linear = internal_transform$linear_part %*% cov_target_internal / var_target
+    } else {
+        nuisance = observed_internal - cov_target_internal %*% solve(var_target) %*% observed_target 
+        target_linear = internal_transform$linear_part %*% cov_target_internal %*% solve(var_target)
+    }
+    target_offset = internal_transform$linear_part %*% nuisance + internal_transform$offset
+    return(list(linear_term=target_linear,
+                offset_term=target_offset))
+}
+
+# XXX only for Gaussian so far
+
+importance_weight = function(noise_scale,
+                             target_sample,
+                             opt_sample,
+                             opt_transform,
+                             target_transform,
+                             observed_raw) {
+
+    log_num = log_density_gaussian_(noise_scale,
+                                    target_transform$linear_term,
+                                    as.matrix(target_sample),
+                                    optimization_transform$linear_term,
+                                    as.matrix(opt_state),
+                                    target_transform$offset_term + optimization_transform$offset_term)
+
+    log_den = log_density_gaussian_conditional_(noise_scale,
+                                                opt_transform$linear_term,
+                                                as.matrix(opt_sample),
+                                                observed_raw)
+    W = log_num - log_den
+    W = W - max(W)
+    return(exp(W))
+}
+                             
