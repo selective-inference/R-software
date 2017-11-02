@@ -12,6 +12,20 @@ smoke_test = function() {
 }
 A = smoke_test()
 
+sampler_test = function() {
+
+    n = 100; p = 50
+    X = matrix(rnorm(n * p), n, p)
+    y = rnorm(n)
+    lam = 20 / sqrt(n)
+    noise_scale = 0.01 * sqrt(n)
+    ridge_term = .1 / sqrt(n)
+    obj = selectiveInference:::randomizedLASSO(X, y, lam, noise_scale, ridge_term)
+    S = selectiveInference:::sample_opt_variables(obj, jump_scale=rep(1/sqrt(n), p), nsample=10000)
+    return(S$samples[2001:10000,])
+}
+B = sampler_test()
+
 gaussian_density_test = function() {
 
     noise_scale = 10.
