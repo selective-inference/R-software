@@ -1,5 +1,5 @@
-PKG_CFLAGS= -I.
-PKG_CPPFLAGS= -I.
+PKG_CFLAGS= -I. -DCOLUMN_MAJOR_ORDER
+PKG_CPPFLAGS= -I. -DCOLUMN_MAJOR_ORDER
 PKG_LIBS=-L. 
 
 $(SHLIB): Rcpp Rcpp-matrixcomps.o Rcpp-debias.o RcppExports.o quadratic_program.o quadratic_program_wide.o
