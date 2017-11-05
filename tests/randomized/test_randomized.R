@@ -10,6 +10,7 @@ smoke_test = function() {
     ridge_term = .1 / sqrt(n)
     selectiveInference:::randomizedLASSO(X, y, lam, noise_scale, ridge_term)
 }
+
 A = smoke_test()
 
 sampler_test = function() {
