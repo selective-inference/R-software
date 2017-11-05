@@ -130,7 +130,7 @@ randomizedLASSO = function(X,
 
     # density for sampling optimization variables
 
-    observed_raw = -t(X) %*% Y
+    observed_raw = -t(X) %*% y
     inactive_lam = lam[inactive_set]
     inactive_start = sum(unpenalized) + sum(active)
     active_start = sum(unpenalized)
@@ -187,12 +187,12 @@ linear_decomposition = function(observed_target,
     var_target = as.matrix(var_target) 
     if (nrow(var_target) == 1) {
         nuisance = observed_internal - cov_target_internal * observed_target / var_target
-        target_linear = internal_transform$linear_part %*% cov_target_internal / var_target
+        target_linear = internal_transform$linear_term %*% cov_target_internal / var_target[1,1]
     } else {
         nuisance = observed_internal - cov_target_internal %*% solve(var_target) %*% observed_target 
-        target_linear = internal_transform$linear_part %*% cov_target_internal %*% solve(var_target)
+        target_linear = internal_transform$linear_term %*% cov_target_internal %*% solve(var_target)
     }
-    target_offset = internal_transform$linear_part %*% nuisance + internal_transform$offset
+    target_offset = internal_transform$linear_term %*% nuisance + internal_transform$offset_term
     return(list(linear_term=target_linear,
                 offset_term=target_offset))
 }
@@ -209,9 +209,9 @@ importance_weight = function(noise_scale,
     log_num = log_density_gaussian_(noise_scale,
                                     target_transform$linear_term,
                                     as.matrix(target_sample),
-                                    optimization_transform$linear_term,
-                                    as.matrix(opt_state),
-                                    target_transform$offset_term + optimization_transform$offset_term)
+                                    opt_transform$linear_term,
+                                    as.matrix(opt_sample),
+                                    target_transform$offset_term + opt_transform$offset_term)
 
     log_den = log_density_gaussian_conditional_(noise_scale,
                                                 opt_transform$linear_term,
