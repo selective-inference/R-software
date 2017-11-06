@@ -145,11 +145,10 @@ randomizedLASSO = function(X,
             (sum(opt_state[(active_start+1):inactive_start] < 0) > 0)) {
             return(-Inf)
         }
-
         D = log_density_gaussian_conditional_(noise_scale,
                                               opt_transform$linear_term,
                                               as.matrix(opt_state),
-                                              observed_raw)
+                                              observed_raw+opt_transform$offset_term)
         return(D)
     }
 
