@@ -66,34 +66,27 @@ conditional_density = function(noise_scale, lasso_soln){
 }
 
 
-
-run_instance = function(n, p, s){
-  rho=0.3
-  lam=1.
-  sigma=1
-  data = gaussian_instance(n=n,p=p,s=s, rho=rho, sigma=sigma)
-  X=data$X
-  print(dim(X))
-  y=data$y
-  ridge_term=sd(y)/sqrt(n)
-  noise_scale = sd(y)/2
+run_instance = function(X,y,sigma, lam, noise_scale, ridge_term){
+  n=nrow(X)
+  p=ncol(X)
   lasso_soln=selectiveInference:::randomizedLASSO(X, y, lam, noise_scale, ridge_term)
   active_set = lasso_soln$active_set
   inactive_set = lasso_soln$inactive_set
   nactive = length(active_set)
   print(paste("nactive", nactive))
   
-  lasso_soln = conditional_density(noise_scale, lasso_soln)
-  
-  S = selectiveInference:::sample_opt_variables(lasso_soln, jump_scale=rep(1/sqrt(n), nactive), nsample=10000)
-  opt_samples = S$samples[2001:10000,]
-  print(paste("dim opt samples", toString(dim(opt_samples))))
+  #lasso_soln = conditional_density(noise_scale, lasso_soln)
   
   observed_raw = lasso_soln$observed_raw
   opt_linear = lasso_soln$optimization_transform$linear_term
   opt_offset =  lasso_soln$optimization_transform$offset_term
   observed_opt_state = lasso_soln$observed_opt_state
   opt_transform = lasso_soln$optimization_transform
+  
+  dim=length(observed_opt_state)
+  S = selectiveInference:::sample_opt_variables(lasso_soln, jump_scale=rep(1/sqrt(n), dim), nsample=10000)
+  opt_samples = S$samples[2001:10000,]
+  print(paste("dim opt samples", toString(dim(opt_samples))))
   
   X_E=X[, active_set]
   X_minusE=X[, inactive_set]
@@ -124,26 +117,35 @@ run_instance = function(n, p, s){
     }
     
     pivots[i] = pivot(0)
-    print(pivots[i])
   }
-  
+  print(paste("pivots", toString(pivots)))
   return(pivots)
 }
 
-collect_instances = function(n,p,s, nsim=1){
+collect_results = function(n,p,s, nsim=2){
+  rho=0.3
+  lam=1.
+  sigma=1
   sample_pivots = NULL
   for (i in 1:nsim){
-    result = run_instance(n,p,s)
+    data = gaussian_instance(n=n,p=p,s=s, rho=rho, sigma=sigma)
+    X=data$X
+    print(dim(X))
+    y=data$y
+    ridge_term=sd(y)/sqrt(n)
+    noise_scale = sd(y)/2
+    result = run_instance(X,y,sigma, lam, noise_scale, ridge_term)
     sample_pivots = c(sample_pivots, result)
   }
+  
   jpeg('pivots.jpg')
   plot(ecdf(sample_pivots), xlim=c(0,1),  main="Empirical CDF of null p-values", xlab="p-values", ylab="ecdf")
   abline(0, 1, lty=2)
   dev.off()
 }
 
-
-collect_instances(n=100, p=20, s=0)
+set.seed(1)
+collect_results(n=100, p=20, s=0)
 
 
 
