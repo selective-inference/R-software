@@ -1,7 +1,6 @@
 library(selectiveInference)
 
 smoke_test = function() {
-
     n = 100; p = 50
     X = matrix(rnorm(n * p), n, p)
     y = rnorm(n)
@@ -10,6 +9,7 @@ smoke_test = function() {
     ridge_term = .1 / sqrt(n)
     selectiveInference:::randomizedLASSO(X, y, lam, noise_scale, ridge_term)
 }
+
 A = smoke_test()
 
 sampler_test = function() {
