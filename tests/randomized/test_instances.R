@@ -30,7 +30,6 @@ gaussian_instance = function(n, p, s, sigma=1, rho=0, signal=6, X=NA,
 conditional_density = function(noise_scale, lasso_soln){
   
   active_set = lasso_soln$active_set
-  inactive_set = lasso_soln$inactive_set
   observed_raw = lasso_soln$observed_raw
   opt_linear = lasso_soln$optimization_transform$linear_term
   opt_offset =  lasso_soln$optimization_transform$offset_term
@@ -41,15 +40,14 @@ conditional_density = function(noise_scale, lasso_soln){
   beta_offset = observed_raw+opt_offset
   p=length(observed_opt_state)
   if (nactive<p){
-    U=opt_linear[,(nactive+1):p]
-    beta_offset =+U %*% observed_opt_state[(nactive+1):p]
+    beta_offset = beta_offset+(opt_linear[,(nactive+1):p] %*% observed_opt_state[(nactive+1):p])
   }
-  opt_transform = list(linear_term=B, offset_term = beta_offset)
+  opt_transform = list(linear_term=B, 
+                       offset_term = beta_offset)
   reduced_B = chol(t(B) %*% B)
   reduced_beta_offset = solve(t(reduced_B)) %*% (t(B) %*% beta_offset)
   
   log_condl_optimization_density = function(opt_state) {
-    
     if  (sum(opt_state < 0) > 0) {
       return(-Inf)
     }
@@ -77,24 +75,23 @@ run_instance = function(X,y,sigma, lam, noise_scale, ridge_term){
   
   #lasso_soln = conditional_density(noise_scale, lasso_soln)
   
-  observed_raw = lasso_soln$observed_raw
-  opt_linear = lasso_soln$optimization_transform$linear_term
-  opt_offset =  lasso_soln$optimization_transform$offset_term
-  observed_opt_state = lasso_soln$observed_opt_state
-  opt_transform = lasso_soln$optimization_transform
-  
-  dim=length(observed_opt_state)
+  dim=length(lasso_soln$observed_opt_state)
+  print(paste("chain dim", dim))
   S = selectiveInference:::sample_opt_variables(lasso_soln, jump_scale=rep(1/sqrt(n), dim), nsample=10000)
   opt_samples = S$samples[2001:10000,]
   print(paste("dim opt samples", toString(dim(opt_samples))))
   
   X_E=X[, active_set]
   X_minusE=X[, inactive_set]
-  target_cov = solve(t(X_E)%*%X_E)*sigma^2
+  target_cov = solve(t(X_E) %*% X_E)*sigma^2
   cov_target_internal = rbind(target_cov, matrix(0, nrow=p-nactive, ncol=nactive))
   observed_target = solve(t(X_E) %*% X_E) %*% t(X_E) %*% y
   observed_internal = c(observed_target, t(X_minusE) %*% (y-X_E%*% observed_target))
   internal_transform = lasso_soln$internal_transform
+  
+  observed_opt_state = lasso_soln$observed_opt_state
+  opt_transform = lasso_soln$optimization_transform
+  observed_raw = lasso_soln$observed_raw
   
   pivots = rep(0, nactive)
   for (i in 1:nactive){
@@ -122,7 +119,7 @@ run_instance = function(X,y,sigma, lam, noise_scale, ridge_term){
   return(pivots)
 }
 
-collect_results = function(n,p,s, nsim=2){
+collect_results = function(n,p,s, nsim=1){
   rho=0.3
   lam=1.
   sigma=1

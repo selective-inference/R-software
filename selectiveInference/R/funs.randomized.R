@@ -216,7 +216,7 @@ importance_weight = function(noise_scale,
     log_den = log_density_gaussian_conditional_(noise_scale,
                                                 opt_transform$linear_term,
                                                 as.matrix(opt_sample),
-                                                observed_raw)
+                                                observed_raw+opt_transform$offset_term)
     W = log_num - log_den
     W = W - max(W)
     return(exp(W))
