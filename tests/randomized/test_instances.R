@@ -1,7 +1,4 @@
-#library(devtools)
-#devtools::install_github('jonathan-taylor/R-selective/selectiveInference')
-library(selectiveInference, lib.loc='/Users/Jelena/anaconda/lib/R/library')
-
+library(selectiveInference)
 
 gaussian_instance = function(n, p, s, sigma=1, rho=0, signal=6, X=NA,
                              random_signs=TRUE, scale=TRUE, center=TRUE, seed=NA){
