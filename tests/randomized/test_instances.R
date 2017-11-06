@@ -65,7 +65,7 @@ conditional_density = function(noise_scale, lasso_soln){
 }
 
 
-run_instance = function(X,y,sigma, lam, noise_scale, ridge_term){
+randomized_inference = function(X,y,sigma, lam, noise_scale, ridge_term){
   n=nrow(X)
   p=ncol(X)
   lasso_soln=selectiveInference:::randomizedLASSO(X, y, lam, noise_scale, ridge_term)
@@ -74,7 +74,7 @@ run_instance = function(X,y,sigma, lam, noise_scale, ridge_term){
   nactive = length(active_set)
   print(paste("nactive", nactive))
   
-  lasso_soln = conditional_density(noise_scale, lasso_soln)
+  #lasso_soln = conditional_density(noise_scale, lasso_soln)
   
   dim=length(lasso_soln$observed_opt_state)
   print(paste("chain dim", dim))
@@ -93,6 +93,7 @@ run_instance = function(X,y,sigma, lam, noise_scale, ridge_term){
   observed_raw = lasso_soln$observed_raw
   
   pivots = rep(0, nactive)
+  ci = matrix(0, nactive, 2)
   for (i in 1:nactive){
     target_transform = selectiveInference:::linear_decomposition(observed_target[i], 
                                                   observed_internal, 
@@ -110,11 +111,24 @@ run_instance = function(X,y,sigma, lam, noise_scale, ridge_term){
                                                      observed_raw)
       return(mean((target_sample<observed_target[i])*weights)/mean(weights))
     }
-    
+    level = 0.9
+    rootU = function(candidate){
+      return (pivot(observed_target[i]+candidate)-(1-level)/2)
+    }
+    rootL = function(candidate){
+      return (pivot(observed_target[i]+candidate)-(1+level)/2)
+    }
     pivots[i] = pivot(0)
+    line_min = -10*sd(target_sample)
+    line_max = 10*sd(target_sample)
+    ci[i,1] = uniroot(rootU, c(line_min, line_max))$root+observed_target[i]
+    ci[i,2] = uniroot(rootL,c(line_min, line_max))$root+observed_target[i]
   }
   print(paste("pivots", toString(pivots)))
-  return(pivots)
+  for (i in 1:nactive){
+    print(paste("CIs", toString(ci[i,])))
+  }
+  return(list(pivots=pivots, ci=ci))
 }
 
 collect_results = function(n,p,s, nsim=1){
@@ -129,8 +143,13 @@ collect_results = function(n,p,s, nsim=1){
     y=data$y
     ridge_term=sd(y)/sqrt(n)
     noise_scale = sd(y)/2
-    result = run_instance(X,y,sigma, lam, noise_scale, ridge_term)
-    sample_pivots = c(sample_pivots, result)
+    #X = matrix(rnorm(n * p), n, p)
+    #y = rnorm(n)
+    #lam = 20 / sqrt(n)
+    #noise_scale = 0.01 * sqrt(n)
+    #ridge_term = .1 / sqrt(n)
+    result = randomized_inference(X,y,sigma,lam,noise_scale,ridge_term)
+    sample_pivots = c(sample_pivots, result$pivots)
   }
   
   jpeg('pivots.jpg')
