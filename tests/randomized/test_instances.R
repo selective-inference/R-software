@@ -37,7 +37,7 @@ conditional_density = function(noise_scale, lasso_soln){
   
   nactive = length(active_set)
   B = opt_linear[,1:nactive]
-  beta_offset = observed_raw+opt_offset
+  beta_offset = opt_offset
   p=length(observed_opt_state)
   if (nactive<p){
     beta_offset = beta_offset+(opt_linear[,(nactive+1):p] %*% observed_opt_state[(nactive+1):p])
@@ -45,6 +45,7 @@ conditional_density = function(noise_scale, lasso_soln){
   opt_transform = list(linear_term=B, 
                        offset_term = beta_offset)
   reduced_B = chol(t(B) %*% B)
+  beta_offset = beta_offset+observed_raw
   reduced_beta_offset = solve(t(reduced_B)) %*% (t(B) %*% beta_offset)
   
   log_condl_optimization_density = function(opt_state) {
@@ -53,7 +54,7 @@ conditional_density = function(noise_scale, lasso_soln){
     }
     D = selectiveInference:::log_density_gaussian_conditional_(noise_scale,
                                                                reduced_B,
-                                                               as.matrix(observed_opt_state[1:nactive]),
+                                                               as.matrix(opt_state),
                                                                reduced_beta_offset)
     return(D)
   }
@@ -73,7 +74,7 @@ run_instance = function(X,y,sigma, lam, noise_scale, ridge_term){
   nactive = length(active_set)
   print(paste("nactive", nactive))
   
-  #lasso_soln = conditional_density(noise_scale, lasso_soln)
+  lasso_soln = conditional_density(noise_scale, lasso_soln)
   
   dim=length(lasso_soln$observed_opt_state)
   print(paste("chain dim", dim))
@@ -88,8 +89,6 @@ run_instance = function(X,y,sigma, lam, noise_scale, ridge_term){
   observed_target = solve(t(X_E) %*% X_E) %*% t(X_E) %*% y
   observed_internal = c(observed_target, t(X_minusE) %*% (y-X_E%*% observed_target))
   internal_transform = lasso_soln$internal_transform
-  
-  observed_opt_state = lasso_soln$observed_opt_state
   opt_transform = lasso_soln$optimization_transform
   observed_raw = lasso_soln$observed_raw
   
@@ -100,7 +99,6 @@ run_instance = function(X,y,sigma, lam, noise_scale, ridge_term){
                                                   target_cov[i,i], 
                                                   cov_target_internal[,i],
                                                   internal_transform)
-    
     target_sample = rnorm(nrow(opt_samples)) * sqrt(target_cov[i,i])
     
     pivot = function(candidate){
