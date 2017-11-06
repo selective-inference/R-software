@@ -1,7 +1,6 @@
 library(selectiveInference)
 
 smoke_test = function() {
-
     n = 100; p = 50
     X = matrix(rnorm(n * p), n, p)
     y = rnorm(n)
