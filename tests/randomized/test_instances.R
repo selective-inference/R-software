@@ -25,8 +25,8 @@ gaussian_instance = function(n, p, s, sigma=1, rho=0, signal=6, X=NA,
 }
 
 
-collect_results = function(n,p,s, nsim=10, level=0.9){
-  rho=0.
+collect_results = function(n,p,s, nsim=100, level=0.9){
+  rho=0.3
   lam=1.
   sigma=1
   sample_pvalues = c()
@@ -38,7 +38,7 @@ collect_results = function(n,p,s, nsim=10, level=0.9){
     beta=data$beta
     ridge_term=sd(y)/sqrt(n)
     noise_scale = sd(y)/2
-    result = selectiveInference:::randomized_inference(X,y,sigma,lam,noise_scale,ridge_term, level)
+    result = selectiveInference:::randomized_inference(X,y,sigma,lam,noise_scale,ridge_term, TRUE, level)
     true_beta = beta[result$active_set]
     coverage = rep(0, nrow(result$ci))
     for (i in 1:nrow(result$ci)){
