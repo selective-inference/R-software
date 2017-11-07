@@ -264,6 +264,9 @@ randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term, level
   p = ncol(X)
   lasso_soln = selectiveInference:::randomizedLASSO(X, y, lam, noise_scale, ridge_term)
   active_set = lasso_soln$active_set
+  if (length(active_set)==0){
+    return (list(active_set=active_set, pvalues=c(), ci=c()))
+  }
   inactive_set = lasso_soln$inactive_set
   nactive = length(active_set)
   
@@ -293,8 +296,9 @@ randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term, level
                                                   target_cov[i,i], 
                                                   cov_target_internal[,i],
                                                   internal_transform)
+  
     target_sample = rnorm(nrow(as.matrix(opt_samples))) * sqrt(target_cov[i,i])
-    
+    print(length(target_sample))
     pivot = function(candidate){
       weights = selectiveInference:::importance_weight(noise_scale,
                                                      t(as.matrix(target_sample)) + candidate,
