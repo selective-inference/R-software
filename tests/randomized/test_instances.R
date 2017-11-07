@@ -39,22 +39,26 @@ collect_results = function(n,p,s, nsim=1, level=0.9){
     ridge_term=sd(y)/sqrt(n)
     noise_scale = sd(y)/2
     result = selectiveInference:::randomized_inference(X,y,sigma,lam,noise_scale,ridge_term, level)
-    true_beta = beta[result$active_set]
-    coverage = rep(0, nrow(result$ci))
-    for (i in 1:nrow(result$ci)){
-      if (result$ci[i,1]<true_beta[i] & result$ci[i,2]>true_beta[i]){
-        coverage[i]=1
+    if (length(result$active_set)>0){
+      true_beta = beta[result$active_set]
+      coverage = rep(0, nrow(result$ci))
+      for (i in 1:nrow(result$ci)){
+        if (result$ci[i,1]<true_beta[i] & result$ci[i,2]>true_beta[i]){
+          coverage[i]=1
+        }
+        print(paste("ci", toString(result$ci[i,])))
       }
-      print(paste("ci", toString(result$ci[i,])))
+      sample_pvalues = c(sample_pvalues, result$pvalues)
+      sample_coverage = c(sample_coverage, coverage)
     }
-    sample_pvalues = c(sample_pvalues, result$pvalues)
-    sample_coverage = c(sample_coverage, coverage)
   }
-  print(paste("coverage", mean(sample_coverage)))
-  jpeg('pivots.jpg')
-  plot(ecdf(sample_pvalues), xlim=c(0,1),  main="Empirical CDF of null p-values", xlab="p-values", ylab="ecdf")
-  abline(0, 1, lty=2)
-  dev.off()
+  if (length(sample_coverage)>0){
+    print(paste("coverage", mean(sample_coverage)))
+    jpeg('pivots.jpg')
+    plot(ecdf(sample_pvalues), xlim=c(0,1),  main="Empirical CDF of null p-values", xlab="p-values", ylab="ecdf")
+    abline(0, 1, lty=2)
+    dev.off()
+  }
 }
 
 set.seed(1)
