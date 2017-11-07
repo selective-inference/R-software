@@ -25,9 +25,9 @@ gaussian_instance = function(n, p, s, sigma=1, rho=0, signal=6, X=NA,
 }
 
 
-collect_results = function(n,p,s, nsim=100, level=0.9){
+collect_results = function(n,p,s, nsim=100, level=0.9, condition_subgrad=TRUE){
   rho=0.3
-  lam=1.
+  lam=1.2
   sigma=1
   sample_pvalues = c()
   sample_coverage = c()
@@ -36,7 +36,7 @@ collect_results = function(n,p,s, nsim=100, level=0.9){
     X=data$X
     y=data$y
     beta=data$beta
-    result = selectiveInference:::randomizedLassoInf(X, y, lam, level=level, burnin=2000, nsample=4000)
+    result = selectiveInference:::randomizedLassoInf(X, y, lam, level=level, burnin=2000, nsample=4000, condition_subgrad=condition_subgrad)
     true_beta = beta[result$active_set]
     coverage = rep(0, nrow(result$ci))
     for (i in 1:nrow(result$ci)){

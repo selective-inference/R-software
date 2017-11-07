@@ -109,7 +109,13 @@ randomizedLasso = function(X,
     L_E = t(X) %*% X[,E]
 
     coef_term = L_E
-    coef_term = coef_term %*% diag(c(rep(1, sum(unpenalized)), sign_soln[active]))  # coefficients are non-negative
+    signs_ = c(rep(1, sum(unpenalized)), sign_soln[active])
+    if (length(signs_) == 1) {
+        coef_term = coef_term * signs_
+    } else {
+        coef_term = coef_term %*% diag(signs_)  # scaligns are non-negative
+    }
+
     coef_term[active,] = coef_term[active,] + ridge_term * diag(rep(1, sum(active)))  # ridge term
 
     subgrad_term = matrix(0, p, sum(inactive)) # for subgrad
@@ -151,10 +157,10 @@ randomizedLasso = function(X,
 
     # XXX only for Gaussian so far
 
-    log_optimization_density = function(opt_state 
-                                        ) {
+    log_optimization_density = function(opt_state) {
+
         if ((sum(abs(opt_state[(inactive_start + 1):p]) > inactive_lam) > 0) ||
-            (sum(opt_state[(active_start+1):inactive_start] < 0) > 0)) {
+            (sum(opt_state[(active_start + 1):inactive_start] < 0) > 0)) {
             return(-Inf)
         }
 
@@ -188,7 +194,7 @@ randomizedLasso = function(X,
 sample_opt_variables = function(randomizedLASSO_obj, jump_scale, nsample=10000) {
       return(MCMC(randomizedLASSO_obj$log_optimization_density, 
                   nsample,
-		  randomizedLASSO_obj$observed_opt_state,
+                  randomizedLASSO_obj$observed_opt_state,
                   acc.rate=0.2,
                   scale=jump_scale))
 }
@@ -232,6 +238,7 @@ importance_weight = function(noise_scale,
         A = apply(A, 2, function(x) {return(x + target_transform$offset_term + opt_transform$offset_term)})
         log_num = -apply(A^2, 2, sum) / noise_scale^2
     } else {
+
         log_num = log_density_gaussian_(noise_scale,
                                         target_transform$linear_term,
                                         as.matrix(target_sample),
@@ -264,10 +271,11 @@ conditional_density = function(noise_scale, lasso_soln) {
   observed_opt_state = lasso_soln$observed_opt_state
   
   nactive = length(active_set)
-  B = opt_linear[,1:nactive]
+  B = opt_linear[,1:nactive,drop=FALSE]
   beta_offset = opt_offset
-  p=length(observed_opt_state)
-  if (nactive<p){
+  p = length(observed_opt_state)
+
+  if (nactive < p) {
     beta_offset = beta_offset+(opt_linear[,(nactive+1):p] %*% observed_opt_state[(nactive+1):p])
   }
   opt_transform = list(linear_term=B, 
@@ -313,11 +321,12 @@ randomizedLassoInf = function(X,
 
   n = nrow(X)
   p = ncol(X)
+
   lasso_soln = randomizedLasso(X, y, lam, noise_scale=noise_scale, ridge_term=ridge_term)
   active_set = lasso_soln$active_set
   inactive_set = lasso_soln$inactive_set
   nactive = length(active_set)
-  
+
   noise_scale = lasso_soln$noise_scale # set to default value in randomizedLasso
 
  if (condition_subgrad==TRUE){
@@ -327,7 +336,7 @@ randomizedLassoInf = function(X,
   ndim = length(lasso_soln$observed_opt_state)
 
   S = sample_opt_variables(lasso_soln, jump_scale=rep(1/sqrt(n), ndim), nsample=nsample)
-  opt_samples = S$samples[(burnin+1):nsample,]
+  opt_samples = as.matrix(S$samples[(burnin+1):nsample,,drop=FALSE])
   
   X_E = X[, active_set]
   X_minusE = X[, inactive_set]
@@ -338,7 +347,7 @@ randomizedLassoInf = function(X,
         lm_y = lm(y ~ X_E - 1)
         sigma = sqrt(sum(resid(lm_y)^2) / lm_y$df.resid)
   }        
-  print(c(sigma, 'sigma'))
+
   target_cov = solve(t(X_E) %*% X_E)*sigma^2
   cov_target_internal = rbind(target_cov, matrix(0, nrow=p-nactive, ncol=nactive))
   observed_target = solve(t(X_E) %*% X_E) %*% t(X_E) %*% y
@@ -378,13 +387,11 @@ randomizedLassoInf = function(X,
     if (rootU(line_min)*rootU(line_max)<0){
       ci[i,2] = uniroot(rootU, c(line_min, line_max))$root+observed_target[i]
     } else{
-      print("non inv u")
       ci[i,2]=line_max
     }
     if (rootL(line_min)*rootL(line_max)<0){
       ci[i,1] = uniroot(rootL, c(line_min, line_max))$root+observed_target[i]
     } else{
-      print("non inv u")
       ci[i,1] = line_min
     }
   }
