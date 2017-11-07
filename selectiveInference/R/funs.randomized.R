@@ -221,9 +221,7 @@ importance_weight = function(noise_scale,
     return(exp(W))
 }
                              
-### Jelena's functions
-
-conditional_density = function(noise_scale, lasso_soln){
+conditional_density = function(noise_scale, lasso_soln) {
   
   active_set = lasso_soln$active_set
   observed_raw = lasso_soln$observed_raw
@@ -241,7 +239,7 @@ conditional_density = function(noise_scale, lasso_soln){
   opt_transform = list(linear_term=B, 
                        offset_term = beta_offset)
   reduced_B = chol(t(B) %*% B)
-  beta_offset = beta_offset+observed_raw
+  beta_offset = beta_offset + observed_raw
   reduced_beta_offset = solve(t(reduced_B)) %*% (t(B) %*% beta_offset)
   
   log_condl_optimization_density = function(opt_state) {
@@ -260,26 +258,23 @@ conditional_density = function(noise_scale, lasso_soln){
   return(lasso_soln)
 }
 
+randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term){
 
-randomized_inference = function(X,y,sigma, lam, noise_scale, ridge_term){
-  n=nrow(X)
-  p=ncol(X)
-  lasso_soln=selectiveInference:::randomizedLASSO(X, y, lam, noise_scale, ridge_term)
+  n = nrow(X)
+  p = ncol(X)
+  lasso_soln = selectiveInference:::randomizedLASSO(X, y, lam, noise_scale, ridge_term)
   active_set = lasso_soln$active_set
   inactive_set = lasso_soln$inactive_set
   nactive = length(active_set)
-  print(paste("nactive", nactive))
-  
-  #lasso_soln = conditional_density(noise_scale, lasso_soln)
-  
-  dim=length(lasso_soln$observed_opt_state)
+
+  dim = length(lasso_soln$observed_opt_state)
   print(paste("chain dim", dim))
   S = selectiveInference:::sample_opt_variables(lasso_soln, jump_scale=rep(1/sqrt(n), dim), nsample=10000)
   opt_samples = S$samples[2001:10000,]
   print(paste("dim opt samples", toString(dim(opt_samples))))
   
-  X_E=X[, active_set]
-  X_minusE=X[, inactive_set]
+  X_E = X[, active_set]
+  X_minusE = X[, inactive_set]
   target_cov = solve(t(X_E) %*% X_E)*sigma^2
   cov_target_internal = rbind(target_cov, matrix(0, nrow=p-nactive, ncol=nactive))
   observed_target = solve(t(X_E) %*% X_E) %*% t(X_E) %*% y
@@ -288,7 +283,7 @@ randomized_inference = function(X,y,sigma, lam, noise_scale, ridge_term){
   opt_transform = lasso_soln$optimization_transform
   observed_raw = lasso_soln$observed_raw
   
-  pivots = rep(0, nactive)
+  pvalus = rep(0, nactive)
   ci = matrix(0, nactive, 2)
   for (i in 1:nactive){
     target_transform = selectiveInference:::linear_decomposition(observed_target[i], 
@@ -300,7 +295,7 @@ randomized_inference = function(X,y,sigma, lam, noise_scale, ridge_term){
     
     pivot = function(candidate){
       weights = selectiveInference:::importance_weight(noise_scale,
-                                                     t(as.matrix(target_sample))+candidate,
+                                                     t(as.matrix(target_sample)) + candidate,
                                                      t(opt_samples),
                                                      opt_transform,
                                                      target_transform,
@@ -314,15 +309,11 @@ randomized_inference = function(X,y,sigma, lam, noise_scale, ridge_term){
     rootL = function(candidate){
       return (pivot(observed_target[i]+candidate)-(1+level)/2)
     }
-    pivots[i] = pivot(0)
+    pvalues[i] = pivot(0)
     line_min = -10*sd(target_sample)
     line_max = 10*sd(target_sample)
     ci[i,1] = uniroot(rootU, c(line_min, line_max))$root+observed_target[i]
-    ci[i,2] = uniroot(rootL,c(line_min, line_max))$root+observed_target[i]
+    ci[i,2] = uniroot(rootL, c(line_min, line_max))$root+observed_target[i]
   }
-  print(paste("pivots", toString(pivots)))
-  for (i in 1:nactive){
-    print(paste("CIs", toString(ci[i,])))
-  }
-  return(list(pivots=pivots, ci=ci))
+  return(list(pvalues=pvalues, ci=ci))
 }
