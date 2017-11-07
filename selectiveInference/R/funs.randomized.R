@@ -307,8 +307,8 @@ randomizedLassoInf = function(X,
   # if no sigma given, use OLS estimate
 
   if (is.null(sigma)) {
-        lm_y = lm(y ~ X[,E] - 1)
-        sigma = sum(resid(lm_y)^2 / lm_y$df.resid)
+        lm_y = lm(y ~ X_E - 1)
+        sigma = sqrt(sum(resid(lm_y)^2) / lm_y$df.resid)
   }        
   print(c(sigma, 'sigma'))
   target_cov = solve(t(X_E) %*% X_E)*sigma^2
