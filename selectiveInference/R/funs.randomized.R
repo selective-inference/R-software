@@ -65,6 +65,7 @@ randomizedLasso = function(X,
     ever_active = rep(0, p)
     nactive = as.integer(0)
 
+    print('here')
     result = solve_QP_wide(X,                  # design matrix
     	                   lam / n,            # vector of Lagrange multipliers
 		           ridge_term / n,     # ridge_term 
@@ -85,6 +86,7 @@ randomizedLasso = function(X,
 
     sign_soln = sign(result$soln)
 
+    print('now')
     unpenalized = lam == 0
     active = (!unpenalized) & (sign_soln != 0)
     inactive = (!unpenalized) & (sign_soln == 0)
