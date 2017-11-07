@@ -258,7 +258,8 @@ conditional_density = function(noise_scale, lasso_soln) {
   return(lasso_soln)
 }
 
-randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term, level=0.9){
+randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term, 
+                                condition_subgrad=FALSE, level=0.9){
 
   n = nrow(X)
   p = ncol(X)
@@ -266,7 +267,11 @@ randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term, level
   active_set = lasso_soln$active_set
   inactive_set = lasso_soln$inactive_set
   nactive = length(active_set)
-
+  
+  if (condition_subgrad==TRUE){
+    lasso_soln=conditional_density(noise_scale,lasso_soln)
+  } 
+    
   dim = length(lasso_soln$observed_opt_state)
   print(paste("chain dim", dim))
   S = selectiveInference:::sample_opt_variables(lasso_soln, jump_scale=rep(1/sqrt(n), dim), nsample=10000)
