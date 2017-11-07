@@ -258,7 +258,7 @@ conditional_density = function(noise_scale, lasso_soln) {
   return(lasso_soln)
 }
 
-randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term){
+randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term, level=0.9){
 
   n = nrow(X)
   p = ncol(X)
@@ -283,7 +283,7 @@ randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term){
   opt_transform = lasso_soln$optimization_transform
   observed_raw = lasso_soln$observed_raw
   
-  pvalus = rep(0, nactive)
+  pvalues = rep(0, nactive)
   ci = matrix(0, nactive, 2)
   for (i in 1:nactive){
     target_transform = selectiveInference:::linear_decomposition(observed_target[i], 
@@ -300,9 +300,8 @@ randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term){
                                                      opt_transform,
                                                      target_transform,
                                                      observed_raw)
-      return(mean((target_sample<observed_target[i])*weights)/mean(weights))
+      return(mean((target_sample+candidate<observed_target[i])*weights)/mean(weights))
     }
-    level = 0.9
     rootU = function(candidate){
       return (pivot(observed_target[i]+candidate)-(1-level)/2)
     }
@@ -310,10 +309,20 @@ randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term){
       return (pivot(observed_target[i]+candidate)-(1+level)/2)
     }
     pvalues[i] = pivot(0)
-    line_min = -10*sd(target_sample)
-    line_max = 10*sd(target_sample)
-    ci[i,1] = uniroot(rootU, c(line_min, line_max))$root+observed_target[i]
-    ci[i,2] = uniroot(rootL, c(line_min, line_max))$root+observed_target[i]
+    line_min = -20*sd(target_sample)
+    line_max = 20*sd(target_sample)
+    if (rootU(line_min)*rootU(line_max)<0){
+      ci[i,2] = uniroot(rootU, c(line_min, line_max))$root+observed_target[i]
+    } else{
+      print("non inv u")
+      ci[i,2]=line_max
+    }
+    if (rootL(line_min)*rootL(line_max)<0){
+      ci[i,1] = uniroot(rootL, c(line_min, line_max))$root+observed_target[i]
+    } else{
+      print("non inv u")
+      ci[i,1] = line_min
+    }
   }
-  return(list(pvalues=pvalues, ci=ci))
+  return(list(active_set=active_set, pvalues=pvalues, ci=ci))
 }
