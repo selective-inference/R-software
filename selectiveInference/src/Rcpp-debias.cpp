@@ -160,8 +160,8 @@ Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X,
 				 (double *) X.begin(),
 				 (double *) linear_func.begin(),
 				 (int *) need_update.begin(),
-				 nfeature,
 				 ncase,
+				 nfeature,
 				 (double *) bound.begin(),
 				 ridge_term,
 				 kkt_tol);
@@ -175,8 +175,8 @@ Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X,
 		       (double *) X.begin(),
 		       (double *) linear_func.begin(),
 		       (int *) need_update.begin(),
-		       nfeature,
-		       ncase);
+		       ncase,
+		       nfeature);
 
   return(Rcpp::List::create(Rcpp::Named("soln") = theta,
 			    Rcpp::Named("gradient") = gradient,

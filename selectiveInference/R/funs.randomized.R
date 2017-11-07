@@ -221,3 +221,99 @@ importance_weight = function(noise_scale,
     return(exp(W))
 }
                              
+conditional_density = function(noise_scale, lasso_soln) {
+  
+  active_set = lasso_soln$active_set
+  observed_raw = lasso_soln$observed_raw
+  opt_linear = lasso_soln$optimization_transform$linear_term
+  opt_offset =  lasso_soln$optimization_transform$offset_term
+  observed_opt_state = lasso_soln$observed_opt_state
+  
+  nactive = length(active_set)
+  B = opt_linear[,1:nactive]
+  beta_offset = opt_offset
+  p=length(observed_opt_state)
+  if (nactive<p){
+    beta_offset = beta_offset+(opt_linear[,(nactive+1):p] %*% observed_opt_state[(nactive+1):p])
+  }
+  opt_transform = list(linear_term=B, 
+                       offset_term = beta_offset)
+  reduced_B = chol(t(B) %*% B)
+  beta_offset = beta_offset + observed_raw
+  reduced_beta_offset = solve(t(reduced_B)) %*% (t(B) %*% beta_offset)
+  
+  log_condl_optimization_density = function(opt_state) {
+    if  (sum(opt_state < 0) > 0) {
+      return(-Inf)
+    }
+    D = selectiveInference:::log_density_gaussian_conditional_(noise_scale,
+                                                               reduced_B,
+                                                               as.matrix(opt_state),
+                                                               reduced_beta_offset)
+    return(D)
+  }
+  lasso_soln$log_optimization_density = log_condl_optimization_density
+  lasso_soln$observed_opt_state = observed_opt_state[1:nactive]
+  lasso_soln$optimization_transform = opt_transform
+  return(lasso_soln)
+}
+
+randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term){
+
+  n = nrow(X)
+  p = ncol(X)
+  lasso_soln = selectiveInference:::randomizedLASSO(X, y, lam, noise_scale, ridge_term)
+  active_set = lasso_soln$active_set
+  inactive_set = lasso_soln$inactive_set
+  nactive = length(active_set)
+
+  dim = length(lasso_soln$observed_opt_state)
+  print(paste("chain dim", dim))
+  S = selectiveInference:::sample_opt_variables(lasso_soln, jump_scale=rep(1/sqrt(n), dim), nsample=10000)
+  opt_samples = S$samples[2001:10000,]
+  print(paste("dim opt samples", toString(dim(opt_samples))))
+  
+  X_E = X[, active_set]
+  X_minusE = X[, inactive_set]
+  target_cov = solve(t(X_E) %*% X_E)*sigma^2
+  cov_target_internal = rbind(target_cov, matrix(0, nrow=p-nactive, ncol=nactive))
+  observed_target = solve(t(X_E) %*% X_E) %*% t(X_E) %*% y
+  observed_internal = c(observed_target, t(X_minusE) %*% (y-X_E%*% observed_target))
+  internal_transform = lasso_soln$internal_transform
+  opt_transform = lasso_soln$optimization_transform
+  observed_raw = lasso_soln$observed_raw
+  
+  pvalus = rep(0, nactive)
+  ci = matrix(0, nactive, 2)
+  for (i in 1:nactive){
+    target_transform = selectiveInference:::linear_decomposition(observed_target[i], 
+                                                  observed_internal, 
+                                                  target_cov[i,i], 
+                                                  cov_target_internal[,i],
+                                                  internal_transform)
+    target_sample = rnorm(nrow(opt_samples)) * sqrt(target_cov[i,i])
+    
+    pivot = function(candidate){
+      weights = selectiveInference:::importance_weight(noise_scale,
+                                                     t(as.matrix(target_sample)) + candidate,
+                                                     t(opt_samples),
+                                                     opt_transform,
+                                                     target_transform,
+                                                     observed_raw)
+      return(mean((target_sample<observed_target[i])*weights)/mean(weights))
+    }
+    level = 0.9
+    rootU = function(candidate){
+      return (pivot(observed_target[i]+candidate)-(1-level)/2)
+    }
+    rootL = function(candidate){
+      return (pivot(observed_target[i]+candidate)-(1+level)/2)
+    }
+    pvalues[i] = pivot(0)
+    line_min = -10*sd(target_sample)
+    line_max = 10*sd(target_sample)
+    ci[i,1] = uniroot(rootU, c(line_min, line_max))$root+observed_target[i]
+    ci[i,2] = uniroot(rootL, c(line_min, line_max))$root+observed_target[i]
+  }
+  return(list(pvalues=pvalues, ci=ci))
+}
