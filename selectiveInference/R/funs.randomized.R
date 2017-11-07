@@ -3,11 +3,11 @@
 #
 # min 1/2 || y - \beta_0 - X \beta ||_2^2 + \lambda || \beta ||_1 - \omega^T\beta + \frac{\epsilon}{2} \|\beta\|^2_2
 
-randomizedLASSO = function(X, 
+randomizedLasso = function(X, 
                            y, 
                            lam, 
-                           noise_scale, 
-                           ridge_term, 
+                           noise_scale=NULL, 
+                           ridge_term=NULL, 
                            noise_type=c('gaussian', 'laplace'),
                            max_iter=100,        # how many iterations for each optimization problem
                            kkt_tol=1.e-4,       # tolerance for the KKT conditions
@@ -20,6 +20,21 @@ randomizedLASSO = function(X,
 
     n = nrow(X); p = ncol(X)
     			
+    mean_diag = mean(apply(X^2, 2, sum))
+
+    # default ridge term
+
+    if (is.null(ridge_term)) {
+        ridge_term = sqrt(mean_diag) * sd(y) / sqrt(n)
+    }
+
+    # default noise level
+
+    if (is.null(noise_scale)) {
+        noise_scale = 0.5 * sd(y) * sqrt(mean_diag)
+    }
+
+    print(c(noise_scale, ridge_term))
     noise_type = match.arg(noise_type)
 
     if (noise_scale > 0) {
@@ -246,10 +261,10 @@ conditional_density = function(noise_scale, lasso_soln) {
     if  (sum(opt_state < 0) > 0) {
       return(-Inf)
     }
-    D = selectiveInference:::log_density_gaussian_conditional_(noise_scale,
-                                                               reduced_B,
-                                                               as.matrix(opt_state),
-                                                               reduced_beta_offset)
+    D = log_density_gaussian_conditional_(noise_scale,
+                                          reduced_B,
+                                          as.matrix(opt_state),
+                                          reduced_beta_offset)
     return(D)
   }
   lasso_soln$log_optimization_density = log_condl_optimization_density
@@ -258,12 +273,18 @@ conditional_density = function(noise_scale, lasso_soln) {
   return(lasso_soln)
 }
 
-randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term, 
-                                condition_subgrad=FALSE, level=0.9){
+randomizedLassoInf = function(X, 
+                              y, 
+                              lam, 
+                              sigma=NULL, 
+                              noise_scale=NULL, 
+                              ridge_term=NULL, 
+                              condition_subgrad=TRUE, 
+                              level=0.9) {
 
   n = nrow(X)
   p = ncol(X)
-  lasso_soln = selectiveInference:::randomizedLASSO(X, y, lam, noise_scale, ridge_term)
+  lasso_soln = randomizedLasso(X, y, lam, noise_scale, ridge_term)
   active_set = lasso_soln$active_set
   inactive_set = lasso_soln$inactive_set
   nactive = length(active_set)
@@ -274,12 +295,20 @@ randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term,
     
   dim = length(lasso_soln$observed_opt_state)
   print(paste("chain dim", dim))
-  S = selectiveInference:::sample_opt_variables(lasso_soln, jump_scale=rep(1/sqrt(n), dim), nsample=10000)
+  S = sample_opt_variables(lasso_soln, jump_scale=rep(1/sqrt(n), dim), nsample=10000)
   opt_samples = S$samples[2001:10000,]
   print(paste("dim opt samples", toString(dim(opt_samples))))
   
   X_E = X[, active_set]
   X_minusE = X[, inactive_set]
+
+  # if no sigma given, use OLS estimate
+
+  if (is.null(sigma)) {
+        lm_y = lm(y ~ X[,E] - 1)
+        sigma = sum(resid(lm_y)^2 / lm_y$df.resid)
+  }        
+  print(c(sigma, 'sigma'))
   target_cov = solve(t(X_E) %*% X_E)*sigma^2
   cov_target_internal = rbind(target_cov, matrix(0, nrow=p-nactive, ncol=nactive))
   observed_target = solve(t(X_E) %*% X_E) %*% t(X_E) %*% y
@@ -291,20 +320,20 @@ randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term,
   pvalues = rep(0, nactive)
   ci = matrix(0, nactive, 2)
   for (i in 1:nactive){
-    target_transform = selectiveInference:::linear_decomposition(observed_target[i], 
-                                                  observed_internal, 
-                                                  target_cov[i,i], 
-                                                  cov_target_internal[,i],
-                                                  internal_transform)
+    target_transform = linear_decomposition(observed_target[i], 
+                                            observed_internal, 
+                                            target_cov[i,i], 
+                                            cov_target_internal[,i],
+                                            internal_transform)
     target_sample = rnorm(nrow(opt_samples)) * sqrt(target_cov[i,i])
     
     pivot = function(candidate){
-      weights = selectiveInference:::importance_weight(noise_scale,
-                                                     t(as.matrix(target_sample)) + candidate,
-                                                     t(opt_samples),
-                                                     opt_transform,
-                                                     target_transform,
-                                                     observed_raw)
+      weights = importance_weight(noise_scale,
+                                  t(as.matrix(target_sample)) + candidate,
+                                  t(opt_samples),
+                                  opt_transform,
+                                  target_transform,
+                                  observed_raw)
       return(mean((target_sample+candidate<observed_target[i])*weights)/mean(weights))
     }
     rootU = function(candidate){
