@@ -286,7 +286,7 @@ randomizedLassoInf = function(X,
 
   n = nrow(X)
   p = ncol(X)
-  lasso_soln = randomizedLasso(X, y, lam, noise_scale, ridge_term)
+  lasso_soln = randomizedLasso(X, y, lam, noise_scale=noise_scale, ridge_term=ridge_term)
   active_set = lasso_soln$active_set
   inactive_set = lasso_soln$inactive_set
   nactive = length(active_set)
