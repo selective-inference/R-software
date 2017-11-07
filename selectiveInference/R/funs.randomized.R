@@ -158,12 +158,16 @@ randomizedLasso = function(X,
             return(-Inf)
         }
 
-	A = opt_transform$linear_term %*% opt_state + observed_raw + opt_transform$offset_term
-	D = -apply(A^2, 2, sum) / noise_scale^2
-#        D = log_density_gaussian_conditional_(noise_scale,
-#                                              opt_transform$linear_term,
-#                                              as.matrix(opt_state),
-#                                              observed_raw + opt_transform$offset_term)
+        use_C_code = TRUE
+        if (!use_C_code) {
+            A = opt_transform$linear_term %*% opt_state + observed_raw + opt_transform$offset_term
+            D = -apply(A^2, 2, sum) / noise_scale^2
+        } else {
+            D = log_density_gaussian_conditional_(noise_scale,
+                                                  opt_transform$linear_term,
+                                                  as.matrix(opt_state),
+                                                  observed_raw + opt_transform$offset_term)
+        }
         return(D)
     }
 
