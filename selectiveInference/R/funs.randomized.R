@@ -296,16 +296,28 @@ randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term, level
                                                   target_cov[i,i], 
                                                   cov_target_internal[,i],
                                                   internal_transform)
-  
+    
+    target_opt_linear = cbind(target_transform$linear_term, opt_transform$linear_term)
+    reduced_target_opt_linear = chol(t(target_opt_linear) %*% target_opt_linear)
+    target_linear = reduced_target_opt_linear[,1]
+    temp = solve(t(reduced_target_opt_linear)) %*% t(target_opt_linear)
+    target_offset = temp %*% target_transform$offset_term
+    target_transform = list(linear_term = as.matrix(target_linear), offset_term = target_offset)
+    print(dim(reduced_target_opt_linear))
+    opt_linear = reduced_target_opt_linear[,2:ncol(reduced_target_opt_linear)]
+    opt_offset = temp %*% opt_transform$offset_term
+    opt_transform_reduced = list(linear_term = as.matrix(opt_linear), offset_term = opt_offset)
+    
+    raw = target_transform$linear_term * observed_target[i] +target_transform$offset_term
+    
     target_sample = rnorm(nrow(as.matrix(opt_samples))) * sqrt(target_cov[i,i])
-    print(length(target_sample))
     pivot = function(candidate){
       weights = selectiveInference:::importance_weight(noise_scale,
                                                      t(as.matrix(target_sample)) + candidate,
                                                      t(opt_samples),
-                                                     opt_transform,
+                                                     opt_transform_reduced,
                                                      target_transform,
-                                                     observed_raw)
+                                                     raw)
       return(mean((target_sample+candidate<observed_target[i])*weights)/mean(weights))
     }
     rootU = function(candidate){
