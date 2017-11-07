@@ -47,6 +47,7 @@ collect_results = function(n,p,s, nsim=100, level=0.9){
     }
     sample_pvalues = c(sample_pvalues, result$pvalues)
     sample_coverage = c(sample_coverage, coverage)
+    print(paste("coverage", mean(sample_coverage)))
   }
   print(paste("coverage", mean(sample_coverage)))
   jpeg('pivots.jpg')
