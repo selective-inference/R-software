@@ -1,6 +1,6 @@
 #include <Rcpp.h>                // need to include the main Rcpp header file 
 #include <randomized_lasso.h>    // where densities are defined
-
+#include <stdio.h>
 // [[Rcpp::export]]
 Rcpp::NumericVector log_density_gaussian_(double noise_scale,                         // Scale of randomization
 					  Rcpp::NumericMatrix internal_linear,        // A_D -- linear part for data
@@ -53,6 +53,7 @@ Rcpp::NumericVector log_density_gaussian_conditional_(double noise_scale,       
 
   int ipt;
   for (ipt=0; ipt<npt; ipt++) {
+    // fprintf(stderr, "here 5: %f %d %d %d %d\n", noise_scale, ndim, noptimization, ipt, npt);
     result[ipt] = log_density_gaussian_conditional(noise_scale,
 						   ndim,
 						   noptimization,

@@ -36,7 +36,7 @@ collect_results = function(n,p,s, nsim=100, level=0.9){
     X=data$X
     y=data$y
     beta=data$beta
-    result = selectiveInference:::randomizedLassoInf(X, y, lam, level=level)
+    result = selectiveInference:::randomizedLassoInf(X, y, lam, level=level, burnin=2000, nsample=4000)
     true_beta = beta[result$active_set]
     coverage = rep(0, nrow(result$ci))
     for (i in 1:nrow(result$ci)){
