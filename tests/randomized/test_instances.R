@@ -36,9 +36,7 @@ collect_results = function(n,p,s, nsim=100, level=0.9){
     X=data$X
     y=data$y
     beta=data$beta
-    ridge_term=sd(y)/sqrt(n)
-    noise_scale = sd(y)/2
-    result = selectiveInference:::randomized_inference(X,y,sigma,lam,noise_scale,ridge_term, TRUE, level)
+    result = selectiveInference:::randomizedLassoInf(X, y, sigma, lam, level=level)
     true_beta = beta[result$active_set]
     coverage = rep(0, nrow(result$ci))
     for (i in 1:nrow(result$ci)){
