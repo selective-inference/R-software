@@ -34,7 +34,6 @@ randomizedLasso = function(X,
         noise_scale = 0.5 * sd(y) * sqrt(mean_diag)
     }
 
-    print(c(noise_scale, ridge_term))
     noise_type = match.arg(noise_type)
 
     if (noise_scale > 0) {
@@ -222,7 +221,7 @@ importance_weight = function(noise_scale,
                              target_transform,
                              observed_raw) {
 
-    use_C_code = FALSE
+    use_C_code = TRUE
     if (!use_C_code) {
         A = (opt_transform$linear_term %*% opt_sample + 
              target_transform$linear_term %*% target_sample)
@@ -278,7 +277,7 @@ conditional_density = function(noise_scale, lasso_soln) {
       return(-Inf)
     }
 
-    use_C_code = FALSE
+    use_C_code = TRUE
     if (!use_C_code) {
         A = reduced_B %*% as.matrix(opt_state) + reduced_beta_offset
         A = apply(A, 2, function(x) {x + reduced_beta_offset})
@@ -321,15 +320,10 @@ randomizedLassoInf = function(X,
    lasso_soln=conditional_density(noise_scale, lasso_soln)
  } 
     
-  dim = length(lasso_soln$observed_opt_state)
-  print(paste("chain dim", dim))
+  ndim = length(lasso_soln$observed_opt_state)
 
-#  print(lasso_soln)
-
-
-  S = sample_opt_variables(lasso_soln, jump_scale=rep(1/sqrt(n), dim), nsample=nsample)
+  S = sample_opt_variables(lasso_soln, jump_scale=rep(1/sqrt(n), ndim), nsample=nsample)
   opt_samples = S$samples[(burnin+1):nsample,]
-  print(paste("dim opt samples", toString(dim(opt_samples))))
   
   X_E = X[, active_set]
   X_minusE = X[, inactive_set]
