@@ -25,9 +25,9 @@ gaussian_instance = function(n, p, s, sigma=1, rho=0, signal=6, X=NA,
 }
 
 
-collect_results = function(n,p,s, nsim=1, level=0.9){
+collect_results = function(n,p,s, nsim=100, level=0.9){
   rho=0.3
-  lam=2.
+  lam=1.
   sigma=1
   sample_pvalues = c()
   sample_coverage = c()
