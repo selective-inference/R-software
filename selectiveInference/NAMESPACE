@@ -41,7 +41,7 @@ import(intervals)
 import(survival)
 importFrom("graphics", abline, axis, matplot)
 importFrom("stats", dnorm, lsfit, pexp, pnorm, predict, 
-           qnorm, rnorm, sd, uniroot, dchisq, model.matrix, pchisq)
+           qnorm, rnorm, sd, uniroot, dchisq, model.matrix, pchisq, resid)
 importFrom("stats", "coef", "df", "lm", "pf")
 importFrom("stats", "glm", "residuals", "vcov")
 importFrom("stats", "rbinom", "rexp")
