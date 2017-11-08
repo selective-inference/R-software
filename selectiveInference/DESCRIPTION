@@ -10,6 +10,7 @@ Depends:
     glmnet,
     intervals,
     survival,
+    adaptMCMC,
 Suggests:
     Rmpfr
 Description: New tools for post-selection inference, for use with forward
