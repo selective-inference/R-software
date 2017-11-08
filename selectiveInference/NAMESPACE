@@ -14,7 +14,8 @@ export(lar,fs,
        TG.pvalue, 
        TG.limits, 
        TG.interval,
-       debiasingMatrix
+       debiasingMatrix,
+       randomizedLassoInf
     )
 
 S3method("coef", "lar")
@@ -40,8 +41,9 @@ import(intervals)
 import(survival)
 importFrom("graphics", abline, axis, matplot)
 importFrom("stats", dnorm, lsfit, pexp, pnorm, predict, 
-           qnorm, rnorm, sd, uniroot, dchisq, model.matrix, pchisq)
+           qnorm, rnorm, sd, uniroot, dchisq, model.matrix, pchisq, resid)
 importFrom("stats", "coef", "df", "lm", "pf")
 importFrom("stats", "glm", "residuals", "vcov")
 importFrom("stats", "rbinom", "rexp")
 importFrom("Rcpp", "sourceCpp")
+importFrom("adaptMCMC", "MCMC")

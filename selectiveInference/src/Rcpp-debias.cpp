@@ -101,7 +101,6 @@ Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X,
 			 int param_stop
 			 ) {
 
-  int column_major = 1; // R has matrices in column major order
   int ncase = X.nrow(); // number of cases
   int nfeature = X.ncol(); // number of features
 
@@ -140,7 +139,6 @@ Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X,
 			(int *) nactive.begin(),
 			ncase,
 			nfeature,
-			column_major,
 			(double *) bound.begin(),
 			ridge_term,
 			(double *) theta.begin(),
@@ -162,9 +160,8 @@ Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X,
 				 (double *) X.begin(),
 				 (double *) linear_func.begin(),
 				 (int *) need_update.begin(),
-				 nfeature,
 				 ncase,
-				 column_major,
+				 nfeature,
 				 (double *) bound.begin(),
 				 ridge_term,
 				 kkt_tol);
@@ -178,9 +175,8 @@ Rcpp::List solve_QP_wide(Rcpp::NumericMatrix X,
 		       (double *) X.begin(),
 		       (double *) linear_func.begin(),
 		       (int *) need_update.begin(),
-		       nfeature,
 		       ncase,
-		       column_major);
+		       nfeature);
 
   return(Rcpp::List::create(Rcpp::Named("soln") = theta,
 			    Rcpp::Named("gradient") = gradient,
