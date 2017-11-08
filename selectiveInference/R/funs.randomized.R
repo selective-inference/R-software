@@ -265,7 +265,7 @@ importance_weight = function(noise_scale,
 get_mean_cov = function(noise_scale, linear_term, offset_term){
     temp = solve(t(linear_term) %*% linear_term)
     cov = noise_scale^2*temp
-    mean = temp %*% linear_term %*% offset_term
+    mean = temp %*% t(linear_term) %*% offset_term
     return(list(mean=mean, cov=cov))
 }
 
