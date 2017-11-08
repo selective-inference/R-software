@@ -113,7 +113,7 @@ is not allowed.
 
 Note that the coefficients and standard errors reported are unregularized.
 Eg for the Gaussian, they are the usual least squares estimates and standard errors
-for the model fit to the actice set from the lasso.
+for the model fit to the active set from the lasso.
 }
 \value{  
 \item{type}{Type of coefficients tested (partial or full)}
