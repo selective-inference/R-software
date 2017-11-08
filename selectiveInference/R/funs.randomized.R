@@ -15,7 +15,7 @@ randomizedLasso = function(X,
                            objective_tol=1.e-8, # tolerance for relative decrease in objective
                            objective_stop=FALSE,
                            kkt_stop=TRUE,
-                           param_stop=TRUE)
+                           parameter_stop=TRUE)
 {
 
     n = nrow(X); p = ncol(X)
@@ -80,7 +80,7 @@ randomizedLasso = function(X,
                            p,
 		           objective_stop,     # objective_stop
 			   kkt_stop,           # kkt_stop
-			   param_stop)         # param_stop
+			   parameter_stop)         # param_stop
 
     sign_soln = sign(result$soln)
 
@@ -324,7 +324,7 @@ randomizedLassoInf = function(X,
                               objective_tol=1.e-8, # tolerance for relative decrease in objective
                               objective_stop=FALSE,
                               kkt_stop=TRUE,
-                              param_stop=TRUE)
+                              parameter_stop=TRUE)
  {
 
   n = nrow(X)
@@ -341,7 +341,7 @@ randomizedLassoInf = function(X,
                                objective_tol=objective_tol,
                                objective_stop=objective_stop,
                                kkt_stop=kkt_stop,
-                               param_stop=param_stop)
+                               parameter_stop=parameter_stop)
 
   active_set = lasso_soln$active_set
   inactive_set = lasso_soln$inactive_set
