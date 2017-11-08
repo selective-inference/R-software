@@ -27,7 +27,7 @@ randomizedLassoInf(X,
                    objective_tol=1.e-8,
                    objective_stop=FALSE,
                    kkt_stop=TRUE,
-                   param_stop=TRUE)
+                   parameter_stop=TRUE)
 }
 \arguments{
   \item{X}{
