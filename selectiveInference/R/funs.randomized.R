@@ -239,7 +239,6 @@ importance_weight = function(noise_scale,
         A = apply(A, 2, function(x) {return(x + target_transform$offset_term + opt_transform$offset_term)})
         log_num = -apply(A^2, 2, sum) / noise_scale^2
     } else {
-
         log_num = log_density_gaussian_(noise_scale,
                                         target_transform$linear_term,
                                         as.matrix(target_sample),
@@ -262,6 +261,15 @@ importance_weight = function(noise_scale,
     W = W - max(W)
     return(exp(W))
 }
+
+get_mean_cov = function(noise_scale, linear_term, offset_term){
+    temp = solve(t(linear_term) %*% linear_term)
+    cov = noise_scale^2*temp
+    mean = temp %*% linear_term %*% offset_term
+    return(list(mean=mean, cov=cov))
+}
+
+
                              
 conditional_density = function(noise_scale, lasso_soln) {
   
