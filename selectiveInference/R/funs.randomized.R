@@ -95,6 +95,7 @@ randomizedLASSO = function(X,
     L_E = t(X) %*% X[,E]
 
     coef_term = L_E
+    print(active_set)
     coef_term = coef_term %*% diag(c(rep(1, sum(unpenalized)), sign_soln[active]))  # coefficients are non-negative
     coef_term[active,] = coef_term[active,] + ridge_term * diag(rep(1, sum(active)))  # ridge term
 
@@ -274,8 +275,9 @@ randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term, level
     
   dim = length(lasso_soln$observed_opt_state)
   print(paste("chain dim", dim))
-  S = selectiveInference:::sample_opt_variables(lasso_soln, jump_scale=rep(1/sqrt(n), dim), nsample=10000)
-  opt_samples = S$samples[2001:10000,]
+  nsample=4000
+  S = selectiveInference:::sample_opt_variables(lasso_soln, jump_scale=rep(1/sqrt(n), dim), nsample=nsample)
+  opt_samples = S$samples[2001:nsample,]
   print(paste("dim opt samples", toString(dim(opt_samples))))
   
   X_E = X[, active_set]
@@ -290,6 +292,7 @@ randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term, level
   
   pvalues = rep(0, nactive)
   ci = matrix(0, nactive, 2)
+  
   for (i in 1:nactive){
     target_transform = selectiveInference:::linear_decomposition(observed_target[i], 
                                                   observed_internal, 
@@ -303,7 +306,6 @@ randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term, level
     temp = solve(t(reduced_target_opt_linear)) %*% t(target_opt_linear)
     target_offset = temp %*% target_transform$offset_term
     target_transform = list(linear_term = as.matrix(target_linear), offset_term = target_offset)
-    print(dim(reduced_target_opt_linear))
     opt_linear = reduced_target_opt_linear[,2:ncol(reduced_target_opt_linear)]
     opt_offset = temp %*% opt_transform$offset_term
     opt_transform_reduced = list(linear_term = as.matrix(opt_linear), offset_term = opt_offset)
@@ -324,11 +326,13 @@ randomized_inference = function(X, y, sigma, lam, noise_scale, ridge_term, level
       return (pivot(observed_target[i]+candidate)-(1-level)/2)
     }
     rootL = function(candidate){
-      return (pivot(observed_target[i]+candidate)-(1+level)/2)
+      return(pivot(observed_target[i]+candidate)-(1+level)/2)
     }
     pvalues[i] = pivot(0)
-    line_min = -20*sd(target_sample)
-    line_max = 20*sd(target_sample)
+    line_min = -10*sd(target_sample)
+    line_max = 10*sd(target_sample)
+    print(rootU(line_min))
+    print(rootU(line_max))
     if (rootU(line_min)*rootU(line_max)<0){
       ci[i,2] = uniroot(rootU, c(line_min, line_max))$root+observed_target[i]
     } else{
