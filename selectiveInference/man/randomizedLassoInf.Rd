@@ -145,7 +145,7 @@ sigma = 0.2
 lam = 0.5
 
 X = matrix(rnorm(n*p), n, p)
-X = scale(X, TRUE, TRUE)
+X = scale(X, TRUE, TRUE) / sqrt(n-1)
 
 beta = c(3,2,rep(0,p-2))
 y = X\%*\%beta + sigma*rnorm(n)
