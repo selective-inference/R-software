@@ -68,20 +68,16 @@ In forming selective confidence intervals and p-values should we condition
 on the inactive coordinates of the subgradient as well?
 Default is TRUE. 
 }
-\item{level}
-{
+\item{level}{
 Level for confidence intervals.
 }
-\item{nsample}
-{
+\item{nsample}{
 Number of samples of optimization variables to sample.
 }
-\item{burnin}
-{
+\item{burnin}{
 How many samples of optimization variable to discard (should be less than nsample).
 }
-\item{max_iter}
-{
+\item{max_iter}{
 How many rounds of updates used of coordinate descent in solving randomized
 LASSO.
 }
@@ -99,10 +95,10 @@ of objective value.
 \item{kkt_stop}{
 Should we use KKT check to determine when to stop?
 }
-\item{parameter_tol}{
+\item{parameter_stop}{
 Should we use convergence of parameters to determine when to stop?
 }
-\item{objective_tol}{
+\item{objective_stop}{
 Should we use convergence of objective value to determine when to stop?
 }
 }
@@ -145,13 +141,14 @@ arxiv:1609.05609
 set.seed(43)
 n = 50
 p = 10
-sigma = 1
+sigma = 0.2
+lam = 0.5
 
-x = matrix(rnorm(n*p),n,p)
-x = scale(x,TRUE,TRUE)
+X = matrix(rnorm(n*p), n, p)
+X = scale(X, TRUE, TRUE)
 
 beta = c(3,2,rep(0,p-2))
-y = x\%*\%beta + sigma*rnorm(n)
+y = X\%*\%beta + sigma*rnorm(n)
 
 result = randomizedLassoInf(X, y, lam)
 

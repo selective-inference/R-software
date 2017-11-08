@@ -317,12 +317,32 @@ randomizedLassoInf = function(X,
                               condition_subgrad=TRUE, 
                               level=0.9,
 			      nsample=10000,
-			      burnin=2000) {
+			      burnin=2000,
+                              max_iter=100,        # how many iterations for each optimization problem
+                              kkt_tol=1.e-4,       # tolerance for the KKT conditions
+                              parameter_tol=1.e-8, # tolerance for relative convergence of parameter
+                              objective_tol=1.e-8, # tolerance for relative decrease in objective
+                              objective_stop=FALSE,
+                              kkt_stop=TRUE,
+                              param_stop=TRUE)
+ {
 
   n = nrow(X)
   p = ncol(X)
 
-  lasso_soln = randomizedLasso(X, y, lam, noise_scale=noise_scale, ridge_term=ridge_term)
+  lasso_soln = randomizedLasso(X, 
+                               y, 
+                               lam, 
+                               noise_scale=noise_scale, 
+                               ridge_term=ridge_term,
+                               max_iter=max_iter,
+                               kkt_tol=kkt_tol,       
+                               parameter_tol=parameter_tol,
+                               objective_tol=objective_tol,
+                               objective_stop=objective_stop,
+                               kkt_stop=kkt_stop,
+                               param_stop=param_stop)
+
   active_set = lasso_soln$active_set
   inactive_set = lasso_soln$inactive_set
   nactive = length(active_set)
