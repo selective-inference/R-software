@@ -109,6 +109,7 @@ randomizedLasso = function(X,
     L_E = t(X) %*% X[,E]
 
     coef_term = L_E
+
     signs_ = c(rep(1, sum(unpenalized)), sign_soln[active])
     if (length(signs_) == 1) {
         coef_term = coef_term * signs_
@@ -344,6 +345,9 @@ randomizedLassoInf = function(X,
                                parameter_stop=parameter_stop)
 
   active_set = lasso_soln$active_set
+  if (length(active_set)==0){
+    return (list(active_set=active_set, pvalues=c(), ci=c()))
+  }
   inactive_set = lasso_soln$inactive_set
   nactive = length(active_set)
 
@@ -378,32 +382,61 @@ randomizedLassoInf = function(X,
   
   pvalues = rep(0, nactive)
   ci = matrix(0, nactive, 2)
+  
   for (i in 1:nactive){
+
     target_transform = linear_decomposition(observed_target[i], 
                                             observed_internal, 
                                             target_cov[i,i], 
                                             cov_target_internal[,i],
                                             internal_transform)
-    target_sample = rnorm(nrow(opt_samples)) * sqrt(target_cov[i,i])
     
+    
+    # changing dimension of density evalutaion
+
+    if ((condition_subgrad == TRUE) & (nactive < p)) {
+        target_opt_linear = cbind(target_transform$linear_term, opt_transform$linear_term)
+        reduced_target_opt_linear = chol(t(target_opt_linear) %*% target_opt_linear)
+        target_linear = reduced_target_opt_linear[,1]
+        temp = solve(t(reduced_target_opt_linear)) %*% t(target_opt_linear)
+        target_offset = temp %*% target_transform$offset_term
+        target_transform = list(linear_term = as.matrix(target_linear), offset_term = target_offset)
+        cur_linear = reduced_target_opt_linear[,2:ncol(reduced_target_opt_linear)]
+        cur_offset = temp %*% opt_transform$offset_term
+        cur_transform = list(linear_term = as.matrix(cur_linear), offset_term = cur_offset)
+
+        raw = target_transform$linear_term * observed_target[i] + target_transform$offset_term
+    } else {
+        cur_transform = opt_transform
+        raw = observed_raw
+    }   
+
+    target_sample = rnorm(nrow(as.matrix(opt_samples))) * sqrt(target_cov[i,i])
+
     pivot = function(candidate){
+
       weights = importance_weight(noise_scale,
                                   t(as.matrix(target_sample) + candidate),
                                   t(opt_samples),
-                                  opt_transform,
+                                  cur_transform,
                                   target_transform,
-                                  observed_raw)
+                                  raw)
       return(mean((target_sample + candidate < observed_target[i]) * weights)/mean(weights))
+
     }
+
     rootU = function(candidate){
       return (pivot(observed_target[i]+candidate)-(1-level)/2)
     }
+
     rootL = function(candidate){
-      return (pivot(observed_target[i]+candidate)-(1+level)/2)
+      return(pivot(observed_target[i]+candidate)-(1+level)/2)
     }
+
     pvalues[i] = pivot(0)
-    line_min = -20*sd(target_sample)
-    line_max = 20*sd(target_sample)
+    line_min = -10*sd(target_sample)
+    line_max = 10*sd(target_sample)
+
     if (rootU(line_min)*rootU(line_max)<0){
       ci[i,2] = uniroot(rootU, c(line_min, line_max))$root+observed_target[i]
     } else{
