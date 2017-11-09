@@ -374,14 +374,23 @@ randomizedLassoInf = function(X,
   }
   inactive_set = lasso_soln$inactive_set
   
-
   noise_scale = lasso_soln$noise_scale # set to default value in randomizedLasso
-
- if (condition_subgrad==TRUE){
+  
+  constraints = matrix(0,nactive,2)
+  constraints[,2] = Inf
+  if (condition_subgrad==TRUE){
    condl_lasso=conditional_density(noise_scale, lasso_soln)
    lasso_soln = condl_lasso$lasso_soln
-   reduced_opt_transform = condl_lasso$reduced_opt_transform
- } 
+   cur_opt_transform = condl_lasso$reduced_opt_transform
+   } else{
+   if (nactive<p){
+     subgrad_constraints = matrix(-lam, p-nactive, 2)
+     subgrad_constraints[,2]=lam
+     constraints = rbind(constraints, subgrad_constraints)
+   }
+    cur_opt_transform = list(linear_term = lasso_soln$optimization_transform$linear_term,
+                             offset_term = lasso_soln$optimization_transform$offset_term+lasso_soln$observed_raw)
+  }
     
   ndim = length(lasso_soln$observed_opt_state)
   
@@ -391,8 +400,9 @@ randomizedLassoInf = function(X,
   } else if (sampler == "A"){
     opt_samples = gaussian_sampler(noise_scale, 
                                  lasso_soln$observed_opt_state, 
-                                 reduced_opt_transform$linear_term,
-                                 reduced_opt_transform$offset_term,
+                                 cur_opt_transform$linear_term,
+                                 cur_opt_transform$offset_term,
+                                 constraints,
                                  nsamples=nsample)
     opt_sample = opt_samples[(burnin+1):nsample,]
   }
@@ -439,7 +449,6 @@ randomizedLassoInf = function(X,
         cur_linear = reduced_target_opt_linear[,2:ncol(reduced_target_opt_linear)]
         cur_offset = temp %*% opt_transform$offset_term
         cur_transform = list(linear_term = as.matrix(cur_linear), offset_term = cur_offset)
-
         raw = target_transform$linear_term * observed_target[i] + target_transform$offset_term
     } else {
         cur_transform = opt_transform
