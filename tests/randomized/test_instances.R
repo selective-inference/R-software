@@ -61,7 +61,7 @@ test_KKT=function(){
   
 
 
-collect_results = function(n,p,s, nsim=100, level=0.9, condition_subgrad=TRUE, lam=1.2){
+collect_results = function(n,p,s, nsim=100, level=0.9, condition_subgrad=FALSE, lam=1.2){
 
   rho=0.3
   sigma=1
@@ -76,7 +76,7 @@ collect_results = function(n,p,s, nsim=100, level=0.9, condition_subgrad=TRUE, l
                                                      lam=lam, 
                                                      sigma=sigma,
                                                      level=level, 
-                                                     sampler = "R",
+                                                     sampler = "A",
                                                      burnin=1000, 
                                                      nsample=5000, 
                                                      condition_subgrad=condition_subgrad)
@@ -104,7 +104,7 @@ collect_results = function(n,p,s, nsim=100, level=0.9, condition_subgrad=TRUE, l
 }
 
 set.seed(1)
-collect_results(n=100, p=2000, s=0, lam=2.5)
+collect_results(n=100, p=20, s=0, lam=1.2)
 #test_randomized_lasso()
 #test_KKT()
 

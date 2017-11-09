@@ -74,7 +74,12 @@ log_concave_sampler = function(negative_log_density,
   return (samples)
 }
 
-gaussian_sampler = function(noise_scale, observed, linear_term, offset_term, nsamples){
+gaussian_sampler = function(noise_scale, 
+                            observed, 
+                            linear_term, 
+                            offset_term, 
+                            constraints,
+                            nsamples){
   
   negative_log_density = function(x) {
     recon = linear_term %*% x+offset_term
@@ -84,9 +89,6 @@ gaussian_sampler = function(noise_scale, observed, linear_term, offset_term, nsa
     recon = linear_term %*% x+offset_term
     return(t(linear_term)%*% recon/(noise_scale^2))
   }
-  dim = length(observed)
-  constraints = matrix(0,dim,2)
-  constraints[,2] = Inf
   
   return(log_concave_sampler(negative_log_density, 
                              grad_negative_log_density,
