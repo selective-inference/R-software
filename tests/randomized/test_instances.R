@@ -1,7 +1,7 @@
 library(selectiveInference)
 
-gaussian_instance = function(n, p, s, sigma=1, rho=0, signal=6, X=NA,
-                             random_signs=TRUE, scale=TRUE, center=TRUE, seed=NA){
+get_instance = function(n, p, s, sigma=1, rho=0, signal=6, family="gaussian",
+                        X=NA, random_signs=TRUE, scale=TRUE, center=TRUE, seed=NA){
   if (!is.na(seed)){
     set.seed(seed)
   }
@@ -19,10 +19,19 @@ gaussian_instance = function(n, p, s, sigma=1, rho=0, signal=6, X=NA,
     signs = sample(c(-1,1), s, replace = TRUE)
     beta = beta * signs
   }
-  y = X %*% beta + rnorm(n)*sigma
+  mu = X %*% beta
+  if (family=="gaussian"){
+    y = mu + rnorm(n)*sigma
+  } else if (family=="binomial"){
+    prob = exp(mu)/(1+exp(mu))
+    y= rbinom(n,1, prob)
+  }
   result = list(X=X,y=y,beta=beta)
   return(result)
 }
+
+
+
 
 test_randomized_lasso = function(n=100,p=200,s=0){
   set.seed(1)
@@ -61,27 +70,29 @@ test_KKT=function(){
   
 
 
-collect_results = function(n,p,s, nsim=100, level=0.9, condition_subgrad=FALSE, lam=1.2){
+collect_results = function(n,p,s, nsim=100, level=0.9, 
+                           family = "gaussian",
+                           condition_subgrad=FALSE, lam=1.2){
 
   rho=0.3
   sigma=1
   sample_pvalues = c()
   sample_coverage = c()
   for (i in 1:nsim){
-    data = gaussian_instance(n=n,p=p,s=s, rho=rho, sigma=sigma)
+    data = get_instance(n=n,p=p,s=s, rho=rho, sigma=sigma, family=family)
     X=data$X
     y=data$y
-    beta=data$beta
     result = selectiveInference:::randomizedLassoInf(X, y, 
-                                                     lam=lam, 
+                                                     lam, 
+                                                     family = family,
+                                                     sampler = "A",
                                                      sigma=sigma,
                                                      level=level, 
-                                                     sampler = "A",
                                                      burnin=1000, 
                                                      nsample=5000, 
                                                      condition_subgrad=condition_subgrad)
     if (length(result$active_set)>0){
-      true_beta = beta[result$active_set]
+      true_beta = data$beta[result$active_set]
       coverage = rep(0, nrow(result$ci))
       for (i in 1:nrow(result$ci)){
         if (result$ci[i,1]<true_beta[i] & result$ci[i,2]>true_beta[i]){
@@ -104,7 +115,7 @@ collect_results = function(n,p,s, nsim=100, level=0.9, condition_subgrad=FALSE, 
 }
 
 set.seed(1)
-collect_results(n=100, p=20, s=0, lam=1.2)
+collect_results(n=100, p=20, s=0, lam=0.5)
 #test_randomized_lasso()
 #test_KKT()
 
