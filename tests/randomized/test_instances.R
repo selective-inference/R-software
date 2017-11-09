@@ -76,7 +76,7 @@ collect_results = function(n,p,s, nsim=100, level=0.9, condition_subgrad=TRUE, l
                                                      lam=lam, 
                                                      sigma=sigma,
                                                      level=level, 
-                                                     sampler = "A",
+                                                     sampler = "R",
                                                      burnin=1000, 
                                                      nsample=5000, 
                                                      condition_subgrad=condition_subgrad)
