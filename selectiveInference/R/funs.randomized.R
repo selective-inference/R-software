@@ -33,11 +33,15 @@ randomizedLasso = function(X,
     if (is.null(noise_scale)) {
         noise_scale = 0.5 * sd(y) * sqrt(mean_diag)
     }
-
+    
+    print(paste("ridge term", ridge_term))
+    print(paste("noise scale", noise_scale))
+    
     noise_type = match.arg(noise_type)
 
     if (noise_scale > 0) {
         if (noise_type == 'gaussian') {
+            set.seed(1)
             perturb_ = rnorm(p) * noise_scale
         }
         else if (noise_type == 'laplace') {
@@ -65,8 +69,8 @@ randomizedLasso = function(X,
     nactive = as.integer(0)
 
     result = solve_QP_wide(X,                  # design matrix
-    	                   lam / n,            # vector of Lagrange multipliers
-		           ridge_term / n,     # ridge_term 
+    	                     lam / n,            # vector of Lagrange multipliers
+		                       ridge_term / n,     # ridge_term 
                            max_iter, 
                            soln, 
                            linear_func, 
@@ -76,12 +80,12 @@ randomizedLasso = function(X,
                            nactive, 
                            kkt_tol, 
                            objective_tol, 
-			   parameter_tol,
+			                     parameter_tol,
                            p,
-		           objective_stop,     # objective_stop
-			   kkt_stop,           # kkt_stop
-			   parameter_stop)         # param_stop
-
+		                       objective_stop,     # objective_stop
+			                     kkt_stop,           # kkt_stop
+			                     parameter_stop)         # param_stop
+    
     sign_soln = sign(result$soln)
 
     unpenalized = lam == 0
@@ -96,7 +100,11 @@ randomizedLasso = function(X,
 
     observed_scalings = abs(result$soln)[active]
     observed_unpen = result$soln[unpenalized]
-    observed_subgrad = result$gradient[inactive]
+    observed_subgrad = -n*result$gradient[inactive]
+    
+    if (length(which(abs(observed_subgrad)>lam[1]))){
+      print("subgradient eq not satisfied")
+    }
 
     observed_opt_state = c(observed_unpen, observed_scalings, observed_subgrad)
 
@@ -111,14 +119,15 @@ randomizedLasso = function(X,
     coef_term = L_E
 
     signs_ = c(rep(1, sum(unpenalized)), sign_soln[active])
-    if (length(signs_) == 1) {
-        coef_term = coef_term * signs_
-    } else {
-        coef_term = coef_term %*% diag(signs_)  # scaligns are non-negative
-    }
-
+    
     coef_term[active,] = coef_term[active,] + ridge_term * diag(rep(1, sum(active)))  # ridge term
-
+  
+    if (length(signs_) == 1) {
+      coef_term = coef_term * signs_
+    } else {
+      coef_term = coef_term %*% diag(signs_)  # scaligns are non-negative
+    }
+    
     subgrad_term = matrix(0, p, sum(inactive)) # for subgrad
     for (i in 1:sum(inactive)) {
         subgrad_term[inactive_set[i], i] = 1
@@ -155,7 +164,8 @@ randomizedLasso = function(X,
     inactive_lam = lam[inactive_set]
     inactive_start = sum(unpenalized) + sum(active)
     active_start = sum(unpenalized)
-
+    
+    
     # XXX only for Gaussian so far
 
     log_optimization_density = function(opt_state) {
@@ -185,9 +195,11 @@ randomizedLasso = function(X,
                 optimization_transform = opt_transform,
                 internal_transform = internal_transform,
                 log_optimization_density = log_optimization_density,
-		observed_opt_state = observed_opt_state,
+		            observed_opt_state = observed_opt_state,
                 observed_raw = observed_raw,
-		noise_scale = noise_scale
+		            noise_scale = noise_scale,
+		            soln = result$soln,
+		            perturb = perturb_
                 ))
 
 }
@@ -314,19 +326,22 @@ conditional_density = function(noise_scale, lasso_soln) {
   lasso_soln$log_optimization_density = log_condl_optimization_density
   lasso_soln$observed_opt_state = observed_opt_state[1:nactive]
   lasso_soln$optimization_transform = opt_transform
-  return(lasso_soln)
+  reduced_opt_transform =list(linear_term = reduced_B, offset_term = reduced_beta_offset)
+  return(list(lasso_soln=lasso_soln, 
+              reduced_opt_transform = reduced_opt_transform))
 }
 
 randomizedLassoInf = function(X, 
                               y, 
                               lam, 
+                              sampler="A",
                               sigma=NULL, 
                               noise_scale=NULL, 
                               ridge_term=NULL, 
                               condition_subgrad=TRUE, 
                               level=0.9,
-			      nsample=10000,
-			      burnin=2000,
+			                        nsample=10000,
+			                        burnin=2000,
                               max_iter=100,        # how many iterations for each optimization problem
                               kkt_tol=1.e-4,       # tolerance for the KKT conditions
                               parameter_tol=1.e-8, # tolerance for relative convergence of parameter
@@ -353,22 +368,35 @@ randomizedLassoInf = function(X,
                                parameter_stop=parameter_stop)
 
   active_set = lasso_soln$active_set
-  if (length(active_set)==0){
+  nactive = length(active_set)
+  print(paste("nactive", nactive))
+  if (nactive==0){
     return (list(active_set=active_set, pvalues=c(), ci=c()))
   }
   inactive_set = lasso_soln$inactive_set
-  nactive = length(active_set)
+  
 
   noise_scale = lasso_soln$noise_scale # set to default value in randomizedLasso
 
  if (condition_subgrad==TRUE){
-   lasso_soln=conditional_density(noise_scale, lasso_soln)
+   condl_lasso=conditional_density(noise_scale, lasso_soln)
+   lasso_soln = condl_lasso$lasso_soln
+   reduced_opt_transform = condl_lasso$reduced_opt_transform
  } 
     
   ndim = length(lasso_soln$observed_opt_state)
-
-  S = sample_opt_variables(lasso_soln, jump_scale=rep(1/sqrt(n), ndim), nsample=nsample)
-  opt_samples = as.matrix(S$samples[(burnin+1):nsample,,drop=FALSE])
+  
+  if (sampler =="R"){
+    S = sample_opt_variables(lasso_soln, jump_scale=rep(1/sqrt(n), ndim), nsample=nsample)
+    opt_samples = as.matrix(S$samples[(burnin+1):nsample,,drop=FALSE])
+  } else if (sampler == "A"){
+    opt_samples = gaussian_sampler(noise_scale, 
+                                 lasso_soln$observed_opt_state, 
+                                 reduced_opt_transform$linear_term,
+                                 reduced_opt_transform$offset_term,
+                                 nsamples=nsample)
+    opt_sample = opt_samples[(burnin+1):nsample,]
+  }
   
   X_E = X[, active_set]
   X_minusE = X[, inactive_set]
@@ -458,3 +486,6 @@ randomizedLassoInf = function(X,
   }
   return(list(active_set=active_set, pvalues=pvalues, ci=ci))
 }
+
+
+
