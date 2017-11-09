@@ -41,7 +41,6 @@ randomizedLasso = function(X,
 
     if (noise_scale > 0) {
         if (noise_type == 'gaussian') {
-            set.seed(1)
             perturb_ = rnorm(p) * noise_scale
         }
         else if (noise_type == 'laplace') {
