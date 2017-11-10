@@ -98,8 +98,8 @@ randomizedLasso = function(X,
     observed_unpen = result$soln[unpenalized]
     observed_subgrad = -n*result$gradient[inactive]
     
-    if (length(which(abs(observed_subgrad)>lam[1]))){
-      print("subgradient eq not satisfied")
+    if (sum(abs(observed_subgrad)>lam*(1.001)) > 0){
+      stop("subgradient eq not satisfied")
     }
 
     observed_opt_state = c(observed_unpen, observed_scalings, observed_subgrad)
