@@ -544,8 +544,70 @@ randomizedLassoInf = function(X,
 }
 
    
+solve_logistic=function(X, y, lam, 
+                    ridge_term, 
+                    perturb,
+                    niters=5,
+                    max_iter=100,        # how many iterations for each optimization problem
+                    kkt_tol=1.e-4,       # tolerance for the KKT conditions
+                    parameter_tol=1.e-8, # tolerance for relative convergence of parameter
+                    objective_tol=1.e-8, # tolerance for relative decrease in objective
+                    objective_stop=FALSE,
+                    kkt_stop=TRUE,
+                    parameter_stop=TRUE){
+
+  n=nrow(X); p=ncol(X)
+  soln = rep(0, p)
+  ever_active = rep(0, p)
+  nactive = as.integer(0)
+  
+  pi_fn = function(beta){
+    print(length(as.vector(beta)))
+    print(dim(X))
+    temp = X %*% as.vector(beta)
+    return(as.vector(exp(temp)/(1+exp(temp)))) # n-dimensional
+  }
+  
+  for (i in 1:niters){
+    print(paste("iteration ", i))
+    pi_vec = pi_fn(soln)
+    rootW = diag(sqrt(as.vector(pi_vec*(1-pi_vec))))
+    weighted_X = rootW %*% X
+    Xsoln = weighted_X %*% soln
     
+    gradient = -t(X)%*%(y-pi_vec)-perturb
+    linear_func = gradient-t(weighted_X) %*% weighted_X %*% as.vector(soln)
+    gradient = gradient/n
+    linear_func = linear_func/n
+    print(length(gradient))
+    print(length(linear_func))
     
+    result = solve_QP_wide(weighted_X,                  # design matrix
+                           lam / n,            # vector of Lagrange multipliers
+                           ridge_term / n,     # ridge_term 
+                           max_iter, 
+                           soln, 
+                           linear_func, 
+                           gradient, 
+                           Xsoln,
+                           ever_active, 
+                           nactive, 
+                           kkt_tol, 
+                           objective_tol, 
+                           parameter_tol,
+                           p,
+                           objective_stop,     # objective_stop
+                           kkt_stop,           # kkt_stop
+                           parameter_stop)         # param_stop
+    
+    #soln = result$soln
+    #print(length(soln))
+    print(paste("soln", length(soln)))
+  }
+  return(soln)
+}
+
+
     
 
 
