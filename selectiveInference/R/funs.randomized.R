@@ -78,11 +78,11 @@ randomizedLasso = function(X,
                            nactive, 
                            kkt_tol, 
                            objective_tol, 
-			                     parameter_tol,
+                           parameter_tol,
                            p,
-		                       objective_stop,     # objective_stop
-			                     kkt_stop,           # kkt_stop
-			                     parameter_stop)         # param_stop
+                           objective_stop,     # objective_stop
+                           kkt_stop,           # kkt_stop
+                           parameter_stop)         # param_stop
     
     sign_soln = sign(result$soln)
     
@@ -100,7 +100,7 @@ randomizedLasso = function(X,
     observed_unpen = result$soln[unpenalized]
     observed_subgrad = -n*result$gradient[inactive]
     
-    if (sum(abs(observed_subgrad)>lam*(1.001)) > 0){
+    if (sum(abs(observed_subgrad)>lam[inactive]*(1.001)) > 0){
       stop("subgradient eq not satisfied")
     }
 
@@ -144,14 +144,17 @@ randomizedLasso = function(X,
       coef_term = coef_term %*% diag(signs_)  # scaligns are non-negative
     }
     
-    subgrad_term = matrix(0, p, sum(inactive)) # for subgrad
-    for (i in 1:sum(inactive)) {
-        subgrad_term[inactive_set[i], i] = 1
-    }
+    if (sum(inactive) > 0) {
+        subgrad_term = matrix(0, p, sum(inactive)) # for subgrad
+        for (i in 1:sum(inactive)) {
+            subgrad_term[inactive_set[i], i] = 1
+            }
 
-    linear_term = cbind(coef_term,
-                        subgrad_term)
-
+        linear_term = cbind(coef_term,
+                            subgrad_term)
+    } else {
+        linear_term = coef_term
+    }    
     offset_term = rep(0, p)
     offset_term[active] = lam[active] * sign_soln[active]
 
@@ -167,9 +170,14 @@ randomizedLasso = function(X,
 
     active_term = -L_E                           # for \bar{\beta}_E
 
-    inactive_term = -subgrad_term
-    linear_term = cbind(active_term,
-                        inactive_term)
+    if (sum(inactive) > 0) {
+        inactive_term = -subgrad_term
+        linear_term = cbind(active_term,
+                            inactive_term)
+    } else {
+        linear_term = active_term
+    }
+  
     offset_term = rep(0, p)
     internal_transform = list(linear_term = linear_term,
                               offset_term = offset_term)
