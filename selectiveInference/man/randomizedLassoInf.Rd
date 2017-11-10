@@ -19,6 +19,7 @@ randomizedLassoInf(X,
                    ridge_term=NULL, 
                    condition_subgrad=TRUE, 
                    level=0.9,
+                   sampler=c("norejection", "adaptMCMC"),
                    nsample=10000,
                    burnin=2000,
                    max_iter=100,       
@@ -70,6 +71,10 @@ Default is TRUE.
 }
 \item{level}{
 Level for confidence intervals.
+}
+\item{sampler}{
+Which sampler to use -- default is a no-rejection sampler. Otherwise
+use MCMC from the adaptMCMC package.
 }
 \item{nsample}{
 Number of samples of optimization variables to sample.
