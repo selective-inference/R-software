@@ -34,9 +34,6 @@ randomizedLasso = function(X,
         noise_scale = 0.5 * sd(y) * sqrt(mean_diag)
     }
     
-    print(paste("ridge term", ridge_term))
-    print(paste("noise scale", noise_scale))
-    
     noise_type = match.arg(noise_type)
 
     if (noise_scale > 0) {
@@ -333,14 +330,14 @@ conditional_density = function(noise_scale, lasso_soln) {
 randomizedLassoInf = function(X, 
                               y, 
                               lam, 
-                              sampler="A",
                               sigma=NULL, 
                               noise_scale=NULL, 
                               ridge_term=NULL, 
                               condition_subgrad=TRUE, 
                               level=0.9,
-			                        nsample=10000,
-			                        burnin=2000,
+                              sampler=c("norejection", "adaptMCMC"),
+                              nsample=10000,
+                              burnin=2000,
                               max_iter=100,        # how many iterations for each optimization problem
                               kkt_tol=1.e-4,       # tolerance for the KKT conditions
                               parameter_tol=1.e-8, # tolerance for relative convergence of parameter
@@ -368,7 +365,7 @@ randomizedLassoInf = function(X,
 
   active_set = lasso_soln$active_set
   nactive = length(active_set)
-  print(paste("nactive", nactive))
+
   if (nactive==0){
     return (list(active_set=active_set, pvalues=c(), ci=c()))
   }
@@ -394,10 +391,12 @@ randomizedLassoInf = function(X,
     
   ndim = length(lasso_soln$observed_opt_state)
   
-  if (sampler =="R"){
+  sampler = match.arg(sampler)
+
+  if (sampler == "adaptMCMC"){
     S = sample_opt_variables(lasso_soln, jump_scale=rep(1/sqrt(n), ndim), nsample=nsample)
     opt_samples = as.matrix(S$samples[(burnin+1):nsample,,drop=FALSE])
-  } else if (sampler == "A"){
+  } else if (sampler == "norejection") {
     opt_samples = gaussian_sampler(noise_scale, 
                                  lasso_soln$observed_opt_state, 
                                  cur_opt_transform$linear_term,
