@@ -24,8 +24,44 @@ gaussian_instance = function(n, p, s, sigma=1, rho=0, signal=6, X=NA,
   return(result)
 }
 
+test_randomized_lasso = function(n=100,p=200,s=0){
+  set.seed(1)
+  data = gaussian_instance(n=n,p=p,s=s, rho=0.3, sigma=3)
+  X=data$X
+  y=data$y
+  lam = 2.
+  noise_scale = 0.5
+  ridge_term = 1./sqrt(n)
+  result = selectiveInference:::randomizedLasso(X,y,lam, noise_scale, ridge_term)
+  print(result$soln)
+  print(length(which(result$soln!=0)))
+  print(result$observed_opt_state) # compared with python code
+}
 
-collect_results = function(n,p,s, nsim=100, level=0.9, condition_subgrad=TRUE, lam=1.2){
+test_KKT=function(){
+  set.seed(1)
+  n=200
+  p=100
+  data = gaussian_instance(n=n,p=p,s=0, rho=0.3, sigma=3)
+  X=data$X
+  y=data$y
+  lam = 2.
+  noise_scale = 0.5
+  ridge_term = 1./sqrt(n)
+  result = selectiveInference:::randomizedLasso(X,y,lam, noise_scale, ridge_term)
+  print("check KKT")
+  opt_linear = result$optimization_transform$linear_term
+  opt_offset = result$optimization_transform$offset_term
+  observed_opt_state=result$observed_opt_state
+  #print(dim(opt_linear))
+  #print(opt_offset)
+  #print(result$perturb)
+  print(opt_linear %*% observed_opt_state+opt_offset+result$observed_raw-result$perturb) ## should be zero
+}
+  
+
+
+collect_results = function(n,p,s, nsim=100, level=0.9, condition_subgrad=FALSE, lam=1.2){
 
   rho=0.3
   sigma=1
@@ -36,10 +72,17 @@ collect_results = function(n,p,s, nsim=100, level=0.9, condition_subgrad=TRUE, l
     X=data$X
     y=data$y
     beta=data$beta
-    result = selectiveInference:::randomizedLassoInf(X, y, lam, level=level, burnin=2000, nsample=4000, condition_subgrad=condition_subgrad)
-    true_beta = beta[result$active_set]
-    coverage = rep(0, nrow(result$ci))
+    result = selectiveInference:::randomizedLassoInf(X, y, 
+                                                     lam=lam, 
+                                                     sigma=sigma,
+                                                     level=level, 
+                                                     sampler = "A",
+                                                     burnin=1000, 
+                                                     nsample=5000, 
+                                                     condition_subgrad=condition_subgrad)
     if (length(result$active_set)>0){
+      true_beta = beta[result$active_set]
+      coverage = rep(0, nrow(result$ci))
       for (i in 1:nrow(result$ci)){
         if (result$ci[i,1]<true_beta[i] & result$ci[i,2]>true_beta[i]){
           coverage[i]=1
@@ -61,7 +104,7 @@ collect_results = function(n,p,s, nsim=100, level=0.9, condition_subgrad=TRUE, l
 }
 
 set.seed(1)
-collect_results(n=200, p=100, s=0, lam=2)
-
-
+collect_results(n=100, p=20, s=0, lam=1.2)
+#test_randomized_lasso()
+#test_KKT()
 
