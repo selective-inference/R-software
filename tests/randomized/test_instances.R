@@ -35,7 +35,7 @@ get_instance = function(n, p, s, sigma=1, rho=0, signal=6, family="gaussian",
 
 test_randomized_lasso = function(n=100,p=200,s=0){
   set.seed(1)
-  data = gaussian_instance(n=n,p=p,s=s, rho=0.3, sigma=3)
+  data = get_instance(n=n,p=p,s=s, rho=0.3, sigma=1, family="binomial")
   X=data$X
   y=data$y
   lam = 2.
@@ -46,6 +46,24 @@ test_randomized_lasso = function(n=100,p=200,s=0){
   print(length(which(result$soln!=0)))
   print(result$observed_opt_state) # compared with python code
 }
+
+test_randomized_logistic = function(n=100,p=20,s=0){
+  set.seed(1)
+  data = get_instance(n=n,p=p,s=s, rho=0.3, sigma=1, family="binomial")
+  X=data$X
+  y=data$y
+  lam = 1.2
+  noise_scale = 0.5
+  ridge_term = 1./sqrt(n)
+  set.seed(1)
+  perturb = rnorm(p)*noise_scale
+  result = selectiveInference:::solve_logistic(X,y,lam, ridge_term, perturb)
+  print(result$soln)
+  print(length(which(result$soln!=0)))
+}
+
+test_randomized_logistic()
+
 
 test_KKT=function(){
   set.seed(1)
@@ -68,7 +86,6 @@ test_KKT=function(){
   print(opt_linear %*% observed_opt_state+opt_offset+result$observed_raw-result$perturb) ## should be zero
 }
   
-
 
 collect_results = function(n,p,s, nsim=100, level=0.9, 
                            family = "binomial",
@@ -114,8 +131,6 @@ collect_results = function(n,p,s, nsim=100, level=0.9,
   }
 }
 
-#set.seed(1)
-collect_results(n=500, p=200, s=0, lam=0.8)
-#test_randomized_lasso()
-#test_KKT()
+set.seed(1)
+collect_results(n=100, p=20, s=0, lam=0.8)
 
