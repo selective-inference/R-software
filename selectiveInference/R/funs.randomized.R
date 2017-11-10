@@ -114,6 +114,10 @@ randomizedLasso = function(X,
     X_E = X[,E]
     X_I = X[,I]
     
+    if (length(E)==0){
+      return(list(active_set=c()))
+    }
+    
     if (family=="binomial"){
       unpen_reg = glm(y~X_E-1, family="binomial")
       unpen_est = unpen_reg$coefficients
@@ -126,6 +130,7 @@ randomizedLasso = function(X,
     } else if (family=="gaussian"){
       W_E = diag(rep(1,n))
     }
+    
     L_E = t(X) %*% W_E %*% X[,E]
     
     coef_term = L_E
