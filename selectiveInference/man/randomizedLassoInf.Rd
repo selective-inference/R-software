@@ -14,11 +14,13 @@ randomization.
 randomizedLassoInf(X, 
                    y, 
                    lam, 
+                   family=c("gaussian", "binomial"),
                    sigma=NULL, 
                    noise_scale=NULL, 
                    ridge_term=NULL, 
                    condition_subgrad=TRUE, 
                    level=0.9,
+                   sampler=c("norejection", "adaptMCMC"),
                    nsample=10000,
                    burnin=2000,
                    max_iter=100,       
@@ -48,6 +50,9 @@ Value of lambda used to compute beta. See the above warning
  where obj is the object returned by glmnet (and [-1] removes the intercept,
  which glmnet always puts in the first component)
 } 
+\item{family}{
+Response type: "gaussian" (default), "binomial".
+}
 \item{sigma}{
 Estimate of error standard deviation. If NULL (default), this is estimated 
 using the mean squared residual of the full least squares based on 
@@ -70,6 +75,10 @@ Default is TRUE.
 }
 \item{level}{
 Level for confidence intervals.
+}
+\item{sampler}{
+Which sampler to use -- default is a no-rejection sampler. Otherwise
+use MCMC from the adaptMCMC package.
 }
 \item{nsample}{
 Number of samples of optimization variables to sample.
