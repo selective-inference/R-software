@@ -6,7 +6,7 @@
 randomizedLasso = function(X, 
                            y, 
                            lam, 
-                           family="gaussian",
+                           family=c("gaussian","binomial"),
                            noise_scale=NULL, 
                            ridge_term=NULL, 
                            noise_type=c('gaussian', 'laplace'),
@@ -18,6 +18,8 @@ randomizedLasso = function(X,
                            kkt_stop=TRUE,
                            parameter_stop=TRUE)
 {
+    family = match.arg(family)
+
     n = nrow(X); p = ncol(X)
     			
     mean_diag = mean(apply(X^2, 2, sum))
@@ -65,8 +67,8 @@ randomizedLasso = function(X,
     nactive = as.integer(0)
 
     result = solve_QP_wide(X,                  # design matrix
-    	                     lam / n,            # vector of Lagrange multipliers
-		                       ridge_term / n,     # ridge_term 
+                           lam / n,            # vector of Lagrange multipliers
+                           ridge_term / n,     # ridge_term 
                            max_iter, 
                            soln, 
                            linear_func, 
@@ -177,7 +179,7 @@ randomizedLasso = function(X,
     observed_raw = -t(X) %*% y
     if (family=="binomial"){
       beta_E = result$soln[active_set]
-      observed_raw = observed_raw+t(X)%*%pi_fn(beta_E)-L_E %*% beta_E
+      observed_raw = observed_raw + t(X)%*%pi_fn(beta_E) - L_E %*% beta_E
     }
     inactive_lam = lam[inactive_set]
     inactive_start = sum(unpenalized) + sum(active)
@@ -213,11 +215,11 @@ randomizedLasso = function(X,
                 optimization_transform = opt_transform,
                 internal_transform = internal_transform,
                 log_optimization_density = log_optimization_density,
-		            observed_opt_state = observed_opt_state,
+                observed_opt_state = observed_opt_state,
                 observed_raw = observed_raw,
-		            noise_scale = noise_scale,
-		            soln = result$soln,
-		            perturb = perturb_
+                noise_scale = noise_scale,
+                soln = result$soln,
+                perturb = perturb_
                 ))
 
 }
@@ -352,8 +354,7 @@ conditional_density = function(noise_scale, lasso_soln) {
 randomizedLassoInf = function(X, 
                               y, 
                               lam, 
-                              family=c("gaussian", "logistic"),
-                              sampler=c("norejection", "adaptMCMC"),
+                              family=c("gaussian", "binomial"),
                               sigma=NULL, 
                               noise_scale=NULL, 
                               ridge_term=NULL, 
@@ -436,15 +437,13 @@ randomizedLassoInf = function(X,
   X_E = X[, active_set]
   X_minusE = X[, inactive_set]
 
-  
-  
-  if (family=="gaussian"){
+  if (family == "gaussian") {
     lm_y = lm(y ~ X_E - 1)
     sigma_resid = sqrt(sum(resid(lm_y)^2) / lm_y$df.resid)
     observed_target = lm_y$coefficients
     W_E = diag(rep(1,n))
     observed_internal = c(observed_target, t(X_minusE) %*% (y-X_E%*% observed_target))
-  } else if (family=="binomial"){
+  } else if (family == "binomial") {
     glm_y = glm(y~X_E-1)
     sigma_resid = sqrt(sum(resid(glm_y)^2) / glm_y$df.resid)
     observed_target = as.matrix(glm_y$coefficients)
