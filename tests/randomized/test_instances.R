@@ -85,7 +85,7 @@ collect_results = function(n,p,s, nsim=100, level=0.9,
     result = selectiveInference:::randomizedLassoInf(X, y, 
                                                      lam, 
                                                      family = family,
-                                                     sampler = "A",
+                                                     sampler = "adaptMCMC",
                                                      sigma=sigma,
                                                      level=level, 
                                                      burnin=1000, 
@@ -114,8 +114,8 @@ collect_results = function(n,p,s, nsim=100, level=0.9,
   }
 }
 
-set.seed(1)
-collect_results(n=100, p=20, s=0, lam=0.8)
+#set.seed(1)
+collect_results(n=500, p=200, s=0, lam=0.8)
 #test_randomized_lasso()
 #test_KKT()
 
