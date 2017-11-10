@@ -1,3 +1,4 @@
+# A no-rejection MCMC algorithm Jelena and Amir have been working on
 
 log_concave_sampler = function(negative_log_density, 
                                grad_negative_log_density, 
