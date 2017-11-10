@@ -63,7 +63,7 @@ randomizedLasso = function(X,
     linear_func = (- t(X) %*% y - perturb_) / n
 
     gradient = 1. * linear_func
-    ever_active = rep(0, p)
+    ever_active = as.integer(rep(0, p))
     nactive = as.integer(0)
 
     result = solve_QP_wide(X,                  # design matrix
@@ -544,24 +544,31 @@ randomizedLassoInf = function(X,
 }
 
    
-solve_logistic=function(X, y, lam, 
-                    ridge_term, 
-                    perturb,
-                    niters=5,
-                    max_iter=100,        # how many iterations for each optimization problem
-                    kkt_tol=1.e-4,       # tolerance for the KKT conditions
-                    parameter_tol=1.e-8, # tolerance for relative convergence of parameter
-                    objective_tol=1.e-8, # tolerance for relative decrease in objective
-                    objective_stop=FALSE,
-                    kkt_stop=TRUE,
-                    parameter_stop=TRUE){
+solve_logistic=function(X, 
+                        y, 
+                        lam, 
+                        ridge_term, 
+                        perturb,
+                        niters=5,
+                        max_iter=100,        # how many iterations for each optimization problem
+                        kkt_tol=1.e-4,       # tolerance for the KKT conditions
+                        parameter_tol=1.e-8, # tolerance for relative convergence of parameter
+                        objective_tol=1.e-8, # tolerance for relative decrease in objective
+                        objective_stop=FALSE,
+                        kkt_stop=TRUE,
+                        parameter_stop=TRUE){
 
   n=nrow(X); p=ncol(X)
   soln = rep(0, p)
-  ever_active = rep(0, p)
+  ever_active = as.integer(rep(0, p))
   nactive = as.integer(0)
   
-  pi_fn = function(beta){
+    lam = as.numeric(lam)
+    if (length(lam) == 1) {
+       lam = rep(lam, p)
+    }
+
+  pi_fn = function(X, beta){
     print(length(as.vector(beta)))
     print(dim(X))
     temp = X %*% as.vector(beta)
@@ -570,7 +577,7 @@ solve_logistic=function(X, y, lam,
   
   for (i in 1:niters){
     print(paste("iteration ", i))
-    pi_vec = pi_fn(soln)
+    pi_vec = pi_fn(X, soln)
     rootW = diag(sqrt(as.vector(pi_vec*(1-pi_vec))))
     weighted_X = rootW %*% X
     Xsoln = weighted_X %*% soln
@@ -582,6 +589,7 @@ solve_logistic=function(X, y, lam,
     print(length(gradient))
     print(length(linear_func))
     
+    print(paste("soln pre", length(soln)))
     result = solve_QP_wide(weighted_X,                  # design matrix
                            lam / n,            # vector of Lagrange multipliers
                            ridge_term / n,     # ridge_term 
@@ -600,11 +608,19 @@ solve_logistic=function(X, y, lam,
                            kkt_stop,           # kkt_stop
                            parameter_stop)         # param_stop
     
+    
+    pi_vec = pi_fn(X, soln)
+    gradient = -t(X)%*%(y-pi_vec)-perturb
+    print(c("gradient", gradient))
+    print(c("soln", soln))
+    print(c("lam", lam))
+    print(c("nactive", nactive))
+    print(c("ever_active", ever_active))
     #soln = result$soln
     #print(length(soln))
     print(paste("soln", length(soln)))
   }
-  return(soln)
+  return(result)
 }
 
 
