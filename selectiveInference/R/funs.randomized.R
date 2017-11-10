@@ -6,6 +6,7 @@
 randomizedLasso = function(X, 
                            y, 
                            lam, 
+                           family=c("gaussian","binomial"),
                            noise_scale=NULL, 
                            ridge_term=NULL, 
                            noise_type=c('gaussian', 'laplace'),
@@ -17,6 +18,7 @@ randomizedLasso = function(X,
                            kkt_stop=TRUE,
                            parameter_stop=TRUE)
 {
+    family = match.arg(family)
 
     n = nrow(X); p = ncol(X)
     			
@@ -65,8 +67,8 @@ randomizedLasso = function(X,
     nactive = as.integer(0)
 
     result = solve_QP_wide(X,                  # design matrix
-    	                     lam / n,            # vector of Lagrange multipliers
-		                       ridge_term / n,     # ridge_term 
+                           lam / n,            # vector of Lagrange multipliers
+                           ridge_term / n,     # ridge_term 
                            max_iter, 
                            soln, 
                            linear_func, 
@@ -83,7 +85,7 @@ randomizedLasso = function(X,
 			                     parameter_stop)         # param_stop
     
     sign_soln = sign(result$soln)
-
+    
     unpenalized = lam == 0
     active = (!unpenalized) & (sign_soln != 0)
     inactive = (!unpenalized) & (sign_soln == 0)
@@ -110,8 +112,26 @@ randomizedLasso = function(X,
     I = inactive_set
     X_E = X[,E]
     X_I = X[,I]
-    L_E = t(X) %*% X[,E]
-
+    
+    if (length(E)==0){
+      return(list(active_set=c()))
+    }
+    
+    if (family=="binomial"){
+      unpen_reg = glm(y~X_E-1, family="binomial")
+      unpen_est = unpen_reg$coefficients
+      pi_fn = function(beta){
+        temp = X_E %*% as.matrix(beta)
+        return(as.vector(exp(temp)/(1+exp(temp)))) # n-dimensional
+      }
+      pi_vec = pi_fn(unpen_est)
+      W_E = diag(pi_vec*(1-pi_vec))
+    } else if (family=="gaussian"){
+      W_E = diag(rep(1,n))
+    }
+    
+    L_E = t(X) %*% W_E %*% X[,E]
+    
     coef_term = L_E
 
     signs_ = c(rep(1, sum(unpenalized)), sign_soln[active])
@@ -155,8 +175,12 @@ randomizedLasso = function(X,
                               offset_term = offset_term)
 
     # density for sampling optimization variables
-
+    
     observed_raw = -t(X) %*% y
+    if (family=="binomial"){
+      beta_E = result$soln[active_set]
+      observed_raw = observed_raw + t(X)%*%pi_fn(beta_E) - L_E %*% beta_E
+    }
     inactive_lam = lam[inactive_set]
     inactive_start = sum(unpenalized) + sum(active)
     active_start = sum(unpenalized)
@@ -191,11 +215,11 @@ randomizedLasso = function(X,
                 optimization_transform = opt_transform,
                 internal_transform = internal_transform,
                 log_optimization_density = log_optimization_density,
-		            observed_opt_state = observed_opt_state,
+                observed_opt_state = observed_opt_state,
                 observed_raw = observed_raw,
-		            noise_scale = noise_scale,
-		            soln = result$soln,
-		            perturb = perturb_
+                noise_scale = noise_scale,
+                soln = result$soln,
+                perturb = perturb_
                 ))
 
 }
@@ -330,6 +354,7 @@ conditional_density = function(noise_scale, lasso_soln) {
 randomizedLassoInf = function(X, 
                               y, 
                               lam, 
+                              family=c("gaussian", "binomial"),
                               sigma=NULL, 
                               noise_scale=NULL, 
                               ridge_term=NULL, 
@@ -349,10 +374,13 @@ randomizedLassoInf = function(X,
 
   n = nrow(X)
   p = ncol(X)
-
+  
+  family = match.arg(family)
+  
   lasso_soln = randomizedLasso(X, 
                                y, 
                                lam, 
+                               family=family,
                                noise_scale=noise_scale, 
                                ridge_term=ridge_term,
                                max_iter=max_iter,
@@ -409,17 +437,30 @@ randomizedLassoInf = function(X,
   X_E = X[, active_set]
   X_minusE = X[, inactive_set]
 
-  # if no sigma given, use OLS estimate
-
+  if (family == "gaussian") {
+    lm_y = lm(y ~ X_E - 1)
+    sigma_resid = sqrt(sum(resid(lm_y)^2) / lm_y$df.resid)
+    observed_target = lm_y$coefficients
+    W_E = diag(rep(1,n))
+    observed_internal = c(observed_target, t(X_minusE) %*% (y-X_E%*% observed_target))
+  } else if (family == "binomial") {
+    glm_y = glm(y~X_E-1)
+    sigma_resid = sqrt(sum(resid(glm_y)^2) / glm_y$df.resid)
+    observed_target = as.matrix(glm_y$coefficients)
+    temp = X_E%*%observed_target
+    pi_vec = exp(temp)/(1+exp(temp))
+    observed_internal =  c(observed_target, t(X_minusE) %*% (y-pi_vec))
+    W_E=diag(as.vector(pi_vec *(1-pi_vec)))
+  }
+  
+  # if no sigma given, use the estimate
+  
   if (is.null(sigma)) {
-        lm_y = lm(y ~ X_E - 1)
-        sigma = sqrt(sum(resid(lm_y)^2) / lm_y$df.resid)
+    sigma = sigma_resid
   }        
-
-  target_cov = solve(t(X_E) %*% X_E)*sigma^2
+  
+  target_cov = solve(t(X_E) %*% W_E %*% X_E)*sigma^2
   cov_target_internal = rbind(target_cov, matrix(0, nrow=p-nactive, ncol=nactive))
-  observed_target = solve(t(X_E) %*% X_E) %*% t(X_E) %*% y
-  observed_internal = c(observed_target, t(X_minusE) %*% (y-X_E%*% observed_target))
   internal_transform = lasso_soln$internal_transform
   opt_transform = lasso_soln$optimization_transform
   observed_raw = lasso_soln$observed_raw
@@ -493,6 +534,11 @@ randomizedLassoInf = function(X,
   }
   return(list(active_set=active_set, pvalues=pvalues, ci=ci))
 }
+
+   
+    
+    
+    
 
 
 

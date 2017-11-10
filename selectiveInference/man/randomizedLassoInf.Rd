@@ -14,6 +14,7 @@ randomization.
 randomizedLassoInf(X, 
                    y, 
                    lam, 
+                   family=c("gaussian", "binomial"),
                    sigma=NULL, 
                    noise_scale=NULL, 
                    ridge_term=NULL, 
@@ -49,6 +50,9 @@ Value of lambda used to compute beta. See the above warning
  where obj is the object returned by glmnet (and [-1] removes the intercept,
  which glmnet always puts in the first component)
 } 
+\item{family}{
+Response type: "gaussian" (default), "binomial".
+}
 \item{sigma}{
 Estimate of error standard deviation. If NULL (default), this is estimated 
 using the mean squared residual of the full least squares based on 
