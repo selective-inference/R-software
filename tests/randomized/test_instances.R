@@ -52,7 +52,7 @@ test_randomized_logistic = function(n=100,p=20,s=0){
   data = get_instance(n=n,p=p,s=s, rho=0.3, sigma=1, family="binomial")
   X=data$X
   y=data$y
-  lam = 1.2
+  lam = 0.5
   noise_scale = 0.5
   ridge_term = 1./sqrt(n)
   set.seed(1)
@@ -132,5 +132,5 @@ collect_results = function(n,p,s, nsim=100, level=0.9,
 }
 
 set.seed(1)
-collect_results(n=100, p=20, s=0, lam=0.8)
+#collect_results(n=100, p=20, s=0, lam=0.8)
 
