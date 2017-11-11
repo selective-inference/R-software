@@ -62,7 +62,7 @@ test_randomized_logistic = function(n=100,p=20,s=0){
   print(length(which(result$soln!=0)))
 }
 
-test_randomized_logistic()
+#test_randomized_logistic()
 
 
 test_KKT=function(){
@@ -102,7 +102,7 @@ collect_results = function(n,p,s, nsim=100, level=0.9,
     result = selectiveInference:::randomizedLassoInf(X, y, 
                                                      lam, 
                                                      family = family,
-                                                     sampler = "adaptMCMC",
+                                                     sampler = "norejection", #"adaptMCMC",
                                                      sigma=sigma,
                                                      level=level, 
                                                      burnin=1000, 
@@ -132,5 +132,5 @@ collect_results = function(n,p,s, nsim=100, level=0.9,
 }
 
 set.seed(1)
-#collect_results(n=100, p=20, s=0, lam=0.8)
+collect_results(n=100, p=20, s=0, lam=0.8)
 

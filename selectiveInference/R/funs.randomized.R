@@ -58,15 +58,17 @@ randomizedLasso = function(X,
        stop("Lagrange parameter should be single float or of length ncol(X)")
     }    
 
-    soln = rep(0, p)
-    Xsoln = rep(0, n)
-    linear_func = (- t(X) %*% y - perturb_) / n
+    
+    if (family=="gaussian"){
+      soln = rep(0, p)
+      Xsoln = rep(0, n)
+      linear_func = (- t(X) %*% y - perturb_) / n
 
-    gradient = 1. * linear_func
-    ever_active = as.integer(rep(0, p))
-    nactive = as.integer(0)
-
-    result = solve_QP_wide(X,                  # design matrix
+      gradient = 1. * linear_func
+      ever_active = as.integer(rep(0, p))
+      nactive = as.integer(0)
+      
+      result = solve_QP_wide(X,                  # design matrix
                            lam / n,            # vector of Lagrange multipliers
                            ridge_term / n,     # ridge_term 
                            max_iter, 
@@ -83,7 +85,21 @@ randomizedLasso = function(X,
                            objective_stop,     # objective_stop
                            kkt_stop,           # kkt_stop
                            parameter_stop)         # param_stop
-    
+    } else if (family=="binomial"){
+      result = solve_logistic(X, 
+                              y, 
+                              lam, 
+                              ridge_term, 
+                              perturb_,
+                              niters=5,
+                              max_iter=max_iter,        # how many iterations for each optimization problem
+                              kkt_tol=kkt_tol,       # tolerance for the KKT conditions
+                              parameter_tol=parameter_tol, # tolerance for relative convergence of parameter
+                              objective_tol=objective_tol, # tolerance for relative decrease in objective
+                              objective_stop=objective_stop,
+                              kkt_stop=kkt_stop,
+                              parameter_stop=parameter_stop)
+    }
     sign_soln = sign(result$soln)
     
     unpenalized = lam == 0
@@ -453,7 +469,7 @@ randomizedLassoInf = function(X,
     observed_internal = c(observed_target, t(X_minusE) %*% (y-X_E%*% observed_target))
   } else if (family == "binomial") {
     glm_y = glm(y~X_E-1)
-    sigma_resid = sqrt(sum(resid(glm_y)^2) / glm_y$df.resid)
+    sigma_resid = 1
     observed_target = as.matrix(glm_y$coefficients)
     temp = X_E%*%observed_target
     pi_vec = exp(temp)/(1+exp(temp))
@@ -483,7 +499,6 @@ randomizedLassoInf = function(X,
                                             target_cov[i,i], 
                                             cov_target_internal[,i],
                                             internal_transform)
-    
     
     # changing dimension of density evalutaion
 
@@ -569,14 +584,14 @@ solve_logistic=function(X,
     }
 
   pi_fn = function(X, beta){
-    print(length(as.vector(beta)))
-    print(dim(X))
+    #print(length(as.vector(beta)))
+    #print(dim(X))
     temp = X %*% as.vector(beta)
     return(as.vector(exp(temp)/(1+exp(temp)))) # n-dimensional
   }
   
   for (i in 1:niters){
-    print(paste("iteration ", i))
+    #print(paste("iteration ", i))
     pi_vec = pi_fn(X, soln)
     rootW = diag(sqrt(as.vector(pi_vec*(1-pi_vec))))
     weighted_X = rootW %*% X
@@ -586,10 +601,9 @@ solve_logistic=function(X,
     linear_func = gradient-t(weighted_X) %*% weighted_X %*% as.vector(soln)
     gradient = gradient/n
     linear_func = linear_func/n
-    print(length(gradient))
-    print(length(linear_func))
-    
-    print(paste("soln pre", length(soln)))
+    #print(length(gradient))
+    #print(length(linear_func))
+    #print(paste("soln pre", length(soln)))
     result = solve_QP_wide(weighted_X,                  # design matrix
                            lam / n,            # vector of Lagrange multipliers
                            ridge_term / n,     # ridge_term 
@@ -609,16 +623,16 @@ solve_logistic=function(X,
                            parameter_stop)         # param_stop
     
     
-    pi_vec = pi_fn(X, soln)
-    gradient = -t(X)%*%(y-pi_vec)-perturb
-    print(c("gradient", gradient))
-    print(c("soln", soln))
-    print(c("lam", lam))
-    print(c("nactive", nactive))
-    print(c("ever_active", ever_active))
+    #pi_vec = pi_fn(X, soln)
+    #gradient = -t(X)%*%(y-pi_vec)-perturb
+    #print(c("gradient", gradient))
+    #print(c("soln", soln))
+    #print(c("lam", lam))
+    #print(c("nactive", nactive))
+    #print(c("ever_active", ever_active))
     #soln = result$soln
     #print(length(soln))
-    print(paste("soln", length(soln)))
+    #print(paste("soln", length(soln)))
   }
   return(result)
 }
