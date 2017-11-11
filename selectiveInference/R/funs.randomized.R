@@ -325,7 +325,7 @@ conditional_density = function(noise_scale, lasso_soln) {
   p = length(observed_opt_state)
 
   if (nactive < p) {
-    beta_offset = beta_offset+(opt_linear[,(nactive+1):p] %*% observed_opt_state[(nactive+1):p])
+    beta_offset = beta_offset+(opt_linear[,(nactive+1):p,drop=FALSE] %*% observed_opt_state[(nactive+1):p])
   }
   opt_transform = list(linear_term=B, 
                        offset_term = beta_offset)
@@ -487,7 +487,7 @@ randomizedLassoInf = function(X,
     
     # changing dimension of density evalutaion
 
-    if ((condition_subgrad == TRUE) & (nactive < p)) {
+    if ((condition_subgrad == TRUE) & (nactive < p-1)) {
         target_opt_linear = cbind(target_transform$linear_term, opt_transform$linear_term)
         reduced_target_opt_linear = chol(t(target_opt_linear) %*% target_opt_linear)
         target_linear = reduced_target_opt_linear[,1]
