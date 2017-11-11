@@ -127,7 +127,7 @@ randomizedLasso = function(X,
     I = inactive_set
     X_E = X[,E]
     X_I = X[,I]
-    print(c("nactive", length(E)))
+
     if (length(E)==0){
       return(list(active_set=c()))
     }
@@ -135,7 +135,7 @@ randomizedLasso = function(X,
     if (family=="binomial"){
       unpen_reg = glm(y~X_E-1, family="binomial")
       unpen_est = unpen_reg$coefficients
-      pi_vec = pi_fn(X_E, unpen_est)
+      pi_vec = logistic_fitted(X_E, unpen_est)
       W_E = diag(pi_vec*(1-pi_vec))
     } else if (family=="gaussian"){
       W_E = diag(rep(1,n))
@@ -195,12 +195,9 @@ randomizedLasso = function(X,
 
     # density for sampling optimization variables
     
-    
     if (family=="binomial"){
-      #beta_E = result$soln[active_set]
-      #observed_raw = observed_raw + t(X) %*% pi_fn(beta_E) - L_E %*% beta_E
       unpen_est = as.vector(glm(y~X_E-1, family="binomial")$coefficients)
-      observed_raw = -t(X) %*% (y-pi_fn(X_E, unpen_est))-L_E %*% unpen_est  
+      observed_raw = -t(X) %*% (y-logistic_fitted(X_E, unpen_est))-L_E %*% unpen_est  
     } else if (family=="gaussian"){
       observed_raw = -t(X) %*% y
     }
@@ -416,7 +413,7 @@ randomizedLassoInf = function(X,
 
   active_set = lasso_soln$active_set
   nactive = length(active_set)
-  print(c("nactive", nactive))
+
   if (nactive==0){
     return (list(active_set=active_set, pvalues=c(), ci=c()))
   }
@@ -470,7 +467,7 @@ randomizedLassoInf = function(X,
     glm_y = glm(y~X_E-1, family="binomial")
     sigma_resid = 1
     observed_target = as.vector(glm_y$coefficients)
-    pi_vec = pi_fn(X_E, observed_target)
+    pi_vec = logistic_fitted(X_E, observed_target)
     observed_internal =  c(observed_target, t(X_minusE) %*% (y-pi_vec))
     W_E=diag(as.vector(pi_vec *(1-pi_vec)))
   }
@@ -556,7 +553,7 @@ randomizedLassoInf = function(X,
   return(list(active_set=active_set, pvalues=pvalues, ci=ci))
 }
 
-pi_fn = function(X, beta){
+logistic_fitted = function(X, beta){
   temp = X %*% as.matrix(beta)
   return(as.vector(exp(temp)/(1+exp(temp)))) # n-dimensional
 }
@@ -586,7 +583,7 @@ solve_logistic=function(X,
   }
   
   for (i in 1:niters){
-    pi_vec = pi_fn(X, soln)
+    pi_vec = logistic_fitted(X, soln)
     rootW = diag(sqrt(as.vector(pi_vec*(1-pi_vec))))
     weighted_X = rootW %*% X
     Xsoln = weighted_X %*% soln
