@@ -215,39 +215,60 @@ randomizedLasso = function(X,
             return(-Inf)
         }
 
-        use_C_code = TRUE
-        if (!use_C_code) {
-            A = opt_transform$linear_term %*% opt_state + observed_raw + opt_transform$offset_term
-            D = -apply(A^2, 2, sum) / noise_scale^2
-        } else {
-            D = log_density_gaussian_conditional_(noise_scale,
-                                                  opt_transform$linear_term,
-                                                  as.matrix(opt_state),
-                                                  observed_raw + opt_transform$offset_term)
-        }
+        D = log_density_gaussian_conditional_(noise_scale,
+                                              opt_transform$linear_term,
+                                              as.matrix(opt_state),
+                                              observed_raw + opt_transform$offset_term)
+
         return(D)
     }
 
-    return(list(active_set = active_set,
-                inactive_set = inactive_set,
-                unpenalized_set = unpenalized_set,
-                sign_soln = sign_soln,
-                optimization_transform = opt_transform,
-                internal_transform = internal_transform,
-                log_optimization_density = log_optimization_density,
-                observed_opt_state = observed_opt_state,
-                observed_raw = observed_raw,
-                noise_scale = noise_scale,
-                soln = result$soln,
-                perturb = perturb_
+    # work out conditional density and save it as well
+
+    conditional_transform = conditional_opt_transform(noise_scale, 
+                                                      active_set,
+                                                      observed_raw,
+                                                      opt_transform$linear_term,
+                                                      opt_transform$offset_term,
+                                                      observed_opt_state)
+    constraints = matrix(0, length(active_set), 2)
+    constraints[,2] = Inf
+    conditional_transform$constraints = constraints
+
+    # add constraints and density to the full transform
+
+    subgrad_constraints = cbind(-lam[inactive_set], lam[inactive_set])
+    constraints = rbind(constraints, subgrad_constraints)
+    
+    opt_transform$constraints = constraints
+    opt_transform$observed_opt_state = observed_opt_state
+    opt_transform$log_optimization_density = log_optimization_density
+
+
+    return(list(X=X,
+                y=y,
+                lam=lam,
+		family=family,
+                active_set=active_set,
+                inactive_set=inactive_set,
+                unpenalized_set=unpenalized_set,
+                sign_soln=sign_soln,
+                full_transform=opt_transform,
+                conditional_transform=opt_transform,
+                internal_transform=internal_transform,
+                observed_raw=observed_raw,
+                noise_scale=noise_scale,
+                soln=result$soln,
+                perturb=perturb_
                 ))
 
 }
 
-sample_opt_variables = function(randomizedLASSO_obj, jump_scale, nsample=10000) {
-      return(MCMC(randomizedLASSO_obj$log_optimization_density, 
+sample_opt_variables = function(affine_transform, jump_scale, nsample=10000) {
+      print(affine_transform)
+      return(MCMC(affine_transform$log_optimization_density, 
                   nsample,
-                  randomizedLASSO_obj$observed_opt_state,
+                  affine_transform$observed_opt_state,
                   acc.rate=0.2,
                   scale=jump_scale))
 }
@@ -284,31 +305,18 @@ importance_weight = function(noise_scale,
                              target_transform,
                              observed_raw) {
 
-    use_C_code = TRUE
-    if (!use_C_code) {
-        A = (opt_transform$linear_term %*% opt_sample + 
-             target_transform$linear_term %*% target_sample)
-        A = apply(A, 2, function(x) {return(x + target_transform$offset_term + opt_transform$offset_term)})
-        log_num = -apply(A^2, 2, sum) / noise_scale^2
-    } else {
-        log_num = log_density_gaussian_(noise_scale,
-                                        target_transform$linear_term,
-                                        as.matrix(target_sample),
-                                        opt_transform$linear_term,
-                                        as.matrix(opt_sample),
-                                        target_transform$offset_term + opt_transform$offset_term)
-    }
+    log_num = log_density_gaussian_(noise_scale,
+                                    target_transform$linear_term,
+                                    as.matrix(target_sample),
+                                    opt_transform$linear_term,
+                                    as.matrix(opt_sample),
+                                    target_transform$offset_term + opt_transform$offset_term)
 
-    if (!use_C_code) {
-        A = opt_transform$linear_term %*% opt_sample 
-        A = apply(A, 2, function(x) {return(x + observed_raw + opt_transform$offset_term)})
-        log_den = -apply(A^2, 2, sum) / noise_scale^2
-    } else {
-       log_den = log_density_gaussian_conditional_(noise_scale,
-                                                   opt_transform$linear_term,
-                                                   as.matrix(opt_sample),
-                                                   observed_raw+opt_transform$offset_term)
-    }
+    log_den = log_density_gaussian_conditional_(noise_scale,
+                                                opt_transform$linear_term,
+                                                as.matrix(opt_sample),
+                                                observed_raw+opt_transform$offset_term)
+
     W = log_num - log_den
     W = W - max(W)
     return(exp(W))
@@ -320,17 +328,15 @@ get_mean_cov = function(noise_scale, linear_term, offset_term){
     mean = temp %*% t(linear_term) %*% offset_term
     return(list(mean=mean, cov=cov))
 }
-
-
                              
-conditional_density = function(noise_scale, lasso_soln) {
+conditional_opt_transform = function(noise_scale, 
+                                     active_set,
+                                     observed_raw,
+                                     opt_linear,
+                                     opt_offset,
+                                     observed_opt_state) {
   
-  active_set = lasso_soln$active_set
-  observed_raw = lasso_soln$observed_raw
-  opt_linear = lasso_soln$optimization_transform$linear_term
-  opt_offset =  lasso_soln$optimization_transform$offset_term
-  observed_opt_state = lasso_soln$observed_opt_state
-  
+ 
   nactive = length(active_set)
   B = opt_linear[,1:nactive,drop=FALSE]
   beta_offset = opt_offset
@@ -363,54 +369,28 @@ conditional_density = function(noise_scale, lasso_soln) {
     }
     return(log_den)
   }
-  lasso_soln$log_optimization_density = log_condl_optimization_density
-  lasso_soln$observed_opt_state = observed_opt_state[1:nactive]
-  lasso_soln$optimization_transform = opt_transform
+  log_optimization_density = log_condl_optimization_density
+  observed_opt_state = observed_opt_state[1:nactive]
+  optimization_transform = opt_transform
   reduced_opt_transform =list(linear_term = reduced_B, offset_term = reduced_beta_offset)
-  return(list(lasso_soln=lasso_soln, 
-              reduced_opt_transform = reduced_opt_transform))
+  return(list(reduced_opt_transform=reduced_opt_transform,
+              log_optimization_density=log_condl_optimization_density,
+              observed_opt_state=observed_opt_state[1:nactive],
+	      optimization_transform=opt_transform))
 }
 
-randomizedLassoInf = function(X, 
-                              y, 
-                              lam, 
-                              family=c("gaussian", "binomial"),
+randomizedLassoInf = function(lasso_soln,
                               sigma=NULL, 
-                              noise_scale=NULL, 
-                              ridge_term=NULL, 
                               condition_subgrad=TRUE, 
                               level=0.9,
                               sampler=c("norejection", "adaptMCMC"),
                               nsample=10000,
-                              burnin=2000,
-                              max_iter=100,        # how many iterations for each optimization problem
-                              kkt_tol=1.e-4,       # tolerance for the KKT conditions
-                              parameter_tol=1.e-8, # tolerance for relative convergence of parameter
-                              objective_tol=1.e-8, # tolerance for relative decrease in objective
-                              objective_stop=FALSE,
-                              kkt_stop=TRUE,
-                              parameter_stop=TRUE)
+                              burnin=2000)
  {
 
-  n = nrow(X)
-  p = ncol(X)
+  n = nrow(lasso_soln$X)
+  p = ncol(lasso_soln$X)
   
-  family = match.arg(family)
-  
-  lasso_soln = randomizedLasso(X, 
-                               y, 
-                               lam, 
-                               family=family,
-                               noise_scale=noise_scale, 
-                               ridge_term=ridge_term,
-                               max_iter=max_iter,
-                               kkt_tol=kkt_tol,       
-                               parameter_tol=parameter_tol,
-                               objective_tol=objective_tol,
-                               objective_stop=objective_stop,
-                               kkt_stop=kkt_stop,
-                               parameter_stop=parameter_stop)
-
   active_set = lasso_soln$active_set
   nactive = length(active_set)
 
@@ -418,52 +398,43 @@ randomizedLassoInf = function(X,
     return (list(active_set=active_set, pvalues=c(), ci=c()))
   }
   inactive_set = lasso_soln$inactive_set
-  
-  noise_scale = lasso_soln$noise_scale # set to default value in randomizedLasso
-  
-  constraints = matrix(0,nactive,2)
-  constraints[,2] = Inf
-  if (condition_subgrad==TRUE){
-   condl_lasso=conditional_density(noise_scale, lasso_soln)
-   lasso_soln = condl_lasso$lasso_soln
-   cur_opt_transform = condl_lasso$reduced_opt_transform
-   } else{
-   if (nactive<p){
-     subgrad_constraints = matrix(-lam, p-nactive, 2)
-     subgrad_constraints[,2]=lam
-     constraints = rbind(constraints, subgrad_constraints)
-   }
-    cur_opt_transform = list(linear_term = lasso_soln$optimization_transform$linear_term,
-                             offset_term = lasso_soln$optimization_transform$offset_term+lasso_soln$observed_raw)
-  }
-    
+  noise_scale = lasso_soln$noise_scale  # set to default value in randomizedLasso
+   
   ndim = length(lasso_soln$observed_opt_state)
   
   sampler = match.arg(sampler)
 
+  if (condition_subgrad == TRUE) {
+      cur_opt_transform = lasso_soln$conditional_transform
+  } else {
+      cur_opt_transform = lasso_soln$full_transform
+  }       
+
   if (sampler == "adaptMCMC"){
-    S = sample_opt_variables(lasso_soln, jump_scale=rep(1/sqrt(n), ndim), nsample=nsample)
+    S = sample_opt_variables(cur_opt_transform, 
+                             jump_scale=rep(1/sqrt(n), length(cur_opt_transform$observed_opt_state)), nsample=nsample)
     opt_samples = as.matrix(S$samples[(burnin+1):nsample,,drop=FALSE])
   } else if (sampler == "norejection") {
     opt_samples = gaussian_sampler(noise_scale, 
-                                 lasso_soln$observed_opt_state, 
-                                 cur_opt_transform$linear_term,
-                                 cur_opt_transform$offset_term,
-                                 constraints,
-                                 nsamples=nsample)
+                                   cur_opt_transform$observed_opt_state, 
+                                   cur_opt_transform$linear_term,
+                                   cur_opt_transform$offset_term,
+                                   cur_opt_transform$constraints,
+                                   nsamples=nsample)
     opt_sample = opt_samples[(burnin+1):nsample,]
   }
   
-  X_E = X[, active_set]
-  X_minusE = X[, inactive_set]
+  X_E = lasso_soln$X[, active_set]
+  X_minusE = lasso_soln$X[, inactive_set]
+  y = lasso_soln$y
 
-  if (family == "gaussian") {
+  if (lasso_soln$family == "gaussian") {
     lm_y = lm(y ~ X_E - 1)
     sigma_resid = sqrt(sum(resid(lm_y)^2) / lm_y$df.resid)
     observed_target = lm_y$coefficients
     W_E = diag(rep(1,n))
     observed_internal = c(observed_target, t(X_minusE) %*% (y-X_E%*% observed_target))
-  } else if (family == "binomial") {
+  } else if (lasso_soln$family == "binomial") {
     glm_y = glm(y~X_E-1, family="binomial")
     sigma_resid = 1
     observed_target = as.vector(glm_y$coefficients)
