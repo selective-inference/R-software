@@ -356,27 +356,21 @@ conditional_opt_transform = function(noise_scale,
       return(-Inf)
     }
 
-    use_C_code = TRUE
-    if (!use_C_code) {
-        A = reduced_B %*% as.matrix(opt_state) + reduced_beta_offset
-        A = apply(A, 2, function(x) {x + reduced_beta_offset})
-        log_den = -apply(A^2, 2, sum) / noise_scale^2
-    } else {
-        log_den = log_density_gaussian_conditional_(noise_scale,
-                                                    reduced_B,
-                                                    as.matrix(opt_state),
-                                                    reduced_beta_offset)
-    }
+    log_den = log_density_gaussian_conditional_(noise_scale,
+                                                reduced_B,
+                                                as.matrix(opt_state),
+                                                reduced_beta_offset)
     return(log_den)
   }
+
   log_optimization_density = log_condl_optimization_density
   observed_opt_state = observed_opt_state[1:nactive]
   optimization_transform = opt_transform
   reduced_opt_transform =list(linear_term = reduced_B, offset_term = reduced_beta_offset)
-  return(list(reduced_opt_transform=reduced_opt_transform,
+  return(list(optimization_transform=reduced_opt_transform,
               log_optimization_density=log_condl_optimization_density,
               observed_opt_state=observed_opt_state[1:nactive],
-	      optimization_transform=opt_transform))
+	      optimization_transform_alt=opt_transform))
 }
 
 randomizedLassoInf = function(lasso_soln,
@@ -452,7 +446,7 @@ randomizedLassoInf = function(lasso_soln,
   target_cov = solve(t(X_E) %*% W_E %*% X_E)*sigma^2
   cov_target_internal = rbind(target_cov, matrix(0, nrow=p-nactive, ncol=nactive))
   internal_transform = lasso_soln$internal_transform
-  opt_transform = lasso_soln$optimization_transform
+  opt_transform = cur_opt_transform
   observed_raw = lasso_soln$observed_raw
   
   pvalues = rep(0, nactive)
