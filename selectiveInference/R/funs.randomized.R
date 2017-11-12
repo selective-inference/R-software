@@ -225,25 +225,29 @@ randomizedLasso = function(X,
 
     # work out conditional density and save it as well
 
-    conditional_transform = conditional_opt_transform(noise_scale, 
-                                                      active_set,
-                                                      observed_raw,
-                                                      opt_transform$linear_term,
-                                                      opt_transform$offset_term,
-                                                      observed_opt_state)
+    conditional_law = conditional_opt_transform(noise_scale, 
+                                                active_set,
+                                                observed_raw,
+                                                opt_transform$linear_term,
+                                                opt_transform$offset_term,
+                                                observed_opt_state)
     constraints = matrix(0, length(active_set), 2)
     constraints[,2] = Inf
-    conditional_transform$constraints = constraints
+    conditional_law$constraints = constraints
 
     # add constraints and density to the full transform
 
     subgrad_constraints = cbind(-lam[inactive_set], lam[inactive_set])
     constraints = rbind(constraints, subgrad_constraints)
     
-    opt_transform$constraints = constraints
-    opt_transform$observed_opt_state = observed_opt_state
-    opt_transform$log_optimization_density = log_optimization_density
+    # this is for conditional density of opt given data
 
+    full_law = list(sampling_transform=list(linear_term=opt_transform$linear_term,
+                                            offset_term=opt_transform$offset_term + observed_raw),
+                    constraints=constraints,
+                    observed_opt_state=observed_opt_state,
+                    log_optimization_density=log_optimization_density,
+                    importance_transform=opt_transform)
 
     return(list(X=X,
                 y=y,
@@ -253,8 +257,9 @@ randomizedLasso = function(X,
                 inactive_set=inactive_set,
                 unpenalized_set=unpenalized_set,
                 sign_soln=sign_soln,
-                full_transform=opt_transform,
-                conditional_transform=opt_transform,
+                full_law=full_law,
+		#optimization_transform=opt_transform,
+                conditional_law=conditional_law,
                 internal_transform=internal_transform,
                 observed_raw=observed_raw,
                 noise_scale=noise_scale,
@@ -264,11 +269,10 @@ randomizedLasso = function(X,
 
 }
 
-sample_opt_variables = function(affine_transform, jump_scale, nsample=10000) {
-      print(affine_transform)
-      return(MCMC(affine_transform$log_optimization_density, 
+sample_opt_variables = function(law, jump_scale, nsample=10000) {
+      return(MCMC(law$log_optimization_density, 
                   nsample,
-                  affine_transform$observed_opt_state,
+                  law$observed_opt_state,
                   acc.rate=0.2,
                   scale=jump_scale))
 }
@@ -315,7 +319,7 @@ importance_weight = function(noise_scale,
     log_den = log_density_gaussian_conditional_(noise_scale,
                                                 opt_transform$linear_term,
                                                 as.matrix(opt_sample),
-                                                observed_raw+opt_transform$offset_term)
+                                                observed_raw + opt_transform$offset_term)
 
     W = log_num - log_den
     W = W - max(W)
@@ -367,10 +371,10 @@ conditional_opt_transform = function(noise_scale,
   observed_opt_state = observed_opt_state[1:nactive]
   optimization_transform = opt_transform
   reduced_opt_transform =list(linear_term = reduced_B, offset_term = reduced_beta_offset)
-  return(list(optimization_transform=reduced_opt_transform,
+  return(list(sampling_transform=reduced_opt_transform,
               log_optimization_density=log_condl_optimization_density,
               observed_opt_state=observed_opt_state[1:nactive],
-	      optimization_transform_alt=opt_transform))
+	      importance_transform=opt_transform))
 }
 
 randomizedLassoInf = function(lasso_soln,
@@ -399,21 +403,21 @@ randomizedLassoInf = function(lasso_soln,
   sampler = match.arg(sampler)
 
   if (condition_subgrad == TRUE) {
-      cur_opt_transform = lasso_soln$conditional_transform
+      cur_law = lasso_soln$conditional_law
   } else {
-      cur_opt_transform = lasso_soln$full_transform
+      cur_law = lasso_soln$full_law
   }       
 
   if (sampler == "adaptMCMC"){
-    S = sample_opt_variables(cur_opt_transform, 
-                             jump_scale=rep(1/sqrt(n), length(cur_opt_transform$observed_opt_state)), nsample=nsample)
+    S = sample_opt_variables(cur_law, 
+                             jump_scale=rep(1/sqrt(n), length(cur_law$observed_opt_state)), nsample=nsample)
     opt_samples = as.matrix(S$samples[(burnin+1):nsample,,drop=FALSE])
   } else if (sampler == "norejection") {
     opt_samples = gaussian_sampler(noise_scale, 
-                                   cur_opt_transform$observed_opt_state, 
-                                   cur_opt_transform$linear_term,
-                                   cur_opt_transform$offset_term,
-                                   cur_opt_transform$constraints,
+                                   cur_law$observed_opt_state, 
+                                   cur_law$sampling_transform$linear_term,
+                                   cur_law$sampling_transform$offset_term,
+                                   cur_law$constraints,
                                    nsamples=nsample)
     opt_sample = opt_samples[(burnin+1):nsample,]
   }
@@ -446,12 +450,13 @@ randomizedLassoInf = function(lasso_soln,
   target_cov = solve(t(X_E) %*% W_E %*% X_E)*sigma^2
   cov_target_internal = rbind(target_cov, matrix(0, nrow=p-nactive, ncol=nactive))
   internal_transform = lasso_soln$internal_transform
-  opt_transform = cur_opt_transform
   observed_raw = lasso_soln$observed_raw
   
   pvalues = rep(0, nactive)
   ci = matrix(0, nactive, 2)
   
+  importance_transform = cur_law$importance_transform
+
   for (i in 1:nactive){
 
     target_transform = linear_decomposition(observed_target[i], 
@@ -463,18 +468,18 @@ randomizedLassoInf = function(lasso_soln,
     # changing dimension of density evalutaion
 
     if ((condition_subgrad == TRUE) & (nactive < p-1)) {
-        target_opt_linear = cbind(target_transform$linear_term, opt_transform$linear_term)
+        target_opt_linear = cbind(target_transform$linear_term, importance_transform$linear_term)
         reduced_target_opt_linear = chol(t(target_opt_linear) %*% target_opt_linear)
         target_linear = reduced_target_opt_linear[,1]
         temp = solve(t(reduced_target_opt_linear)) %*% t(target_opt_linear)
         target_offset = temp %*% target_transform$offset_term
         target_transform = list(linear_term = as.matrix(target_linear), offset_term = target_offset)
         cur_linear = reduced_target_opt_linear[,2:ncol(reduced_target_opt_linear)]
-        cur_offset = temp %*% opt_transform$offset_term
+        cur_offset = temp %*% importance_transform$offset_term
         cur_transform = list(linear_term = as.matrix(cur_linear), offset_term = cur_offset)
         raw = target_transform$linear_term * observed_target[i] + target_transform$offset_term
     } else {
-        cur_transform = opt_transform
+        cur_transform = importance_transform
         raw = observed_raw
     }   
 
