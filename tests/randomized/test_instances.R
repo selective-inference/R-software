@@ -99,9 +99,13 @@ collect_results = function(n,p,s, nsim=100, level=0.9,
     data = get_instance(n=n,p=p,s=s, rho=rho, sigma=sigma, family=family)
     X=data$X
     y=data$y
-    result = selectiveInference:::randomizedLassoInf(X, y, 
-                                                     lam, 
-                                                     family = family,
+
+    rand_lasso_soln = selectiveInference:::randomizedLasso(X, 
+                                                           y, 
+                                                           lam, 
+                                                           family=family)
+
+    result = selectiveInference:::randomizedLassoInf(rand_lasso_soln,
                                                      sampler = "adaptMCMC", #"norejection", #
                                                      sigma=sigma,
                                                      level=level, 
