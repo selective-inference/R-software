@@ -9,7 +9,6 @@ randomizedLasso = function(X,
                            family=c("gaussian","binomial"),
                            noise_scale=NULL, 
                            ridge_term=NULL, 
-                           noise_type=c('gaussian', 'laplace'),
                            max_iter=100,        # how many iterations for each optimization problem
                            kkt_tol=1.e-4,       # tolerance for the KKT conditions
                            parameter_tol=1.e-8, # tolerance for relative convergence of parameter
@@ -36,15 +35,8 @@ randomizedLasso = function(X,
         noise_scale = 0.5 * sd(y) * sqrt(mean_diag)
     }
     
-    noise_type = match.arg(noise_type)
-
     if (noise_scale > 0) {
-        if (noise_type == 'gaussian') {
-            perturb_ = rnorm(p) * noise_scale
-        }
-        else if (noise_type == 'laplace') {
-            perturb_ = rexp(p) * (2 * rbinom(p, 1, 0.5) - 1) * noise_scale
-        }
+        perturb_ = rnorm(p) * noise_scale
     } else {
         perturb_ = rep(0, p)
     }
@@ -377,7 +369,7 @@ conditional_opt_transform = function(noise_scale,
 	      importance_transform=opt_transform))
 }
 
-randomizedLassoInf = function(lasso_soln,
+randomizedLassoInf = function(rand_lasso_soln,
                               sigma=NULL, 
                               condition_subgrad=TRUE, 
                               level=0.9,
@@ -386,26 +378,26 @@ randomizedLassoInf = function(lasso_soln,
                               burnin=2000)
  {
 
-  n = nrow(lasso_soln$X)
-  p = ncol(lasso_soln$X)
+  n = nrow(rand_lasso_soln$X)
+  p = ncol(rand_lasso_soln$X)
   
-  active_set = lasso_soln$active_set
+  active_set = rand_lasso_soln$active_set
   nactive = length(active_set)
 
   if (nactive==0){
     return (list(active_set=active_set, pvalues=c(), ci=c()))
   }
-  inactive_set = lasso_soln$inactive_set
-  noise_scale = lasso_soln$noise_scale  # set to default value in randomizedLasso
+  inactive_set = rand_lasso_soln$inactive_set
+  noise_scale = rand_lasso_soln$noise_scale  # set to default value in randomizedLasso
    
-  ndim = length(lasso_soln$observed_opt_state)
+  ndim = length(rand_lasso_soln$observed_opt_state)
   
   sampler = match.arg(sampler)
 
   if (condition_subgrad == TRUE) {
-      cur_law = lasso_soln$conditional_law
+      cur_law = rand_lasso_soln$conditional_law
   } else {
-      cur_law = lasso_soln$full_law
+      cur_law = rand_lasso_soln$full_law
   }       
 
   if (sampler == "adaptMCMC"){
@@ -422,17 +414,17 @@ randomizedLassoInf = function(lasso_soln,
     opt_sample = opt_samples[(burnin+1):nsample,]
   }
   
-  X_E = lasso_soln$X[, active_set]
-  X_minusE = lasso_soln$X[, inactive_set]
-  y = lasso_soln$y
+  X_E = rand_lasso_soln$X[, active_set]
+  X_minusE = rand_lasso_soln$X[, inactive_set]
+  y = rand_lasso_soln$y
 
-  if (lasso_soln$family == "gaussian") {
+  if (rand_lasso_soln$family == "gaussian") {
     lm_y = lm(y ~ X_E - 1)
     sigma_resid = sqrt(sum(resid(lm_y)^2) / lm_y$df.resid)
     observed_target = lm_y$coefficients
     W_E = diag(rep(1,n))
     observed_internal = c(observed_target, t(X_minusE) %*% (y-X_E%*% observed_target))
-  } else if (lasso_soln$family == "binomial") {
+  } else if (rand_lasso_soln$family == "binomial") {
     glm_y = glm(y~X_E-1, family="binomial")
     sigma_resid = 1
     observed_target = as.vector(glm_y$coefficients)
@@ -449,8 +441,8 @@ randomizedLassoInf = function(lasso_soln,
   
   target_cov = solve(t(X_E) %*% W_E %*% X_E)*sigma^2
   cov_target_internal = rbind(target_cov, matrix(0, nrow=p-nactive, ncol=nactive))
-  internal_transform = lasso_soln$internal_transform
-  observed_raw = lasso_soln$observed_raw
+  internal_transform = rand_lasso_soln$internal_transform
+  observed_raw = rand_lasso_soln$observed_raw
   
   pvalues = rep(0, nactive)
   ci = matrix(0, nactive, 2)
