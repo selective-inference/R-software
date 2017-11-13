@@ -12,7 +12,7 @@ randomization.
 }
 \usage{
 randomizedLassoInf(rand_lasso_soln, 
-                   sigma=NULL, 
+		   targets=NULL,
                    condition_subgrad=TRUE, 
                    level=0.9,
                    sampler=c("norejection", "adaptMCMC"),
@@ -20,13 +20,21 @@ randomizedLassoInf(rand_lasso_soln,
                    burnin=2000)
 }
 \arguments{
-  \item{rand_lasso_soln}{
+\item{rand_lasso_soln}{
 A randomized lasso solution as returned by \code{randomizedLasso}.
 }
-\item{sigma}{
-Estimate of error standard deviation. If NULL (default), this is estimated 
-using the mean squared residual of the full least squares based on 
-selected active set.
+\item{targets}{
+If not NULL, should be a list with entries \code{observed_target, cov_target, crosscov_target_internal}.
+The \code{observed_target} should be (pre-selection) asymptotically Gaussian around targeted
+parameters. The quantity \code{cov_target} should be an estimate of the (pre-selection) covariance
+of \code{observed_target}. Finally, \code{crosscov_target_internal} should be an estimate of
+the (pre-selection) covariance of \code{observed_target} and the internal representation of the
+data of the LASSO. For both \code{"gaussian"} and \code{"binomial"}, this is the vector
+  \deqn{
+\hat{\beta}_{E,MLE}, X_{-E}^T(y - \mu(X_E\hat{\beta}_{E,MLE}))
+  } 
+For example, this cross-covariance could be estimated by jointly bootstrapping the target 
+of interest and the above vector.
 }
 \item{condition_subgrad}{
 In forming selective confidence intervals and p-values should we condition

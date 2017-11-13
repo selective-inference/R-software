@@ -370,7 +370,7 @@ conditional_opt_transform = function(noise_scale,
 }
 
 randomizedLassoInf = function(rand_lasso_soln,
-                              sigma=NULL, 
+                              targets=NULL,
                               condition_subgrad=TRUE, 
                               level=0.9,
                               sampler=c("norejection", "adaptMCMC"),
@@ -414,52 +414,56 @@ randomizedLassoInf = function(rand_lasso_soln,
     opt_sample = opt_samples[(burnin+1):nsample,]
   }
   
-  X_E = rand_lasso_soln$X[, active_set]
-  X_minusE = rand_lasso_soln$X[, inactive_set]
-  y = rand_lasso_soln$y
+  if (is.null(targets)) {
 
-  if (rand_lasso_soln$family == "gaussian") {
-    lm_y = lm(y ~ X_E - 1)
-    sigma_resid = sqrt(sum(resid(lm_y)^2) / lm_y$df.resid)
-    observed_target = lm_y$coefficients
-    W_E = diag(rep(1,n))
-    observed_internal = c(observed_target, t(X_minusE) %*% (y-X_E%*% observed_target))
-  } else if (rand_lasso_soln$family == "binomial") {
-    glm_y = glm(y~X_E-1, family="binomial")
-    sigma_resid = 1
-    observed_target = as.vector(glm_y$coefficients)
-    pi_vec = logistic_fitted(X_E, observed_target)
-    observed_internal =  c(observed_target, t(X_minusE) %*% (y-pi_vec))
-    W_E=diag(as.vector(pi_vec *(1-pi_vec)))
-  }
-  
-  # if no sigma given, use the estimate
-  
-  if (is.null(sigma)) {
-    sigma = sigma_resid
-  }        
-  
-  target_cov = solve(t(X_E) %*% W_E %*% X_E)*sigma^2
-  cov_target_internal = rbind(target_cov, matrix(0, nrow=p-nactive, ncol=nactive))
-  internal_transform = rand_lasso_soln$internal_transform
-  observed_raw = rand_lasso_soln$observed_raw
-  
+      X_E = rand_lasso_soln$X[, active_set]
+      X_minusE = rand_lasso_soln$X[, inactive_set]
+      y = rand_lasso_soln$y
+
+      if (rand_lasso_soln$family == "gaussian") {
+        lm_y = lm(y ~ X_E - 1)
+        sigma_resid = sqrt(sum(resid(lm_y)^2) / lm_y$df.resid)
+        observed_target = lm_y$coefficients
+        W_E = diag(rep(1,n))
+        observed_internal = c(observed_target, t(X_minusE) %*% (y-X_E%*% observed_target))
+      } else if (rand_lasso_soln$family == "binomial") {
+        glm_y = glm(y~X_E-1, family="binomial")
+        sigma_resid = 1
+        observed_target = as.vector(glm_y$coefficients)
+        pi_vec = logistic_fitted(X_E, observed_target)
+        observed_internal =  c(observed_target, t(X_minusE) %*% (y-pi_vec))
+        W_E=diag(as.vector(pi_vec *(1-pi_vec)))
+      }
+
+      cov_target = solve(t(X_E) %*% W_E %*% X_E)*sigma_resid^2
+
+      targets = list(observed_target=observed_target,
+                     cov_target=cov_target,
+                     crosscov_target_internal=rbind(cov_target, matrix(0, nrow=p-nactive, ncol=nactive)))
+
+  } 
+
+  importance_transform = cur_law$importance_transform
+  internal_transform=rand_lasso_soln$internal_transform
+  observed_raw=rand_lasso_soln$observed_raw
+
   pvalues = rep(0, nactive)
   ci = matrix(0, nactive, 2)
   
-  importance_transform = cur_law$importance_transform
-
   for (i in 1:nactive){
 
-    target_transform = linear_decomposition(observed_target[i], 
+    target_transform = linear_decomposition(targets$observed_target[i], 
                                             observed_internal, 
-                                            target_cov[i,i], 
-                                            cov_target_internal[,i],
+                                            targets$cov_target[i,i], 
+                                            targets$crosscov_target_internal[,i],
                                             internal_transform)
     
     # changing dimension of density evalutaion
 
     if ((condition_subgrad == TRUE) & (nactive < p-1)) {
+
+        # A description of why we do this might help
+
         target_opt_linear = cbind(target_transform$linear_term, importance_transform$linear_term)
         reduced_target_opt_linear = chol(t(target_opt_linear) %*% target_opt_linear)
         target_linear = reduced_target_opt_linear[,1]
@@ -469,13 +473,13 @@ randomizedLassoInf = function(rand_lasso_soln,
         cur_linear = reduced_target_opt_linear[,2:ncol(reduced_target_opt_linear)]
         cur_offset = temp %*% importance_transform$offset_term
         cur_transform = list(linear_term = as.matrix(cur_linear), offset_term = cur_offset)
-        raw = target_transform$linear_term * observed_target[i] + target_transform$offset_term
+        raw = target_transform$linear_term * targets$observed_target[i] + target_transform$offset_term
     } else {
         cur_transform = importance_transform
         raw = observed_raw
     }   
 
-    target_sample = rnorm(nrow(as.matrix(opt_samples))) * sqrt(target_cov[i,i])
+    target_sample = rnorm(nrow(as.matrix(opt_samples))) * sqrt(targets$cov_target[i,i])
 
     pivot = function(candidate){
 
@@ -485,16 +489,16 @@ randomizedLassoInf = function(rand_lasso_soln,
                                   cur_transform,
                                   target_transform,
                                   raw)
-      return(mean((target_sample + candidate < observed_target[i]) * weights)/mean(weights))
+      return(mean((target_sample + candidate < targets$observed_target[i]) * weights)/mean(weights))
 
     }
 
     rootU = function(candidate){
-      return (pivot(observed_target[i]+candidate)-(1-level)/2)
+      return (pivot(targets$observed_target[i]+candidate)-(1-level)/2)
     }
 
     rootL = function(candidate){
-      return(pivot(observed_target[i]+candidate)-(1+level)/2)
+      return(pivot(targets$observed_target[i]+candidate)-(1+level)/2)
     }
 
     pvalues[i] = pivot(0)
@@ -502,12 +506,12 @@ randomizedLassoInf = function(rand_lasso_soln,
     line_max = 10*sd(target_sample)
 
     if (rootU(line_min)*rootU(line_max)<0){
-      ci[i,2] = uniroot(rootU, c(line_min, line_max))$root+observed_target[i]
+      ci[i,2] = uniroot(rootU, c(line_min, line_max))$root + targets$observed_target[i]
     } else{
       ci[i,2]=line_max
     }
     if (rootL(line_min)*rootL(line_max)<0){
-      ci[i,1] = uniroot(rootL, c(line_min, line_max))$root+observed_target[i]
+      ci[i,1] = uniroot(rootL, c(line_min, line_max))$root + targets$observed_target[i]
     } else{
       ci[i,1] = line_min
     }
