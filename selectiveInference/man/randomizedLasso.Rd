@@ -96,20 +96,22 @@ For \code{family="binomial"}, the squared error loss is replaced by the
 negative of the logistic log-likelihood.
 }
 \value{  
-\item{type}{Type of coefficients tested (partial or full)}
-\item{lambda}{Value of tuning parameter lambda used}
-\item{pv}{One-sided P-values for active variables, uses the fact we have conditioned on the sign.}
-\item{ci}{Confidence intervals}
-\item{tailarea}{Realized tail areas (lower and upper) for each confidence interval}
-\item{vlo}{Lower truncation limits for statistics}
-\item{vup}{Upper truncation limits for statistics}
-\item{vmat}{Linear contrasts that define the observed statistics}
-\item{y}{Vector of outcomes}
-\item{vars}{Variables in active set}
-\item{sign}{Signs of active coefficients}
-\item{alpha}{Desired coverage (alpha/2 in each tail)}
-\item{sigma}{Value of error standard deviation (sigma) used}
-\item{call}{The call to lassoInf}
+\item{X}{Design matrix.}
+\item{y}{Response vector.}
+\item{lam}{Vector of penalty parameters.}
+\item{family}{Family: "gaussian" or "binomial".}
+\item{active_set}{Set of non-zero coefficients in randomized solution that were penalized. Integers from 1:p.}
+\item{inactive_set}{Set of zero coefficients in randomized solution. Integers from 1:p.}
+\item{unpenalized_set}{Set of non-zero coefficients in randomized solution that were not penalized. Integers from 1:p.}
+\item{sign_soln}{The sign pattern of the randomized solution.}
+\item{full_law}{List describing sampling parameters for conditional law of all optimization variables given the data in the LASSO problem.}
+\item{conditional_law}{List describing sampling parameters for conditional law of only the scaling variables given the data and the observed subgradient in the LASSO problem.}
+\item{internal_transform}{Affine transformation describing relationship between internal representation of the data and the data compontent of score of the likelihood at the unregularized MLE based on the sign_vector (a.k.a. relaxed LASSO).}
+\item{observed_raw}{Data component of the score at the unregularized MLE.}
+\item{noise_scale}{SD of Gaussian noise used to draw the perturbed objective.}
+\item{soln}{The randomized solution. Inference is made conditional on its sign vector (so no more snooping of this value is formally permitted.) 
+If \code{condition_subgrad == TRUE} when sampling, then we may snoop on the observed subgradient.}
+\item{perturb}{The random vector in the linear term added to the objective.}
 }
 
 \references{

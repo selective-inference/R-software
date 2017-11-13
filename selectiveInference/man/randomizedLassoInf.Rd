@@ -63,29 +63,21 @@ given a fixed value of the tuning parameter lambda.
 
 }
 \value{  
-\item{type}{Type of coefficients tested (partial or full)}
-\item{lambda}{Value of tuning parameter lambda used}
-\item{pv}{One-sided P-values for active variables, uses the fact we have conditioned on the sign.}
-\item{ci}{Confidence intervals}
-\item{tailarea}{Realized tail areas (lower and upper) for each confidence interval}
-\item{vlo}{Lower truncation limits for statistics}
-\item{vup}{Upper truncation limits for statistics}
-\item{vmat}{Linear contrasts that define the observed statistics}
-\item{y}{Vector of outcomes}
-\item{vars}{Variables in active set}
-\item{sign}{Signs of active coefficients}
-\item{alpha}{Desired coverage (alpha/2 in each tail)}
-\item{sigma}{Value of error standard deviation (sigma) used}
-\item{call}{The call to lassoInf}
+\item{targets}{A list with entries \code{observed_target, cov_target, crosscov_target_internal}. See argument description above.}
+\item{pvalues}{P-values testing hypotheses that each specific target is 0.}
+\item{ci}{Confidence interval for parameters determined by \code{targets}.}
 }
 
 \references{
-Xiaoying Tian, and Jonathan Taylor (2015).
+Jelena Markovic and Jonathan Taylor (2016).
+Bootstrap inference after using multiple queries for model selection. arxiv.org:1612.07811
+
+Xiaoying Tian and Jonathan Taylor (2015).
 Selective inference with a randomized response. arxiv.org:1507.06739
 
 Xiaoying Tian, Snigdha Panigrahi, Jelena Markovic, Nan Bi and Jonathan Taylor (2016).
 Selective inference after solving a convex problem. 
-arxiv:1609.05609
+arxiv.org:1609.05609
 
 }
 \author{Jelena Markovic, Jonathan Taylor}

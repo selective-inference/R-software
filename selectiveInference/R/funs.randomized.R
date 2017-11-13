@@ -254,7 +254,6 @@ randomizedLasso = function(X,
                 unpenalized_set=unpenalized_set,
                 sign_soln=sign_soln,
                 full_law=full_law,
-		#optimization_transform=opt_transform,
                 conditional_law=conditional_law,
                 internal_transform=internal_transform,
                 observed_raw=observed_raw,
@@ -520,7 +519,7 @@ randomizedLassoInf = function(rand_lasso_soln,
       ci[i,1] = line_min
     }
   }
-  return(list(active_set=active_set, pvalues=pvalues, ci=ci))
+  return(list(targets=targets, pvalues=pvalues, ci=ci))
 }
 
 logistic_fitted = function(X, beta){
