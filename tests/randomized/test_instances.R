@@ -135,5 +135,5 @@ collect_results = function(n,p,s, nsim=100, level=0.9,
 }
 
 set.seed(1)
-collect_results(n=100, p=20, s=0, lam=0.5)
+collect_results(n=500, p=200, s=0, lam=1.)
 
