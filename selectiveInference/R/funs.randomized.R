@@ -32,7 +32,11 @@ randomizedLasso = function(X,
     # default noise level
 
     if (is.null(noise_scale)) {
-        noise_scale = 0.5 * sd(y) * sqrt(mean_diag)
+        if (family == "gaussian") {
+            noise_scale = 0.5 * sd(y) * sqrt(mean_diag)
+        } else if (family == "binomial") {
+	    noise_scale = 0.5 * sd(y) * sqrt(mean_diag) 
+        }
     }
     
     if (noise_scale > 0) {
