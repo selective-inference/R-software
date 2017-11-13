@@ -107,7 +107,6 @@ collect_results = function(n,p,s, nsim=100, level=0.9,
 
     result = selectiveInference:::randomizedLassoInf(rand_lasso_soln,
                                                      sampler = "adaptMCMC", #"norejection", #
-                                                     sigma=sigma,
                                                      level=level, 
                                                      burnin=1000, 
                                                      nsample=5000, 
