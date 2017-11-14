@@ -419,26 +419,18 @@ randomizedLassoInf = function(rand_lasso_soln,
   
   if (is.null(targets)) {
 
-      X_E = rand_lasso_soln$X[, active_set]
-      X_minusE = rand_lasso_soln$X[, inactive_set]
+      X_E = rand_lasso_soln$X[, active_set, drop=FALSE]
+      X_minusE = rand_lasso_soln$X[, inactive_set, drop=FALSE]
       y = rand_lasso_soln$y
 
-      if (rand_lasso_soln$family == "gaussian") {
-        lm_y = lm(y ~ X_E - 1)
-        sigma_resid = sqrt(sum(resid(lm_y)^2) / lm_y$df.resid)
-        observed_target = lm_y$coefficients
-        W_E = diag(rep(1,n))
-        observed_internal = c(observed_target, t(X_minusE) %*% (y-X_E%*% observed_target))
-      } else if (rand_lasso_soln$family == "binomial") {
-        glm_y = glm(y~X_E-1, family="binomial")
-        sigma_resid = 1
-        observed_target = as.vector(glm_y$coefficients)
-        pi_vec = logistic_fitted(X_E, observed_target)
-        observed_internal =  c(observed_target, t(X_minusE) %*% (y-pi_vec))
-        W_E=diag(as.vector(pi_vec *(1-pi_vec)))
+      if (rand_lasso_soln$family == 'gaussian') {
+         glm_y = glm(y ~ X_E-1)
+      } else if (rand_lasso_soln$family == 'binomial') {
+         glm_y = glm(y ~ X_E-1, family=binomial())
       }
-
-      cov_target = solve(t(X_E) %*% W_E %*% X_E)*sigma_resid^2
+      observed_target = as.vector(glm_y$coefficients)
+      observed_internal =  c(observed_target, t(X_minusE) %*% (y - fitted(glm_y)))
+      cov_target = vcov(glm_y)
 
       targets = list(observed_target=observed_target,
                      cov_target=cov_target,
