@@ -1,6 +1,7 @@
 #include <Rcpp.h>                // need to include the main Rcpp header file 
 #include <randomized_lasso.h>    // where densities are defined
 #include <stdio.h>
+
 // [[Rcpp::export]]
 Rcpp::NumericVector log_density_gaussian_(double noise_scale,                         // Scale of randomization
 					  Rcpp::NumericMatrix internal_linear,        // A_D -- linear part for data
@@ -129,7 +130,7 @@ Rcpp::NumericVector log_density_laplace_conditional_(double noise_scale,        
 }
 
 // [[Rcpp::export]]
-Rcpp::List barrier_solve_(Rcpp::NumericVector conjugate_arg,                 // Argument to conjugate
+Rcpp::List solve_barrier_(Rcpp::NumericVector conjugate_arg,                 // Argument to conjugate
 			  Rcpp::NumericMatrix precision,                     // Precision matrix in conjugate optimization problem
 			  Rcpp::NumericVector feasible_point,                // Feasible point -- must be nonnegative
 			  int max_iter,                                      // How many iterations to run
@@ -144,11 +145,13 @@ Rcpp::List barrier_solve_(Rcpp::NumericVector conjugate_arg,                 // 
   Rcpp::NumericVector opt_proposed(ndim);
   Rcpp::NumericVector scaling(ndim);
 
-  double *scaling_ptr = precision.begin();
+  double *scaling_ptr = scaling.begin();
+  double *opt_ptr = opt_variable.begin();
 
   for (idim=0; idim<ndim; idim++) {
-    *scaling_ptr = precision(idim, idim);
-    scaling_ptr++;
+    fprintf(stderr, "precision %f\n", precision(idim, idim));
+    *scaling_ptr = precision(idim, idim); scaling_ptr++;
+    *opt_ptr = feasible_point(idim); opt_ptr++;
   }
 
   double value = barrier_solve((double *) gradient.begin(),                   // Gradient vector
@@ -163,5 +166,6 @@ Rcpp::List barrier_solve_(Rcpp::NumericVector conjugate_arg,                 // 
 			       initial_step);                                 // Initial stepsize 
 
   return(Rcpp::List::create(Rcpp::Named("soln") = opt_variable,
-			    Rcpp::Named("value") = value));
+			    Rcpp::Named("value") = value,
+			    Rcpp::Named("gradient") = gradient));
 }

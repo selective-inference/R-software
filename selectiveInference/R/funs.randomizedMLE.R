@@ -19,6 +19,10 @@ solve_UMVU = function(target_transform,
     P = opt_transform$linear_term; opt_offset = opt_transform$offset_term
     q = data_offset + opt_offset
 
+    print(c('D',D))
+    print(c('P',P))
+    print(c('q',q))
+
     nopt = ncol(P)
     ntarget = ncol(D)
     ntotal = nopt + ntarget
@@ -53,25 +57,42 @@ solve_UMVU = function(target_transform,
 
     M_1_inv = solve(M_1)
     offset_term = - M_1_inv %*% M_2 %*% conditioned_value
-    mle_transform = list(target_lin=M_1_inv, soln_lin=-M_1_inv.dot(L), offset=offset_term)
+    mle_transform = list(target_lin=M_1_inv, soln_lin=-M_1_inv %*% L, offset=offset_term)
 
     mle_map = function(target_observed, feasible_point=rep(1, length(target_observed))) {
         param_lin = natparam_transform$linear_term
 	param_offset = natparam_transform$offset_term
-        mle_target_lin = mle_transfrom$target_lin
+        mle_target_lin = mle_transform$target_lin
 	mle_soln_lin = mle_transform$soln_lin
 	mle_offset = mle_transform$offset
 
-        result = solve_barrier_(param_lin %*% target_observed + param_offset,
-                                conditional_precision,
-                                feasible_point,
+	conjugate_arg = as.vector(param_lin %*% target_observed + param_offset)
+	scaling = mean(diag(conditional_precision)) * 1.
+        print('conjugate')
+        print(conjugate_arg)
+	print('precision')
+	print(conditional_precision)
+	print('feasible')
+	print(feasible_point)
+
+        result = solve_barrier_(conjugate_arg * 1.,
+                                conditional_precision * 1.,
+                                feasible_point * 1.,
                                 nstep,
                                 tol,
-                                mean(diag(conditional_precision)))
+                                scaling)
 
-        return(list(soln=mle_target_lin %*% target_observed + mle_soln_lin %*% soln + mle_offset, 
-                    value=value))
+	print('value')
+	value = sum(-conjugate_arg * result$soln) + 0.5 * sum(result$soln * (conditional_precision %*% result$soln)) + log((result$soln + scaling) / result$soln)
+	print(value)
+
+        return(list(soln=as.vector(mle_target_lin %*% target_observed + mle_soln_lin %*% result$soln + mle_offset), 
+	            cond_exp=result$soln,
+                    value=result$value,
+		    gradient=result$gradient))
     }
     sel_MLE = mle_map(target_observed)
-    return(list(soln=sel_MLE$soln, value=sel_MLE$value, map=mle_map))
+    print("MLE")
+    print(sel_MLE)
+    return(list(soln=sel_MLE$soln, value=sel_MLE$value, map=mle_map, gradient=sel_MLE$gradient))
 }
