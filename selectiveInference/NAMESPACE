@@ -15,6 +15,7 @@ export(lar,fs,
        TG.limits, 
        TG.interval,
        debiasingMatrix,
+       randomizedLasso,
        randomizedLassoInf
     )
 
