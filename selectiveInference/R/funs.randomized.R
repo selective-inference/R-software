@@ -432,6 +432,10 @@ randomizedLassoInf = function(rand_lasso_soln,
       observed_internal =  c(observed_target, t(X_minusE) %*% (y - fitted(glm_y)))
       cov_target = vcov(glm_y)
 
+      if (sum(is.na(observed_target)) > 0) {
+          stop("unregularized (relaxed) fit has NA values -- X[,active_set] likely singular")
+      }
+
       targets = list(observed_target=observed_target,
                      cov_target=cov_target,
                      crosscov_target_internal=rbind(cov_target, matrix(0, nrow=p-nactive, ncol=nactive)))
