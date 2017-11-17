@@ -263,7 +263,6 @@ randomizedLasso = function(X,
         law = full_law
     }
 
-    print(active_set)
     return(list(X=X,
                 y=y,
                 lam=lam,
@@ -398,7 +397,7 @@ randomizedLassoInf = function(rand_lasso_soln,
                               targets=NULL,
                               condition_subgrad=TRUE, 
                               level=0.9,
-                              sampler=c("norejection", "adaptMCMC"),
+                              sampler=c("adaptMCMC", "norejection"),
                               nsample=10000,
                               burnin=2000)
  {
@@ -420,7 +419,7 @@ randomizedLassoInf = function(rand_lasso_soln,
   sampler = match.arg(sampler)
 
   law = rand_lasso_soln$law
-  if (condition_subgrad != soln$condition_subgrad) {
+  if (condition_subgrad != rand_lasso_soln$condition_subgrad) {
       stop("condition_subgrad does not agree with value when randomizedLasso was solved -- sampler not properly specified")
   } 
 
