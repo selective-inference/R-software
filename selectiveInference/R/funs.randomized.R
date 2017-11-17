@@ -138,7 +138,8 @@ randomizedLasso = function(X,
     }
     
     L_E = t(X_E) %*% W_E %*% X
-    coef_term = t(L_E)
+    L_E = t(L_E)
+    coef_term = L_E
 
     signs_ = c(rep(1, sum(unpenalized)), sign_soln[active])
     
@@ -395,7 +396,6 @@ conditional_opt_transform = function(noise_scale,
 
 randomizedLassoInf = function(rand_lasso_soln,
                               targets=NULL,
-                              condition_subgrad=TRUE, 
                               level=0.9,
                               sampler=c("adaptMCMC", "norejection"),
                               nsample=10000,
@@ -406,10 +406,11 @@ randomizedLassoInf = function(rand_lasso_soln,
   p = ncol(rand_lasso_soln$X)
   
   active_set = rand_lasso_soln$active_set
-  nactive = length(active_set)
+  unpenalized_set = rand_lasso_soln$unpenalized_set
+  nactive = length(c(active_set, unpenalized_set))
 
   if (nactive==0){
-    return (list(active_set=active_set, pvalues=c(), ci=c()))
+    return (list(active_set=active_set, unpenalized_set=unpenalized_set, pvalues=c(), ci=c()))
   }
   inactive_set = rand_lasso_soln$inactive_set
   noise_scale = rand_lasso_soln$noise_scale  # set to default value in randomizedLasso
@@ -419,9 +420,6 @@ randomizedLassoInf = function(rand_lasso_soln,
   sampler = match.arg(sampler)
 
   law = rand_lasso_soln$law
-  if (condition_subgrad != rand_lasso_soln$condition_subgrad) {
-      stop("condition_subgrad does not agree with value when randomizedLasso was solved -- sampler not properly specified")
-  } 
 
   if (sampler == "adaptMCMC"){
     S = sample_opt_variables(law, 
@@ -437,19 +435,24 @@ randomizedLassoInf = function(rand_lasso_soln,
     opt_sample = opt_samples[(burnin+1):nsample,]
   }
   
+  # compute internal representation of the data
+
+  X_E = rand_lasso_soln$X[, c(active_set, unpenalized_set), drop=FALSE]
+
+  y = rand_lasso_soln$y
+  X = rand_lasso_soln$X
+
+  if (rand_lasso_soln$family == 'gaussian') {
+     glm_y = glm(y ~ X_E-1)
+  } else if (rand_lasso_soln$family == 'binomial') {
+     glm_y = glm(y ~ X_E-1, family=binomial())
+  }
+
+  observed_internal =  c(as.vector(glm_y$coefficients), as.vector((y - fitted(glm_y)) %*% X)[inactive_set])
+
   if (is.null(targets)) {
 
-      X_E = rand_lasso_soln$X[, active_set, drop=FALSE]
-      X_minusE = rand_lasso_soln$X[, inactive_set, drop=FALSE]
-      y = rand_lasso_soln$y
-
-      if (rand_lasso_soln$family == 'gaussian') {
-         glm_y = glm(y ~ X_E-1)
-      } else if (rand_lasso_soln$family == 'binomial') {
-         glm_y = glm(y ~ X_E-1, family=binomial())
-      }
       observed_target = as.vector(glm_y$coefficients)
-      observed_internal =  c(observed_target, as.vector((y - fitted(glm_y)) %*% X)[inactive_set])
       cov_target = vcov(glm_y)
 
       if (sum(is.na(observed_target)) > 0) {
@@ -471,21 +474,29 @@ randomizedLassoInf = function(rand_lasso_soln,
   
   for (i in 1:nactive){
 
-    target_transform = linear_decomposition(targets$observed_target[i], 
-                                            observed_internal, 
-                                            targets$cov_target[i,i], 
-                                            targets$crosscov_target_internal[,i],
-                                            internal_transform)
+    pre_nuisance = observed_internal - (targets$crosscov_target_internal[,i] *
+                                        targets$observed_target[i] / 
+                                        targets$cov_target[i,i])
+
+    nuisance = internal_transform$linear_term %*% pre_nuisance[1:nactive] 
+    nuisance[inactive_set] = nuisance[inactive_set] + pre_nuisance[(nactive+1):p]
+
+    pre_linear_term = targets$crosscov_target_internal[,i] / targets$cov_target[i,i]
+    linear_term = rep(0, p)
+    linear_term = internal_transform$linear_term %*% pre_linear_term[1:nactive]
+    linear_term[inactive_set] = linear_term[inactive_set] + pre_linear_term[(nactive+1):p]
+    target_transform = list(linear_term=linear_term,
+                            offset_term=nuisance + internal_transform$offset_term) # internal_transform$offset_term is 0...
     
     # changing dimension of density evalutaion
 
-    if ((condition_subgrad == TRUE) & (nactive < p-1)) {
+    if ((rand_lasso_soln$condition_subgrad == TRUE) & (nactive < p-1)) {
 
         # A description of why we do this might help
 
         target_opt_linear = cbind(target_transform$linear_term, importance_transform$linear_term)
         reduced_target_opt_linear = chol(t(target_opt_linear) %*% target_opt_linear)
-        target_linear = reduced_target_opt_linear[,1]
+        target_linear = reduced_target_opt_linear[,1,drop=FALSE]
         temp = solve(t(reduced_target_opt_linear)) %*% t(target_opt_linear)
         target_offset = temp %*% target_transform$offset_term
         target_transform = list(linear_term = as.matrix(target_linear), offset_term = target_offset)
