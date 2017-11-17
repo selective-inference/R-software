@@ -13,7 +13,6 @@ randomization.
 \usage{
 randomizedLassoInf(rand_lasso_soln, 
 		   targets=NULL,
-                   condition_subgrad=TRUE, 
                    level=0.9,
                    sampler=c("adaptMCMC", "norejection"),
                    nsample=10000,
@@ -35,11 +34,6 @@ data of the LASSO. For both \code{"gaussian"} and \code{"binomial"}, this is the
   } 
 For example, this cross-covariance could be estimated by jointly bootstrapping the target 
 of interest and the above vector.
-}
-\item{condition_subgrad}{
-In forming selective confidence intervals and p-values should we condition
-on the inactive coordinates of the subgradient as well?
-Default is TRUE. 
 }
 \item{level}{
 Level for confidence intervals.

@@ -12,6 +12,7 @@ randomizedLasso(X,
                 y, 
                 lam, 
                 family=c("gaussian", "binomial"),
+		condition_subgrad=TRUE,
                 noise_scale=NULL, 
                 ridge_term=NULL, 
                 max_iter=100,       
@@ -43,6 +44,12 @@ Value of lambda used to compute beta. See the above warning
 } 
 \item{family}{
 Response type: "gaussian" (default), "binomial".
+}
+\item{condition_subgrad}{
+In forming selective confidence intervals and p-values should we condition
+on the inactive coordinates of the subgradient as well?
+Default is TRUE. This determines the form of \code{law} -- which
+is used for sampling later.
 }
 \item{noise_scale}{
 Scale of Gaussian noise added to objective. Default is 

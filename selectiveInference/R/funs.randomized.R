@@ -21,7 +21,8 @@ randomizedLasso = function(X,
     family = match.arg(family)
 
     n = nrow(X); p = ncol(X)
-    			
+    y = as.vector(y)
+
     mean_diag = mean(apply(X^2, 2, sum))
 
     # default ridge term
@@ -58,7 +59,7 @@ randomizedLasso = function(X,
     if (family=="gaussian"){
       soln = rep(0, p)
       Xsoln = rep(0, n)
-      linear_func = (- t(X) %*% y - perturb_) / n
+      linear_func = (- y %*% X - perturb_) / n
 
       gradient = 1. * linear_func
       ever_active = as.integer(rep(0, p))
