@@ -15,7 +15,7 @@ randomizedLassoInf(rand_lasso_soln,
 		   targets=NULL,
                    condition_subgrad=TRUE, 
                    level=0.9,
-                   sampler=c("norejection", "adaptMCMC"),
+                   sampler=c("adaptMCMC", "norejection"),
                    nsample=10000,
                    burnin=2000)
 }
