@@ -169,7 +169,7 @@ randomizedLasso = function(X,
     offset_term = rep(0, p)
     offset_term[active] = lam[active] * sign_soln[active]
 
-    # if conditional_subgrad == FALSE, linear_term will have E columns
+    # if conditional_subgrad == TRUE, linear_term will have E columns
     # otherwise it will have p columns
 
     opt_transform = list(linear_term=linear_term,
