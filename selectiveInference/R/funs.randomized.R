@@ -425,7 +425,7 @@ randomizedLassoInf = function(rand_lasso_soln,
 
   if (sampler == "adaptMCMC"){
     S = sample_opt_variables(law, 
-                             jump_scale=rep(1/sqrt(n), length(cur_law$observed_opt_state)), nsample=nsample)
+                             jump_scale=rep(1/sqrt(n), length(law$observed_opt_state)), nsample=nsample)
     opt_samples = as.matrix(S$samples[(burnin+1):nsample,,drop=FALSE])
   } else if (sampler == "norejection") {
     opt_samples = gaussian_sampler(noise_scale, 
@@ -462,7 +462,7 @@ randomizedLassoInf = function(rand_lasso_soln,
 
   } 
 
-  importance_transform = cur_law$importance_transform
+  importance_transform = law$importance_transform
   internal_transform=rand_lasso_soln$internal_transform
   observed_raw=rand_lasso_soln$observed_raw
 
