@@ -7,3 +7,8 @@
 **.o
 **.so
 forLater/josh/**
+*/R/RcppExports.R
+*/src/RcppExports.cpp
+*~
+*/*~
+*/*/*~
