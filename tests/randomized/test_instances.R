@@ -110,6 +110,7 @@ collect_results = function(n,p,s, nsim=100, level=0.9,
                                                      level=level, 
                                                      burnin=1000, 
                                                      nsample=5000)
+    print(result$active_set)
     if (length(result$active_set)>0){
       true_beta = data$beta[result$active_set]
       coverage = rep(0, nrow(result$ci))
