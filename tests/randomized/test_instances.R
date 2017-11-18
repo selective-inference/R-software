@@ -106,7 +106,7 @@ collect_results = function(n,p,s, nsim=100, level=0.9,
                                                            family=family)
 
     result = selectiveInference:::randomizedLassoInf(rand_lasso_soln,
-                                                     sampler = "adaptMCMC", #"norejection", #
+                                                     sampler = "norejection", #"adaptMCMC", #
                                                      level=level, 
                                                      burnin=1000, 
                                                      nsample=5000)
@@ -134,5 +134,5 @@ collect_results = function(n,p,s, nsim=100, level=0.9,
 }
 
 set.seed(1)
-collect_results(n=500, p=200, s=0, lam=1.)
+collect_results(n=100, p=20, s=0, lam=1.)
 
