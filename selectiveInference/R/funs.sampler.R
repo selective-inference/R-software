@@ -4,7 +4,8 @@ log_concave_sampler = function(negative_log_density,
                                grad_negative_log_density, 
                                constraints,
                                observed,
-                               nsamples){
+                               nsamples,
+			       burnin){
   #print(constraints)
   constraints = as.matrix(constraints)
   dim = nrow(constraints)
@@ -65,11 +66,13 @@ log_concave_sampler = function(negative_log_density,
   }
   
   state = list(pos=observed, velocity = update_velocity())
-  samples = matrix(0, nrow = nsamples, ncol = dim)
+  samples = matrix(0, nrow = nsamples - burnin, ncol = dim)
   for (i in 1:nsamples){
     #print(paste("pos", toString(state$pos)))
     #print(paste("velocity", toString(state$velocity)))
-    samples[i,]=state$pos
+    if (i > burnin) {
+        samples[i - burnin,]=state$pos
+    }
     state = compute_next(state)
   }
   return (samples)
@@ -80,7 +83,8 @@ gaussian_sampler = function(noise_scale,
                             linear_term, 
                             offset_term, 
                             constraints,
-                            nsamples){
+                            nsamples=10000,
+			    burnin=2000){
   
   negative_log_density = function(x) {
     recon = linear_term %*% x+offset_term
@@ -95,5 +99,6 @@ gaussian_sampler = function(noise_scale,
                              grad_negative_log_density,
                              constraints,
                              observed,
-                             nsamples))
+                             nsamples,
+			     burnin))
 }
