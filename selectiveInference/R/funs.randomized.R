@@ -7,7 +7,7 @@ randomizedLasso = function(X,
                            y, 
                            lam, 
                            family=c("gaussian","binomial"),
-			   condition_subgrad=TRUE,
+			                     condition_subgrad=TRUE,
                            noise_scale=NULL, 
                            ridge_term=NULL, 
                            max_iter=100,        # how many iterations for each optimization problem
@@ -480,12 +480,12 @@ randomizedLassoInf = function(rand_lasso_soln,
                                         targets$cov_target[i,i])
 
     nuisance = internal_transform$linear_term %*% pre_nuisance[1:nactive] 
-    nuisance[inactive_set] = nuisance[inactive_set] + pre_nuisance[(nactive+1):p]
+    nuisance[inactive_set] = nuisance[inactive_set] - pre_nuisance[(nactive+1):p]
 
     pre_linear_term = targets$crosscov_target_internal[,i] / targets$cov_target[i,i]
     linear_term = rep(0, p)
     linear_term = internal_transform$linear_term %*% pre_linear_term[1:nactive]
-    linear_term[inactive_set] = linear_term[inactive_set] + pre_linear_term[(nactive+1):p]
+    linear_term[inactive_set] = linear_term[inactive_set] - pre_linear_term[(nactive+1):p]
     target_transform = list(linear_term=linear_term,
                             offset_term=nuisance + internal_transform$offset_term) # internal_transform$offset_term is 0...
     
