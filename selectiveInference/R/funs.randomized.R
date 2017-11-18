@@ -398,7 +398,7 @@ conditional_opt_transform = function(noise_scale,
 randomizedLassoInf = function(rand_lasso_soln,
                               targets=NULL,
                               level=0.9,
-                              sampler=c("adaptMCMC", "norejection"),
+                              sampler=c("norejection"),
                               nsample=10000,
                               burnin=2000)
  {
@@ -460,6 +460,12 @@ randomizedLassoInf = function(rand_lasso_soln,
           stop("unregularized (relaxed) fit has NA values -- X[,active_set] likely singular")
       }
 
+      if (!is.null(colnames(X))) {
+            names(observed_target) = colnames(X)[rand_lasso_soln$active_set]
+      } else {
+            names(observed_target) = rand_lasso_soln$active_set
+      }
+
       targets = list(observed_target=observed_target,
                      cov_target=cov_target,
                      crosscov_target_internal=rbind(cov_target, matrix(0, nrow=p-nactive, ncol=nactive)))
@@ -473,6 +479,9 @@ randomizedLassoInf = function(rand_lasso_soln,
   pvalues = rep(0, nactive)
   ci = matrix(0, nactive, 2)
   
+  names(pvalues) = names(targets$observed_target)
+  rownames(ci) = names(targets$observed_target)
+
   for (i in 1:nactive){
 
     pre_nuisance = observed_internal - (targets$crosscov_target_internal[,i] *
