@@ -432,7 +432,8 @@ randomizedLassoInf = function(rand_lasso_soln,
                                    law$sampling_transform$linear_term,
                                    law$sampling_transform$offset_term,
                                    law$constraints,
-                                   nsamples=nsample)
+                                   nsamples=nsample,
+				   burnin=burnin)
     opt_sample = opt_samples[(burnin+1):nsample,]
   }
   
