@@ -427,14 +427,13 @@ randomizedLassoInf = function(rand_lasso_soln,
                              jump_scale=rep(1/sqrt(n), length(law$observed_opt_state)), nsample=nsample)
     opt_samples = as.matrix(S$samples[(burnin+1):nsample,,drop=FALSE])
   } else if (sampler == "norejection") {
-    opt_samples = gaussian_sampler(noise_scale, 
-                                   law$observed_opt_state, 
-                                   law$sampling_transform$linear_term,
-                                   law$sampling_transform$offset_term,
-                                   law$constraints,
-                                   nsamples=nsample,
-				   burnin=burnin)
-    opt_sample = opt_samples[(burnin+1):nsample,]
+    opt_sample = gaussian_sampler(noise_scale, 
+                                  law$observed_opt_state, 
+                                  law$sampling_transform$linear_term,
+                                  law$sampling_transform$offset_term,
+                                  law$constraints,
+                                  nsamples=nsample,
+		                  burnin=burnin)
   }
   
   # compute internal representation of the data
