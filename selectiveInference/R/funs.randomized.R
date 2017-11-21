@@ -500,24 +500,27 @@ randomizedLassoInf = function(rand_lasso_soln,
     
     # changing dimension of density evalutaion
 
-    if ((rand_lasso_soln$condition_subgrad == TRUE) & (nactive < p-1)) {
+#     if ((rand_lasso_soln$condition_subgrad == TRUE) & (nactive < p-1)) {
 
-        # A description of why we do this might help
+#         # A description of why we do this might help
 
-        target_opt_linear = cbind(target_transform$linear_term, importance_transform$linear_term)
-        reduced_target_opt_linear = chol(t(target_opt_linear) %*% target_opt_linear)
-        target_linear = reduced_target_opt_linear[,1,drop=FALSE]
-        temp = solve(t(reduced_target_opt_linear)) %*% t(target_opt_linear)
-        target_offset = temp %*% target_transform$offset_term
-        target_transform = list(linear_term = as.matrix(target_linear), offset_term = target_offset)
-        cur_linear = reduced_target_opt_linear[,2:ncol(reduced_target_opt_linear)]
-        cur_offset = temp %*% importance_transform$offset_term
-        cur_transform = list(linear_term = as.matrix(cur_linear), offset_term = cur_offset)
-        raw = target_transform$linear_term * targets$observed_target[i] + target_transform$offset_term
-    } else {
-        cur_transform = importance_transform
-        raw = observed_raw
-    }   
+#         target_opt_linear = cbind(target_transform$linear_term, importance_transform$linear_term)
+#         reduced_target_opt_linear = chol(t(target_opt_linear) %*% target_opt_linear)
+#         target_linear = reduced_target_opt_linear[,1,drop=FALSE]
+#         temp = solve(t(reduced_target_opt_linear)) %*% t(target_opt_linear)
+#         target_offset = temp %*% target_transform$offset_term
+#         target_transform = list(linear_term = as.matrix(target_linear), offset_term = target_offset)
+#         cur_linear = reduced_target_opt_linear[,2:ncol(reduced_target_opt_linear)]
+#         cur_offset = temp %*% importance_transform$offset_term
+#         cur_transform = list(linear_term = as.matrix(cur_linear), offset_term = cur_offset)
+#         raw = target_transform$linear_term * targets$observed_target[i] + target_transform$offset_term
+#     } else {
+#         cur_transform = importance_transform
+#         raw = observed_raw
+#     }   
+
+    cur_transform = importance_transform
+    raw = observed_raw
 
     target_sample = rnorm(nrow(as.matrix(opt_samples))) * sqrt(targets$cov_target[i,i])
 
@@ -546,13 +549,15 @@ randomizedLassoInf = function(rand_lasso_soln,
                                           cur_transform,
                                           target_transform,
                                           raw)
+    log_reference_measure = log(reference_measure)
 
     pivot = function(candidate){
-
-      weights = reference_measure * exp(candidate * sufficient_statistic)
-      weights = weights / max(weights)
+      # instead of uniroot -- maybe use newton?
+      exp_arg = candidate * sufficient_statistic + log_reference_measure
+      exp_arg = exp_arg - max(exp_arg)
+      weights = exp(exp_arg)
+      #weights = pmax(pmin(weights, 1e50), 1e-50)
       return(mean((target_sample + candidate < targets$observed_target[i]) * weights)/mean(weights))
-
     }
 
     rootU = function(candidate){
