@@ -427,15 +427,15 @@ randomizedLassoInf = function(rand_lasso_soln,
                              jump_scale=rep(1/sqrt(n), length(law$observed_opt_state)), nsample=nsample)
     opt_samples = as.matrix(S$samples[(burnin+1):nsample,,drop=FALSE])
   } else if (sampler == "norejection") {
-    opt_sample = gaussian_sampler(noise_scale, 
-                                  law$observed_opt_state, 
-                                  law$sampling_transform$linear_term,
-                                  law$sampling_transform$offset_term,
-                                  law$constraints,
-                                  nsamples=nsample,
-		                  burnin=burnin)
+    opt_samples = gaussian_sampler(noise_scale, 
+                                   law$observed_opt_state, 
+                                   law$sampling_transform$linear_term,
+                                   law$sampling_transform$offset_term,
+                                   law$constraints,
+                                   nsamples=nsample,
+		                   burnin=burnin)
   }
-  
+
   # compute internal representation of the data
 
   X_E = rand_lasso_soln$X[, c(active_set, unpenalized_set), drop=FALSE]
@@ -521,14 +521,36 @@ randomizedLassoInf = function(rand_lasso_soln,
 
     target_sample = rnorm(nrow(as.matrix(opt_samples))) * sqrt(targets$cov_target[i,i])
 
+    # weight in the numerator is of the form
+    # -1/(2 noise_scale^2)\|Do + q + P(t+\theta)\|^2_2 
+    # with D=importance_transform$linear_term
+    #      q=target_transform$offset_term + cur_transform$offset_term
+    #      P=target_transform$linear_term
+
+    # weight in the denominator is of the form
+    # -1/(2 noise_scale^2)\|Do + q_D\|^2_2  
+    # with D=importance_transform$linear_term
+    #      q_D = observed_raw + cur_transform$offset_term
+
+    # reference measure just is the ratio at \theta=0
+    # sufficient statistic is linear term in \theta
+
+    sufficient_statistic = - cur_transform$linear_term %*% t(opt_samples)
+    sufficient_statistic = apply(sufficient_statistic, 2,
+                                 function(x) {return(x - target_transform$offset_term - cur_transform$offset_term)})
+    sufficient_statistic = t(target_transform$linear_term) %*% sufficient_statistic / noise_scale^2
+
+    reference_measure = importance_weight(noise_scale,
+                                          t(as.matrix(target_sample)),
+                                          t(opt_samples),
+                                          cur_transform,
+                                          target_transform,
+                                          raw)
+
     pivot = function(candidate){
 
-      weights = importance_weight(noise_scale,
-                                  t(as.matrix(target_sample) + candidate),
-                                  t(opt_samples),
-                                  cur_transform,
-                                  target_transform,
-                                  raw)
+      weights = reference_measure * exp(candidate * sufficient_statistic)
+      weights = weights / max(weights)
       return(mean((target_sample + candidate < targets$observed_target[i]) * weights)/mean(weights))
 
     }
