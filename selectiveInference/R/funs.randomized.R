@@ -548,26 +548,11 @@ randomizedLassoInf = function(rand_lasso_soln,
                                           raw)
     log_reference_measure = log(reference_measure)
 
-    alt_measure = importance_weight(noise_scale,
-                                    t(as.matrix(target_sample) + 0.1 * sqrt(targets$cov_target[i,i])),
-                                    t(opt_samples),
-                                    cur_transform,
-                                    target_transform,
-                                    raw)
-    sufficient_statistic2 = (log(alt_measure) - log_reference_measure) / (0.1 * sqrt(targets$cov_target[i,i]))
-    sufficient_statistic = as.vector(sufficient_statistic)
-    sufficient_statistic2 = as.vector(sufficient_statistic2)
-    print(dim(as.vector(sufficient_statistic)))
-    print(dim(as.vector(sufficient_statistic2)))
-    print(max(sufficient_statistic - sufficient_statistic2))
-    print(cor(sufficient_statistic, sufficient_statistic2))
-
     pivot = function(candidate){
       # instead of uniroot -- maybe use newton?
       exp_arg = candidate * sufficient_statistic + log_reference_measure
       exp_arg = exp_arg - max(exp_arg)
       weights = exp(exp_arg)
-      #weights = pmax(pmin(weights, 1e50), 1e-50)
       return(mean((target_sample + candidate < targets$observed_target[i]) * weights)/mean(weights))
     }
 
