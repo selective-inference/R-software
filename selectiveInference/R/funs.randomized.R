@@ -535,24 +535,27 @@ randomizedLassoInf = function(rand_lasso_soln,
     # reference measure just is the ratio at \theta=0
     # sufficient statistic is linear term in \theta
 
-    sufficient_statistic = - cur_transform$linear_term %*% t(opt_samples)
-    sufficient_statistic = apply(sufficient_statistic, 2,
-                                 function(x) {return(x - target_transform$offset_term - cur_transform$offset_term)})
-    sufficient_statistic = t(target_transform$linear_term) %*% sufficient_statistic / noise_scale^2
-
     reference_measure = importance_weight(noise_scale,
                                           t(as.matrix(target_sample)),
                                           t(opt_samples),
                                           cur_transform,
                                           target_transform,
                                           raw)
+
+    alternative_measure = importance_weight(noise_scale,
+                                            t(as.matrix(target_sample) + 0.1 * sqrt(targets$cov_target[i,i])),
+                                            t(opt_samples),
+                                            cur_transform,
+                                            target_transform,
+                                            raw)
+
     log_reference_measure = log(reference_measure)
+    sufficient_stat = (log(alternative_measure) - log_reference_measure) / (0.1 * sqrt(targets$cov_target[i,i]))
 
     pivot = function(candidate){
-      # instead of uniroot -- maybe use newton?
-      exp_arg = candidate * sufficient_statistic + log_reference_measure
-      exp_arg = exp_arg - max(exp_arg)
-      weights = exp(exp_arg)
+      arg_ = candidate * sufficient_stat + log_reference_measure
+      arg_ = arg_ - max(arg_)
+      weights = exp(arg_)
       return(mean((target_sample + candidate < targets$observed_target[i]) * weights)/mean(weights))
     }
 
