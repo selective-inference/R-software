@@ -529,25 +529,25 @@ randomizedLassoInf = function(rand_lasso_soln,
             importance_transform$offset_term +
             target_transform$offset_term)
 
-    suff_stat2 = -apply(num2^2 - num1^2, 2, sum) / (2 * noise_scale^2)
-    suff_stat2 = suff_stat2
-	       
+    sufficient_stat = -apply(num2^2 - num1^2, 2, sum) / (2 * noise_scale^2)
+
     reference_measure = importance_weight(noise_scale,
                                           t(as.matrix(target_sample)),
                                           t(opt_samples),
                                           importance_transform,
                                           target_transform,
                                           observed_raw)
+    log_reference_measure = log(reference_measure)	       
 
-    alternative_measure = importance_weight(noise_scale,
-                                            t(as.matrix(target_sample) + 0.1 * sqrt(targets$cov_target[i,i])),
-                                            t(opt_samples),
-                                            importance_transform,
-                                            target_transform,
-                                            observed_raw)
+#     alternative_measure = importance_weight(noise_scale,
+#                                             t(as.matrix(target_sample) + 0.1 * sqrt(targets$cov_target[i,i])),
+#                                             t(opt_samples),
+#                                             importance_transform,
+#                                             target_transform,
+#                                             observed_raw)
 
-    log_reference_measure = log(reference_measure)
-    sufficient_stat = (log(alternative_measure) - log_reference_measure) / (0.1 * sqrt(targets$cov_target[i,i]))
+
+#     sufficient_stat = (log(alternative_measure) - log_reference_measure) / (0.1 * sqrt(targets$cov_target[i,i]))
 
     pivot = function(candidate){
       arg_ = candidate * sufficient_stat + log_reference_measure
