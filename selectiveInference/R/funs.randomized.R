@@ -549,9 +549,6 @@ randomizedLassoInf = function(rand_lasso_soln,
     log_reference_measure = log(reference_measure)
     sufficient_stat = (log(alternative_measure) - log_reference_measure) / (0.1 * sqrt(targets$cov_target[i,i]))
 
-    print(cor(as.vector(suff_stat2), as.vector(sufficient_stat)))
-    print(summary(lm(as.vector(suff_stat2) ~ as.vector(sufficient_stat))))
-
     pivot = function(candidate){
       arg_ = candidate * sufficient_stat + log_reference_measure
       arg_ = arg_ - max(arg_)
@@ -571,12 +568,6 @@ randomizedLassoInf = function(rand_lasso_soln,
     line_min = -10*sd(target_sample) + targets$observed_target[i]
     line_max = 10*sd(target_sample) + targets$observed_target[i]
 
-    print(min(log_reference_measure))
-    print(max(log_reference_measure))
-    print(min(sufficient_stat))
-    print(max(sufficient_stat))
-    print(rootU(line_min))
-    print(rootU(line_max))
     if (rootU(line_min)*rootU(line_max)<0){
       ci[i,2] = uniroot(rootU, c(line_min, line_max))$root + targets$observed_target[i]
     } else{
