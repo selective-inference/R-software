@@ -338,7 +338,9 @@ importance_weight = function(noise_scale,
 
     W = log_num - log_den
     W = W - max(W)
-    return(exp(W))
+    W = exp(W)
+    W = W / sum(W)
+    return(W)
 }
 
 get_mean_cov = function(noise_scale, linear_term, offset_term){
@@ -398,7 +400,7 @@ conditional_opt_transform = function(noise_scale,
 randomizedLassoInf = function(rand_lasso_soln,
                               targets=NULL,
                               level=0.9,
-                              sampler=c("norejection"),
+                              sampler=c("norejection", "adaptMCMC"),
                               nsample=10000,
                               burnin=2000)
  {
@@ -496,7 +498,7 @@ randomizedLassoInf = function(rand_lasso_soln,
     linear_term = internal_transform$linear_term %*% pre_linear_term[1:nactive]
     linear_term[inactive_set] = linear_term[inactive_set] - pre_linear_term[(nactive+1):p]
     target_transform = list(linear_term=linear_term,
-                            offset_term=nuisance + internal_transform$offset_term) # internal_transform$offset_term is 0...
+                            offset_term=as.vector(nuisance + internal_transform$offset_term)) # internal_transform$offset_term is 0...
     
     # compute sufficient statistic for root finding
 
@@ -505,17 +507,31 @@ randomizedLassoInf = function(rand_lasso_soln,
     # weight in the numerator is of the form
     # -1/(2 noise_scale^2)\|Do + q + P(t+\theta)\|^2_2 
     # with D=importance_transform$linear_term
-    #      q=target_transform$offset_term + cur_transform$offset_term
+    #      q=target_transform$offset_term + importance_transform$offset_term
     #      P=target_transform$linear_term
 
     # weight in the denominator is of the form
     # -1/(2 noise_scale^2)\|Do + q_D\|^2_2  
     # with D=importance_transform$linear_term
-    #      q_D = observed_raw + cur_transform$offset_term
+    #      q_D = observed_raw + importance_transform$offset_term
 
     # reference measure just is the ratio at \theta=0
     # sufficient statistic is linear term in \theta
 
+    den = importance_transform$linear_term %*% t(opt_samples) + observed_raw + importance_transform$offset_term
+
+    num1 = (importance_transform$linear_term %*% t(opt_samples) + 
+            target_transform$linear_term %*% t(as.matrix(target_sample)) + 
+            importance_transform$offset_term +
+            target_transform$offset_term)
+    num2 = (importance_transform$linear_term %*% t(opt_samples) + 
+            target_transform$linear_term %*% t(as.matrix(target_sample) + 1) +
+            importance_transform$offset_term +
+            target_transform$offset_term)
+
+    suff_stat2 = -apply(num2^2 - num1^2, 2, sum) / (2 * noise_scale^2)
+    suff_stat2 = suff_stat2
+	       
     reference_measure = importance_weight(noise_scale,
                                           t(as.matrix(target_sample)),
                                           t(opt_samples),
@@ -533,6 +549,9 @@ randomizedLassoInf = function(rand_lasso_soln,
     log_reference_measure = log(reference_measure)
     sufficient_stat = (log(alternative_measure) - log_reference_measure) / (0.1 * sqrt(targets$cov_target[i,i]))
 
+    print(cor(as.vector(suff_stat2), as.vector(sufficient_stat)))
+    print(summary(lm(as.vector(suff_stat2) ~ as.vector(sufficient_stat))))
+
     pivot = function(candidate){
       arg_ = candidate * sufficient_stat + log_reference_measure
       arg_ = arg_ - max(arg_)
@@ -549,9 +568,15 @@ randomizedLassoInf = function(rand_lasso_soln,
     }
 
     pvalues[i] = pivot(0)
-    line_min = -10*sd(target_sample)
-    line_max = 10*sd(target_sample)
+    line_min = -10*sd(target_sample) + targets$observed_target[i]
+    line_max = 10*sd(target_sample) + targets$observed_target[i]
 
+    print(min(log_reference_measure))
+    print(max(log_reference_measure))
+    print(min(sufficient_stat))
+    print(max(sufficient_stat))
+    print(rootU(line_min))
+    print(rootU(line_max))
     if (rootU(line_min)*rootU(line_max)<0){
       ci[i,2] = uniroot(rootU, c(line_min, line_max))$root + targets$observed_target[i]
     } else{
