@@ -268,7 +268,7 @@ randomizedLasso = function(X,
     return(list(X=X,
                 y=y,
                 lam=lam,
-		family=family,
+		            family=family,
                 active_set=active_set,
                 inactive_set=inactive_set,
                 unpenalized_set=unpenalized_set,
@@ -397,8 +397,105 @@ conditional_opt_transform = function(noise_scale,
 	      importance_transform=opt_transform))
 }
 
+set.target.and.internal = function(rand_lasso_soln, type){
+  
+  # compute internal representation of the data
+  y = rand_lasso_soln$y
+  X = rand_lasso_soln$X
+  p=ncol(X); n=nrow(X);
+  active_set = rand_lasso_soln$active_set
+  unpenalized_set = rand_lasso_soln$unpenalized_set
+  nactive = length(c(active_set, unpenalized_set))
+  inactive_set = rand_lasso_soln$inactive_set
+  
+  X_E = rand_lasso_soln$X[, c(active_set, unpenalized_set), drop=FALSE]
+  
+  if (rand_lasso_soln$family == 'gaussian') {
+    glm_y = glm(y ~ X_E-1)
+  } else if (rand_lasso_soln$family == 'binomial') {
+    glm_y = glm(y ~ X_E-1, family=binomial())
+  }
+  
+  observed_internal =  c(as.vector(glm_y$coefficients), as.vector((y - fitted(glm_y)) %*% X)[inactive_set])
+  
+  if (type=="partial"){
+    
+    observed_target = as.vector(glm_y$coefficients)
+    cov_target = vcov(glm_y)
+    
+    if (sum(is.na(observed_target)) > 0) {
+      stop("unregularized (relaxed) fit has NA values -- X[,active_set] likely singular")
+    }
+    
+    crosscov_target_internal=rbind(cov_target, matrix(0, nrow=p-nactive, ncol=nactive))
+  } 
+  
+  if (type=="full"){
+    
+    lasso.est = rand_lasso_soln$soln
+    X_active = X[, active_set]
+    X_inactive = X[, inactive_set]
+    
+    if (n<p){
+  
+      Xordered = X[,c(active_set,inactive_set,recursive=T)]
+      hsigmaS = 1/n*(t(X_active)%*%X_active) # hsigma[S,S]
+      hsigmaSinv = solve(hsigmaS) # pinv(hsigmaS)
+      FS = rbind(diag(nactive),matrix(0,p-nactive,nactive))
+      GS = cbind(diag(nactive),matrix(0,nactive,p-nactive))
+      hsigma = 1/n*(t(Xordered)%*%Xordered)
+      is_wide = n < (2 * p)
+      
+      if (!is_wide) {
+        hsigma = 1/n*(t(Xordered)%*%Xordered)
+        htheta = selectiveInference:::debiasingMatrix(hsigma, is_wide, n, 1:nactive)
+        ithetasigma = (GS-(htheta%*%hsigma))
+      } else {
+        htheta = selectiveInference:::debiasingMatrix(Xordered, is_wide, n, 1:nactive)
+        ithetasigma = (GS-((htheta%*%t(Xordered)) %*% Xordered)/n)
+      }
+      
+      M_active <- ((htheta%*%t(Xordered))+ithetasigma%*%FS%*%hsigmaSinv%*%t(X_active))/n
+      M_inactive  =  (htheta[, (nactive+1):p]%*%t(X[,inactive_set])/n)
+                       #+ithetasigma_inactive%*%FS%*%hsigmaSinv%*%t(X_active))/n)
+    }
+    else{
+      pseudo_invX = pinv(crossprod(X))
+      M_active = pseudo_invX[active_set,] %*% t(X)
+      M_inactive = (pseudo_invX[,inactive_set] %*% t(X_inactive))[active_set,]
+    }
+    #print(c("M_active size", dim(M_active)))
+    #print(c("M_inactive size", dim(M_inactive)))
+    #print(M_inactive[,1:10])
+    #pseudo_invX = pinv(crossprod(X))
+    #M_inactive = (pseudo_invX[,inactive_set] %*% t(X_inactive))[active_set,]
+    #print(M_inactive[,1:10])
+    
+    print(c("M_active size", dim(M_active)))
+    print(c("M_inactive size", dim(M_inactive)))
+    residuals = y-X%*%lasso.est
+    scalar = 1 #sqrt(n)
+    observed_target = lasso.est[active_set]+scalar*M_active %*% residuals
+    cov_target = vcov(glm_y) + scalar^2*M_inactive %*% t(M_inactive)
+    crosscov_target_internal = rbind(vcov(glm_y), scalar*t(M_inactive))
+    print(c("dim",dim(crosscov_target_internal)))
+  }
+  
+  if (!is.null(colnames(X))) {
+    names(observed_target) = colnames(X)[active_set]
+  } else {
+    names(observed_target) = active_set
+  }
+  
+  targets = list(observed_target=observed_target,
+                 cov_target=cov_target,
+                 crosscov_target_internal=crosscov_target_internal)
+  return(list(targets=targets, observed_internal=observed_internal))
+}
+
+
 randomizedLassoInf = function(rand_lasso_soln,
-                              targets=NULL,
+                              type="partial",
                               level=0.9,
                               sampler=c("norejection", "adaptMCMC"),
                               nsample=10000,
@@ -435,45 +532,13 @@ randomizedLassoInf = function(rand_lasso_soln,
                                    law$sampling_transform$offset_term,
                                    law$constraints,
                                    nsamples=nsample,
-		                   burnin=burnin)
+		                               burnin=burnin)
   }
 
-  # compute internal representation of the data
-
-  X_E = rand_lasso_soln$X[, c(active_set, unpenalized_set), drop=FALSE]
-
-  y = rand_lasso_soln$y
-  X = rand_lasso_soln$X
-
-  if (rand_lasso_soln$family == 'gaussian') {
-     glm_y = glm(y ~ X_E-1)
-  } else if (rand_lasso_soln$family == 'binomial') {
-     glm_y = glm(y ~ X_E-1, family=binomial())
-  }
-
-  observed_internal =  c(as.vector(glm_y$coefficients), as.vector((y - fitted(glm_y)) %*% X)[inactive_set])
-
-  if (is.null(targets)) {
-
-      observed_target = as.vector(glm_y$coefficients)
-      cov_target = vcov(glm_y)
-
-      if (sum(is.na(observed_target)) > 0) {
-          stop("unregularized (relaxed) fit has NA values -- X[,active_set] likely singular")
-      }
-
-      if (!is.null(colnames(X))) {
-            names(observed_target) = colnames(X)[rand_lasso_soln$active_set]
-      } else {
-            names(observed_target) = rand_lasso_soln$active_set
-      }
-
-      targets = list(observed_target=observed_target,
-                     cov_target=cov_target,
-                     crosscov_target_internal=rbind(cov_target, matrix(0, nrow=p-nactive, ncol=nactive)))
-
-  } 
-
+  targets.and.internal = set.target.and.internal(rand_lasso_soln, type)
+  targets = targets.and.internal$targets
+  observed_internal = targets.and.internal$observed_internal
+  
   importance_transform = law$importance_transform
   internal_transform=rand_lasso_soln$internal_transform
   observed_raw=rand_lasso_soln$observed_raw
