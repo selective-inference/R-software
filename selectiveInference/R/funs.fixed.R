@@ -318,20 +318,20 @@ debiasingMatrix = function(Xinfo,               # could be X or t(X) %*% X / n d
                            is_wide,
                            nsample, 
                            rows, 
- 		           verbose=FALSE, 
-		           bound=NULL,             # starting value of bound
-   			   linesearch=TRUE,     # do a linesearch?
-   		           scaling_factor=1.5,  # multiplicative factor for linesearch
-			   max_active=NULL,     # how big can active set get?
-			   max_try=10,          # how many steps in linesearch?
-			   warn_kkt=FALSE,      # warn if KKT does not seem to be satisfied?
-			   max_iter=50,         # how many iterations for each optimization problem
+ 		                       verbose=FALSE, 
+		                       bound=NULL,             # starting value of bound
+   			                   linesearch=TRUE,     # do a linesearch?
+   		                     scaling_factor=1.5,  # multiplicative factor for linesearch
+			                     max_active=NULL,     # how big can active set get?
+			                     max_try=10,          # how many steps in linesearch?
+			                     warn_kkt=FALSE,      # warn if KKT does not seem to be satisfied?
+			                     max_iter=50,         # how many iterations for each optimization problem
                            kkt_stop=TRUE,       # stop based on KKT conditions?
                            parameter_stop=TRUE, # stop based on relative convergence of parameter?
-			   objective_stop=TRUE, # stop based on relative decrease in objective?
+			                     objective_stop=TRUE, # stop based on relative decrease in objective?
                            kkt_tol=1.e-4,       # tolerance for the KKT conditions
                            parameter_tol=1.e-4, # tolerance for relative convergence of parameter
-			   objective_tol=1.e-4  # tolerance for relative decrease in objective
+			                     objective_tol=1.e-4  # tolerance for relative decrease in objective
                            ) {
 
 
