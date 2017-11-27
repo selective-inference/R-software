@@ -136,7 +136,11 @@ randomizedLasso = function(X,
       W_E = diag(pi_vec*(1-pi_vec))
     } else if (family=="gaussian"){
       W_E = diag(rep(1,n))
+      unpen_reg = glm(y ~ X_E-1)
     }
+    
+    observed_internal =  c(as.vector(unpen_reg$coefficients), as.vector((y - fitted(unpen_reg)) %*% X)[inactive_set])
+    
     
     L_E = t(X_E) %*% W_E %*% X
     L_E = t(L_E)
@@ -275,6 +279,7 @@ randomizedLasso = function(X,
                 sign_soln=sign_soln,
                 law=law,
                 internal_transform=internal_transform,
+		            observed_internal=observed_internal,
                 observed_raw=observed_raw,
                 noise_scale=noise_scale,
                 soln=result$soln,
@@ -397,7 +402,7 @@ conditional_opt_transform = function(noise_scale,
 	      importance_transform=opt_transform))
 }
 
-set.target.and.internal = function(rand_lasso_soln, type){
+set.target = function(rand_lasso_soln, type){
   
   # compute internal representation of the data
   y = rand_lasso_soln$y
@@ -415,8 +420,6 @@ set.target.and.internal = function(rand_lasso_soln, type){
   } else if (rand_lasso_soln$family == 'binomial') {
     glm_y = glm(y ~ X_E-1, family=binomial())
   }
-  
-  observed_internal =  c(as.vector(glm_y$coefficients), as.vector((y - fitted(glm_y)) %*% X)[inactive_set])
   
   if (type=="partial"){
     
@@ -490,12 +493,12 @@ set.target.and.internal = function(rand_lasso_soln, type){
   targets = list(observed_target=observed_target,
                  cov_target=cov_target,
                  crosscov_target_internal=crosscov_target_internal)
-  return(list(targets=targets, observed_internal=observed_internal))
+  return(targets)
 }
 
 
 randomizedLassoInf = function(rand_lasso_soln,
-                              type="partial",
+                              targets=NULL,
                               level=0.9,
                               sampler=c("norejection", "adaptMCMC"),
                               nsample=10000,
@@ -535,9 +538,11 @@ randomizedLassoInf = function(rand_lasso_soln,
 		                               burnin=burnin)
   }
 
-  targets.and.internal = set.target.and.internal(rand_lasso_soln, type)
-  targets = targets.and.internal$targets
-  observed_internal = targets.and.internal$observed_internal
+  if (is.null(targets)){
+    targets=set.target(rand_lasso_soln, type="partial")
+  }
+  
+  observed_internal = rand_lasso_soln$observed_internal
   
   importance_transform = law$importance_transform
   internal_transform=rand_lasso_soln$internal_transform
