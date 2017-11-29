@@ -623,7 +623,8 @@ randomizedLassoInf = function(rand_lasso_soln,
       arg_ = candidate * sufficient_stat + log_reference_measure
       arg_ = arg_ - max(arg_)
       weights = exp(arg_)
-      return(mean((target_sample + candidate < targets$observed_target[i]) * weights)/mean(weights))
+      p = mean((target_sample + candidate < targets$observed_target[i]) * weights)/mean(weights)
+      return(2*min(p, 1-p))
     }
 
     rootU = function(candidate){
