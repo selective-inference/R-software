@@ -113,6 +113,7 @@ randomizedLasso = function(X,
     observed_unpen = result$soln[unpenalized]
     observed_subgrad = -n*result$gradient[inactive]
     
+    print(c("nactive", length(active_set)))
     if (sum(abs(observed_subgrad)>lam[inactive]*(1.001)) > 0){
       stop("subgradient eq not satisfied")
     }
@@ -457,10 +458,10 @@ set.target = function(rand_lasso_soln, type){
         htheta = selectiveInference:::debiasingMatrix(Xordered, is_wide, n, 1:nactive)
         ithetasigma = (GS-((htheta%*%t(Xordered)) %*% Xordered)/n)
       }
-      
       M_active <- ((htheta%*%t(Xordered))+ithetasigma%*%FS%*%hsigmaSinv%*%t(X_active))/n
       M_inactive  =  (htheta[, (nactive+1):p]%*%t(X[,inactive_set])/n)
                        #+ithetasigma_inactive%*%FS%*%hsigmaSinv%*%t(X_active))/n)
+      M_inactive_full = htheta[, (nactive+1)]
     }
     else{
       pseudo_invX = pinv(crossprod(X))
@@ -474,14 +475,14 @@ set.target = function(rand_lasso_soln, type){
     #M_inactive = (pseudo_invX[,inactive_set] %*% t(X_inactive))[active_set,]
     #print(M_inactive[,1:10])
     
-    print(c("M_active size", dim(M_active)))
-    print(c("M_inactive size", dim(M_inactive)))
+    #print(c("M_active size", dim(M_active)))
+    #print(c("M_inactive size", dim(M_inactive)))
     residuals = y-X%*%lasso.est
     scalar = 1 #sqrt(n)
     observed_target = lasso.est[active_set]+scalar*M_active %*% residuals
     cov_target = vcov(glm_y) + scalar^2*M_inactive %*% t(M_inactive)
-    crosscov_target_internal = rbind(vcov(glm_y), scalar*t(M_inactive))
-    print(c("dim",dim(crosscov_target_internal)))
+    crosscov_target_internal = rbind(vcov(glm_y), scalar*t(X_inactive) %*% t(M_inactive))
+    
   }
   
   if (!is.null(colnames(X))) {
@@ -555,11 +556,10 @@ randomizedLassoInf = function(rand_lasso_soln,
   rownames(ci) = names(targets$observed_target)
 
   for (i in 1:nactive){
-
-    pre_nuisance = observed_internal - (targets$crosscov_target_internal[,i] *
+    pre_nuisance = observed_internal - (as.vector(targets$crosscov_target_internal[,i]) *
                                         targets$observed_target[i] / 
                                         targets$cov_target[i,i])
-
+    
     nuisance = internal_transform$linear_term %*% pre_nuisance[1:nactive] 
     nuisance[inactive_set] = nuisance[inactive_set] - pre_nuisance[(nactive+1):p]
 
@@ -637,7 +637,7 @@ randomizedLassoInf = function(rand_lasso_soln,
     pvalues[i] = pivot(0)
     line_min = -10*sd(target_sample) + targets$observed_target[i]
     line_max = 10*sd(target_sample) + targets$observed_target[i]
-
+    
     if (rootU(line_min)*rootU(line_max)<0){
       ci[i,2] = uniroot(rootU, c(line_min, line_max))$root + targets$observed_target[i]
     } else{
