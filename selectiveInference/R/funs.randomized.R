@@ -403,7 +403,10 @@ conditional_opt_transform = function(noise_scale,
 	      importance_transform=opt_transform))
 }
 
-set.target = function(rand_lasso_soln, type){
+set.target = function(rand_lasso_soln, 
+                      type, 
+                      construct_pvalues=NULL,
+                      construct_ci=NULL){
   
   # compute internal representation of the data
   y = rand_lasso_soln$y
@@ -494,16 +497,28 @@ set.target = function(rand_lasso_soln, type){
   targets = list(observed_target=observed_target,
                  cov_target=cov_target,
                  crosscov_target_internal=crosscov_target_internal)
-  return(targets)
+  
+  if (is.null(construct_ci)){
+    construct_ci=rep(1,nactive)
+  }
+  if (is.null(construct_pvalues)){
+    construct_pvalues=rep(1, nactive)
+  }
+  
+  
+  return(list(targets=targets,
+              construct_ci=construct_ci, 
+              construct_pvalues=construct_pvalues))
 }
 
 
 randomizedLassoInf = function(rand_lasso_soln,
-                              targets=NULL,
+                              full_targets=NULL,
                               level=0.9,
                               sampler=c("norejection", "adaptMCMC"),
                               nsample=10000,
-                              burnin=2000)
+                              burnin=2000,
+                              alternative = c("two-sided", "greated", "less"))
  {
 
   n = nrow(rand_lasso_soln$X)
@@ -539,9 +554,13 @@ randomizedLassoInf = function(rand_lasso_soln,
 		                               burnin=burnin)
   }
 
-  if (is.null(targets)){
-    targets=set.target(rand_lasso_soln, type="partial")
+  if (is.null(full_targets)){
+    full_targets=set.target(rand_lasso_soln, type="partial")
   }
+  
+  targets=full_targets$targets
+  construct_ci=full_targets$construct_ci
+  construct_pvalues = full_targets$construct_pvalues
   
   observed_internal = rand_lasso_soln$observed_internal
   
@@ -624,7 +643,7 @@ randomizedLassoInf = function(rand_lasso_soln,
       arg_ = arg_ - max(arg_)
       weights = exp(arg_)
       p = mean((target_sample + candidate < targets$observed_target[i]) * weights)/mean(weights)
-      return(2*min(p, 1-p))
+      return(p)
     }
 
     rootU = function(candidate){
@@ -634,23 +653,34 @@ randomizedLassoInf = function(rand_lasso_soln,
     rootL = function(candidate){
       return(pivot(targets$observed_target[i]+candidate)-(1+level)/2)
     }
-
-    pvalues[i] = pivot(0)
-    line_min = -10*sd(target_sample) + targets$observed_target[i]
-    line_max = 10*sd(target_sample) + targets$observed_target[i]
     
-    if (rootU(line_min)*rootU(line_max)<0){
-      ci[i,2] = uniroot(rootU, c(line_min, line_max))$root + targets$observed_target[i]
-    } else{
-      ci[i,2]=line_max
+    if (construct_pvalues[i]==1){
+      pvalues[i] = pivot(0)
+      if (alternative=="two-sided"){
+        pvalues[i] = 2*min(pvalues[i], 1-pvalues[i])
+      } else if (alternative=="greater"){
+        pvalues[i]= 1-pvalues[i]
+      } 
     }
-    if (rootL(line_min)*rootL(line_max)<0){
-      ci[i,1] = uniroot(rootL, c(line_min, line_max))$root + targets$observed_target[i]
-    } else{
-      ci[i,1] = line_min
+    
+    if (construct_ci[i]==1){
+      
+      line_min = -10*sd(target_sample) + targets$observed_target[i]
+      line_max = 10*sd(target_sample) + targets$observed_target[i]
+    
+      if (rootU(line_min)*rootU(line_max)<0){
+        ci[i,2] = uniroot(rootU, c(line_min, line_max))$root + targets$observed_target[i]
+      } else{
+        ci[i,2]=line_max
+      }
+      if (rootL(line_min)*rootL(line_max)<0){
+        ci[i,1] = uniroot(rootL, c(line_min, line_max))$root + targets$observed_target[i]
+      } else{
+        ci[i,1] = line_min
+      }
     }
   }
-  return(list(targets=targets, pvalues=pvalues, ci=ci))
+  return(list(full_targets=full_targets, pvalues=pvalues, ci=ci))
 }
 
 logistic_fitted = function(X, beta){
