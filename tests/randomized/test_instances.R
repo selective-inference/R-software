@@ -108,10 +108,10 @@ collect_results = function(n,p,s, nsim=100, level=0.9,
                                                            family=family,
                                                            condition_subgrad=condition_subgrad)
     
-    targets=selectiveInference:::set.target(rand_lasso_soln,type=type)
+    full_targets=selectiveInference:::set.target(rand_lasso_soln,type=type)
     
     result = selectiveInference:::randomizedLassoInf(rand_lasso_soln,
-                                                     targets=targets,
+                                                     full_targets=full_targets,
                                                      sampler = "norejection", #"adaptMCMC", #
                                                      level=level, 
                                                      burnin=1000, 
