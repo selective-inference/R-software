@@ -14,7 +14,7 @@ randomization.
 randomizedLassoInf(rand_lasso_soln, 
 		   targets=NULL,
                    level=0.9,
-                   sampler=c("adaptMCMC", "norejection"),
+                   sampler=c("norejection", "adaptMCMC"),
                    nsample=10000,
                    burnin=2000)
 }
