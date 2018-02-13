@@ -85,11 +85,13 @@ test_KKT=function(){
   #print(result$perturb)
   print(opt_linear %*% observed_opt_state+opt_offset+result$observed_raw-result$perturb) ## should be zero
 }
-  
+
 
 collect_results = function(n,p,s, nsim=100, level=0.9, 
-                           family = "binomial",
-                           condition_subgrad=TRUE, lam=1.2){
+                           family = "gaussian",
+                           condition_subgrad=TRUE, 
+                           type="full",
+                           lam=1.2){
 
   rho=0.
   sigma=1
@@ -103,9 +105,13 @@ collect_results = function(n,p,s, nsim=100, level=0.9,
     rand_lasso_soln = selectiveInference:::randomizedLasso(X, 
                                                            y, 
                                                            lam, 
-                                                           family=family)
-
+                                                           family=family,
+                                                           condition_subgrad=condition_subgrad)
+    
+    full_targets=selectiveInference:::set.target(rand_lasso_soln,type=type)
+    
     result = selectiveInference:::randomizedLassoInf(rand_lasso_soln,
+                                                     full_targets=full_targets,
                                                      sampler = "norejection", #"adaptMCMC", #
                                                      level=level, 
                                                      burnin=1000, 
