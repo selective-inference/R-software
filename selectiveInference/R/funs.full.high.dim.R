@@ -1,4 +1,48 @@
 
+AR_design = function(n, p, rho, scale=FALSE){
+  times = c(1:p)
+  cov_mat <- rho^abs(outer(times, times, "-"))
+  chol_mat = chol(cov_mat) # t(chol_mat) %*% chol_mat = cov_mat
+  X=matrix(rnorm(n*p), nrow=n) %*% t(chol_mat)
+  if (scale==TRUE){
+    X = scale(X)
+    X = X/sqrt(n)
+  }
+  return(X)
+}
+
+equicorrelated_design = function(n, p, rho, scale=FALSE){
+  X = sqrt(1-rho)*matrix(rnorm(n*p),n) + sqrt(rho)*matrix(rep(rnorm(n), p), nrow = n)
+  if (scale==TRUE){
+    X = scale(X)
+    X = X/sqrt(n)
+  }
+  return(X)
+}
+
+gaussian_instance = function(n, p, s, rho, sigma, snr, random_signs=TRUE, scale=FALSE, design="AR"){
+  
+  if (design=="AR"){
+    X=AR_design(n,p,rho, scale)
+  } else if (design=="equicorrelated"){
+    X=equicorrelated_design(n,p, rho, scale)
+  }
+  
+  beta = rep(0, p)
+  beta[1:s]=snr
+  
+  if (random_signs==TRUE && s>0){
+    signs = sample(c(-1,1), s, replace = TRUE)
+    beta[1:s] = beta[1:s] * signs
+  }
+  
+  beta=sample(beta)
+  y = X %*% beta + rnorm(n)*sigma 
+  result <- list(X=X,y=y,beta=beta)
+  return(result)
+}
+
+
 family_label = function(loss){
   if (loss=="ls"){
     return("gaussian")
@@ -389,14 +433,12 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
                                  loss, algo, construct_ci){
   
   active_vars = which(soln!=0)
-  print("active_vars")
-  print(active_vars)
+  
   if (length(active_vars)==0){
     return(list(pvalues=NULL, naive_pvalues=NULL))
   }
   active_groups = unique(groups[active_vars])
   nactive_groups = length(active_groups)
-  print(c("nactive groups", nactive_groups))
 
   setup_params = get_QB(X=X, y=y, soln=soln, active_set=active_vars, loss=loss)
   Q=setup_params$Q
@@ -429,9 +471,6 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
     center = TS$center
     radius = TS$radius
     
-    #print(c("center", center))
-    #print(c("radius", radius))
-    
     if (length(target_stat)>1){
       for (i in 1:length(target_stat)){
         LC = linear_contrast(i=i, target_stat=target_stat, target_cov=target_cov, 
@@ -447,7 +486,6 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
           pval = tnorm.union.surv(target_stat[i], mean=0, sd=sqrt(target_cov[i,i]), intervals)
           #pval = test_TG(0, target_stat[i], target_cov[i,i], sigma_est, center, radius, alt="two-sided")
           pval = 2*min(pval, 1-pval)
-          print(c("pval", pval))
           pvalues = c(pvalues, pval)
           
           naive_pval =  pvalue_naive_linear(target_stat[i], target_cov[i,i])
@@ -457,12 +495,10 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
           
           if (construct_ci){
             sel_int = create_tnorm_interval(z=target_stat[i], sd=sqrt(target_cov[i,i]), alpha=0.1, intervals=intervals)
-            #print(c("tg intervals", sel_int))
             #sel_int = selective_CI(target_stat, target_cov, sigma_est, center, radius)
-            #print(c("jelena int", sel_int))
             naive_int = naive_CI(target_stat[i], target_cov[i,i])
-            cat("sel interval", sel_int, "\n")
-            cat("naive interval", naive_int, "\n")
+            #cat("sel interval", sel_int, "\n")
+            #cat("naive interval", naive_int, "\n")
             sel_intervals = cbind(sel_intervals, sel_int)
             naive_intervals = cbind(naive_intervals, naive_int)
           }
@@ -483,7 +519,7 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
         pval = tnorm.union.surv(target_stat, mean=0, sd=sqrt(target_cov), intervals)
         #pval = test_TG(0, target_stat, target_cov, sigma_est, center, radius, alt="two-sided")
         pval = 2*min(pval, 1-pval)
-        print(c("pval", pval))
+        #print(c("pval", pval))
         pvalues = c(pvalues, pval)
         
         selected_vars = c(selected_vars, group_vars)
@@ -497,8 +533,8 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
           #sel_int = selective_CI(target_stat, target_cov, sigma_est, center, radius)
           #print(c("jelena int", sel_int))
           naive_int = naive_CI(target_stat, target_cov)
-          cat("sel interval", sel_int, "\n")
-          cat("naive interval", naive_int, "\n")
+          #cat("sel interval", sel_int, "\n")
+          #cat("naive interval", naive_int, "\n")
           sel_intervals = cbind(sel_intervals, sel_int)
           naive_intervals = cbind(naive_intervals, naive_int)
         }
