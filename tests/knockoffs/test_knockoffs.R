@@ -31,7 +31,7 @@ compute.knockoff = function(data, method, q=0.2, model.free=TRUE){
 
 
 
-test_knockoffs = function(nrep=50, n=100, p=200, s=10, rho=0.5){
+test_knockoffs = function(nrep=50, n=1000, p=2000, s=30, rho=0.5){
   
   method = "knockoff+"
   snr = sqrt(2*log(p)/n)
