@@ -1,11 +1,11 @@
 
 
 
-test_randomized_full = function(nrep=50, n=100, p=200, s=10, rho=0.){
+test_randomized_full = function(seed=1, outfile, nrep=1, n=1000, p=2000, s=30, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
-  set.seed(1)
+  set.seed(seed)
   loss="ls"
   construct_ci=TRUE
   penalty_factor = rep(1, p)
@@ -83,12 +83,16 @@ test_randomized_full = function(nrep=50, n=100, p=200, s=10, rho=0.){
     }
   }
   
+  if (is.null(outfile)){
+    outfile="randomized_full.rds"
+  }
+  
   saveRDS(list(sel_intervals=sel_intervals, sel_coverages=sel_coverages, sel_lengths=sel_lengths,
                pvalues=pvalues,
                FDR_sample=FDR_sample, power_sample=power_sample,
-               n=n,p=p, s=s, snr=snr, rho=rho), file="randomized_full.rds")
+               n=n,p=p, s=s, snr=snr, rho=rho), file=outfile)
   
   return(list(pvalues=pvalues))
 }
 
-test_randomized_full()
+#test_randomized_full()
