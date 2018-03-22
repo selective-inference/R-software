@@ -1,7 +1,7 @@
 
 
 
-test_randomized_full = function(nrep=50, n=100, p=200, s=10, rho=0){
+test_randomized_full = function(nrep=50, n=100, p=200, s=10, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
@@ -39,14 +39,14 @@ test_randomized_full = function(nrep=50, n=100, p=200, s=10, rho=0){
                                                            family=selectiveInference:::family_label(loss),
                                                            condition_subgrad=TRUE)
     
-    full_targets=selectiveInference:::set.target(rand_lasso_soln, type="full")
+    full_targets=selectiveInference:::set.target(rand_lasso_soln, type="full", sigma_est=sigma_est)
     
     PVS = selectiveInference:::randomizedLassoInf(rand_lasso_soln,
-                                                     full_targets=full_targets,
-                                                     sampler = "norejection", #"adaptMCMC", #
-                                                     level=0.9, 
-                                                     burnin=1000, 
-                                                     nsample=10000)
+                                                  full_targets=full_targets,
+                                                  sampler = "norejection", #"adaptMCMC", #
+                                                  level=0.9, 
+                                                  burnin=1000, 
+                                                  nsample=10000)
     active_vars=rand_lasso_soln$active_set
     cat("active_vars:",active_vars,"\n")
     pvalues = c(pvalues, PVS$pvalues)

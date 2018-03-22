@@ -5,11 +5,11 @@ library(glmnet)
 
 # testing Liu et al type=full in high dimensional settings -- uses debiasing matrix
 
-test_liu_full = function(nrep=50, n=100, p=200, s=10, rho=0.5){
+test_liu_full = function(seed=1, outfile=NULL, nrep=10, n=1000, p=2000, s=30, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
-  set.seed(1)
+  set.seed(seed)
   loss="ls"
   construct_ci=TRUE
   penalty_factor = rep(1, p)
@@ -82,14 +82,18 @@ test_liu_full = function(nrep=50, n=100, p=200, s=10, rho=0.5){
     }
   }
   
+  if (is.null(outfile)){
+    outfile="liu_full.rds"
+  }
+  
   saveRDS(list(sel_intervals=sel_intervals, sel_coverages=sel_coverages, sel_lengths=sel_lengths,
                naive_intervals=naive_intervals, naive_coverages=naive_coverages, naive_lengths=naive_lengths,
                pvalues=pvalues, naive_pvalues=naive_pvalues,
                FDR_sample=FDR_sample, power_sample=power_sample,
-               n=n, p=p, s=s, snr=snr, rho=rho), file="liu_full_empty.rds")
+               n=n, p=p, s=s, snr=snr, rho=rho), file=oufile)
   
   return(list(pvalues=pvalues, naive_pvalues=naive_pvalues))
 }
 
-test_liu_full()
+#test_liu_full()
 

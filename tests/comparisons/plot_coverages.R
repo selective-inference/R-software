@@ -22,7 +22,7 @@ labels[1] = paste("len: ", round(lee_len,2), ", cov: ", round(lee_cov,2), sep = 
 labels[2] = paste("len: ", round(liu_len,2), ", cov: ", round(liu_cov,2), sep = "")
 labels[3] = paste("len: ", round(naive_len,2), ", cov: ", round(naive_cov,2), sep = "")
 
-title = paste("n=", n,", p=", p, ", s=", s, ", signal=", snr, ", rho=", rho, sep = "")
+title = paste("n=", n,", p=", p, ", s=", s, ", signal=", round(snr,2), ", rho=", rho, sep = "")
 
 boxplot(lee$sel_lengths[which(lee$sel_lengths!=Inf)], liu$sel_lengths, liu$naive_lengths,
         at = seq(1,11,4) - 0.25, col = "pink", las = 2, outline = F,
@@ -36,3 +36,6 @@ ninf_lee = length(which(lee$sel_lengths==Inf))/length(lee$sel_lengths)
 ninf_liu = length(which(liu$sel_lengths==Inf))/length(liu$sel_lengths)
 c(ninf_lee, ninf_liu)
 
+plot(ecdf(lee$pvalues))
+lines(ecdf(liu$pvalues))
+abline(c(0,1))
