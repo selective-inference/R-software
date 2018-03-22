@@ -1,4 +1,52 @@
 
+selective.plus.BH = function(beta, selected.vars, pvalues, q){
+  
+  if (is.null(selected.vars)){
+    return(list(power=NA, FDR=NA, pvalues=NULL, null.pvalues=NULL, ci=NULL, nselected=0))
+  }
+  
+  nselected = length(selected.vars)
+  p.adjust.BH = p.adjust(pvalues, method = "BH", n = nselected)
+  rejected = selected.vars[which(p.adjust.BH<q)]
+  nrejected=length(rejected)
+  print(paste("sel+BH rejected", nrejected, "vars:",toString(rejected)))
+  
+  true.nonzero = which(beta!=0)
+  true.nulls = which(beta==0)
+  print(paste("true nonzero", length(true.nonzero), "vars:", toString(true.nonzero)))
+  
+  TP = length(intersect(rejected, true.nonzero))
+  s = length(true.nonzero)
+  if (s==0){
+    power = NA
+  } else{
+    power = TP/s
+  }
+  
+  FDR = (nrejected-TP)/max(1, nrejected)
+  
+  selected.nulls = NULL
+  for (i in 1:nselected){
+    if (any(true.nulls==selected.vars[i])){
+      selected.nulls = c(selected.nulls, i)
+    }
+  }
+  
+  null.pvalues=NA
+  if (length(selected.nulls)>0){
+    null.pvalues = pvalues[selected.nulls]
+    print(paste("selected nulls", length(selected.nulls), "vars:",toString(selected.vars[selected.nulls])))
+  }
+  
+  return(list(power=power, 
+              FDR=FDR, 
+              pvalues=pvalues, 
+              null.pvalues=null.pvalues, 
+              nselected=nselected, 
+              nrejected=nrejected))
+}
+
+
 AR_design = function(n, p, rho, scale=FALSE){
   times = c(1:p)
   cov_mat <- rho^abs(outer(times, times, "-"))
@@ -543,7 +591,6 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
       }
       
     }
-    
     
     #reference = get_reference(center, radius, target_stat, solve(target_cov))
     #samples = sampling(target_cov, reference, center, radius, n=nrow(X), nsample=nsample)
