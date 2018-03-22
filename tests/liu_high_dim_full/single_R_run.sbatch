@@ -30,7 +30,7 @@
 SEED=$1
 
 # cd to program directory
-cd /home/jelenam/R-selective/tests/liu_high_dim_full
+cd /home/users/jelenam/R-selective/tests/liu_high_dim_full
 
 module load R/3.4.0
 
