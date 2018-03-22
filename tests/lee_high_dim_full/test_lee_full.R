@@ -3,7 +3,7 @@ library(glmnet)
 
 # testing Lee et al type=full in high dimensional settings -- uses debiasing matrix
 
-test_lee_full = function(nrep=50, n=100, p=300, s=10, rho=0){
+test_lee_full = function(nrep=50, n=100, p=200, s=10, rho=0.5){
   
   snr = sqrt(2*log(p)/n)
   
@@ -17,6 +17,9 @@ test_lee_full = function(nrep=50, n=100, p=300, s=10, rho=0){
   sel_coverages=NULL
   sel_lengths=NULL
   
+  FDR_sample = NULL
+  power_sample=NULL
+  
   for (i in 1:nrep){
     data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
     X=data$X
@@ -26,8 +29,9 @@ test_lee_full = function(nrep=50, n=100, p=300, s=10, rho=0){
     
     CV = cv.glmnet(X, y, standardize=FALSE, intercept=FALSE, family=selectiveInference:::family_label(loss))
     
-    sigma_est=selectiveInference:::estimate_sigma(X,y,coef(CV, s="lambda.min")[-1])  # sigma via Reid et al.
-    print(c("sigma est", sigma_est))
+    #sigma_est=selectiveInference:::estimate_sigma(X,y,coef(CV, s="lambda.min")[-1])  # sigma via Reid et al.
+    #print(c("sigma est", sigma_est))
+    sigma_est=1
     
     # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))] # lambda via randomized cv 
     lambda = 0.8*selectiveInference:::theoretical.lambda(X, loss, sigma_est) # theoretical lambda
@@ -59,9 +63,20 @@ test_lee_full = function(nrep=50, n=100, p=300, s=10, rho=0){
       print(c("selective length mean:", mean(sel_lengths)))
       print(c("selective length median:", median(sel_lengths)))
     }
+    
+    mc = selectiveInference:::selective.plus.BH(beta, active_vars, PVS$pv, q=0.2)
+    FDR_sample=c(FDR_sample, mc$FDR)
+    power_sample=c(power_sample, mc$power)
+    
+    if (length(FDR_sample)>0){
+      print(c("FDR:", mean(FDR_sample)))
+      print(c("power:", mean(power_sample)))
+    }
   }
   
-  saveRDS(list(sel_intervals=sel_intervals, sel_coverages=sel_coverages, sel_lengths=sel_lengths, 
+  saveRDS(list(sel_intervals=sel_intervals, sel_coverages=sel_coverages, sel_lengths=sel_lengths,
+               pvalues=pvalues,
+               FDR_sample=FDR_sample, power_sample=power_sample,
                n=n,p=p, s=s, snr=snr, rho=rho), file="lee_full.rds")
   
   return(list(pvalues=pvalues))
