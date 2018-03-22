@@ -1,6 +1,7 @@
 library(knockoff)
 
 compute.knockoff = function(data, method, q=0.2, model.free=TRUE){
+  
   X=data$X 
   y=data$y
   n = nrow(X)
@@ -31,12 +32,12 @@ compute.knockoff = function(data, method, q=0.2, model.free=TRUE){
 
 
 
-test_knockoffs = function(nrep=50, n=1000, p=2000, s=30, rho=0.5){
+test_knockoffs = function(seed=1, outfile=NULL, method = "knockoff", 
+                          nrep=1, n=1000, p=2000, s=30, rho=0.){
   
-  method = "knockoff+"
   snr = sqrt(2*log(p)/n)
   
-  set.seed(1)
+  set.seed(seed)
 
   FDR_sample = NULL
   power_sample=NULL
@@ -56,8 +57,12 @@ test_knockoffs = function(nrep=50, n=1000, p=2000, s=30, rho=0.5){
     }
   }
   
+  if (is.null(outfile)){
+    outfile=paste(method, ".rds", sep="")
+  }
+  
   saveRDS(list(FDR_sample=FDR_sample, power_sample=power_sample,
-               n=n,p=p, s=s, snr=snr, rho=rho), file=paste(method, ".rds", sep=""))
+               n=n,p=p, s=s, snr=snr, rho=rho), file=outfile)
   
   return(list(FDR_sample=FDR_sample, power_sample=power_sample))
 }

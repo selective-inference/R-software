@@ -5,7 +5,7 @@ library(glmnet)
 
 # testing Liu et al type=full in high dimensional settings -- uses debiasing matrix
 
-test_liu_full = function(seed=1, outfile=NULL, nrep=10, n=1000, p=2000, s=30, rho=0.){
+test_liu_full = function(seed=1, outfile=NULL, nrep=1, n=1000, p=2000, s=30, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
@@ -90,7 +90,7 @@ test_liu_full = function(seed=1, outfile=NULL, nrep=10, n=1000, p=2000, s=30, rh
                naive_intervals=naive_intervals, naive_coverages=naive_coverages, naive_lengths=naive_lengths,
                pvalues=pvalues, naive_pvalues=naive_pvalues,
                FDR_sample=FDR_sample, power_sample=power_sample,
-               n=n, p=p, s=s, snr=snr, rho=rho), file=oufile)
+               n=n, p=p, s=s, snr=snr, rho=rho), file=outfile)
   
   return(list(pvalues=pvalues, naive_pvalues=naive_pvalues))
 }
