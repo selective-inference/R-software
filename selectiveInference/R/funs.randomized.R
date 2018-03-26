@@ -191,7 +191,7 @@ randomizedLasso = function(X,
 
     if (sum(inactive) > 0) {
         if (condition_subgrad == FALSE) {
-            inactive_term = -subgrad_term
+            inactive_term = subgrad_term
             linear_term = cbind(active_term,
                                 inactive_term)
         } else {
@@ -285,7 +285,8 @@ randomizedLasso = function(X,
                 noise_scale=noise_scale,
                 soln=result$soln,
                 perturb=perturb_,
-                condition_subgrad=condition_subgrad
+                condition_subgrad=condition_subgrad,
+		ridge_term=ridge_term
                 ))
 
 }
@@ -378,8 +379,12 @@ conditional_opt_transform = function(noise_scale,
                        offset_term=beta_offset)
   reduced_B = chol(t(B) %*% B)
   beta_offset = beta_offset + observed_raw
+
   reduced_beta_offset = solve(t(reduced_B)) %*% (t(B) %*% beta_offset)
-  
+
+  cond_cov = solve(t(B) %*% B) * noise_scale^2
+  cond_mean = - cond_cov %*% t(B) %*% beta_offset / noise_scale^2
+
   log_condl_optimization_density = function(opt_state) {
 
     if  (sum(opt_state < 0) > 0) {
@@ -400,7 +405,9 @@ conditional_opt_transform = function(noise_scale,
   return(list(sampling_transform=reduced_opt_transform,
               log_optimization_density=log_condl_optimization_density,
               observed_opt_state=observed_opt_state[1:nactive],
-	      importance_transform=opt_transform))
+	      importance_transform=opt_transform,
+	      cond_cov=cond_cov,
+	      cond_mean=cond_mean))
 }
 
 set.target = function(rand_lasso_soln, 
