@@ -1,120 +1,5 @@
 
 
-selective.plus.BH = function(beta, selected.vars, pvalues, q){
-  
-  if (is.null(selected.vars)){
-    return(list(power=NA, FDR=NA, pvalues=NULL, null.pvalues=NULL, ci=NULL, nselected=0))
-  }
-  
-  nselected = length(selected.vars)
-  p.adjust.BH = p.adjust(pvalues, method = "BH", n = nselected)
-  rejected = selected.vars[which(p.adjust.BH<q)]
-  nrejected=length(rejected)
-  print(paste("sel+BH rejected", nrejected, "vars:",toString(rejected)))
-  
-  true.nonzero = which(beta!=0)
-  true.nulls = which(beta==0)
-  print(paste("true nonzero", length(true.nonzero), "vars:", toString(true.nonzero)))
-  
-  TP = length(intersect(rejected, true.nonzero))
-  s = length(true.nonzero)
-  if (s==0){
-    power = NA
-  } else{
-    power = TP/s
-  }
-  
-  FDR = (nrejected-TP)/max(1, nrejected)
-  
-  selected.nulls = NULL
-  for (i in 1:nselected){
-    if (any(true.nulls==selected.vars[i])){
-      selected.nulls = c(selected.nulls, i)
-    }
-  }
-  
-  null.pvalues=NA
-  if (length(selected.nulls)>0){
-    null.pvalues = pvalues[selected.nulls]
-    print(paste("selected nulls", length(selected.nulls), "vars:",toString(selected.vars[selected.nulls])))
-  }
-  
-  return(list(power=power, 
-              FDR=FDR, 
-              pvalues=pvalues, 
-              null.pvalues=null.pvalues, 
-              nselected=nselected, 
-              nrejected=nrejected))
-}
-
-
-AR_design = function(n, p, rho, scale=FALSE){
-  times = c(1:p)
-  cov_mat <- rho^abs(outer(times, times, "-"))
-  chol_mat = chol(cov_mat) # t(chol_mat) %*% chol_mat = cov_mat
-  X=matrix(rnorm(n*p), nrow=n) %*% t(chol_mat)
-  if (scale==TRUE){
-    X = scale(X)
-    X = X/sqrt(n)
-  }
-  return(X)
-}
-
-equicorrelated_design = function(n, p, rho, scale=FALSE){
-  X = sqrt(1-rho)*matrix(rnorm(n*p),n) + sqrt(rho)*matrix(rep(rnorm(n), p), nrow = n)
-  if (scale==TRUE){
-    X = scale(X)
-    X = X/sqrt(n)
-  }
-  return(X)
-}
-
-gaussian_instance = function(n, p, s, rho, sigma, snr, random_signs=TRUE, scale=FALSE, design="AR"){
-  
-  if (design=="AR"){
-    X=AR_design(n,p,rho, scale)
-  } else if (design=="equicorrelated"){
-    X=equicorrelated_design(n,p, rho, scale)
-  }
-  
-  beta = rep(0, p)
-  beta[1:s]=snr
-  
-  if (random_signs==TRUE && s>0){
-    signs = sample(c(-1,1), s, replace = TRUE)
-    beta[1:s] = beta[1:s] * signs
-  }
-  
-  beta=sample(beta)
-  y = X %*% beta + rnorm(n)*sigma 
-  result <- list(X=X,y=y,beta=beta)
-  return(result)
-}
-
-logistic_instance = function(n, p, s, rho, sigma, snr, random_signs=TRUE, scale=FALSE, design="AR"){
-  
-  if (design=="AR"){
-    X=AR_design(n,p,rho, scale)
-  } else if (design=="equicorrelated"){
-    X=equicorrelated_design(n,p, rho, scale)
-  }
-  
-  beta = rep(0, p)
-  beta[1:s]=snr
-  if (random_signs==TRUE && s>0){
-    signs = sample(c(-1,1), s, replace = TRUE)
-    beta[1:s] = beta[1:s] * signs
-  }
-  beta=sample(beta)
-  mu = X %*% beta
-  prob = exp(mu)/(1+exp(mu))
-  y = rbinom(n, 1, prob)
-  
-  result <- list(X=X,y=y,beta=beta)
-  return(result)
-}
-
-
 family_label = function(loss){
   if (loss=="ls"){
     return("gaussian")
@@ -356,21 +241,6 @@ naive_CI = function(observed, variance, alpha=0.1){
 }
 
 
-# theoretical lambda for glmnet
-# glmnet solves: 1/2n*\|y-X\beta\|_2^2+\lambda_1\|\beta\|_1
-theoretical.lambda = function(X, loss="ls", sigma=1){
-  n = nrow(X); p = ncol(X)
-  nsamples= 1000
-  if (loss=="ls"){
-    empirical = apply(abs(t(X) %*% matrix(rnorm(n*nsamples), nrow=n)), 2, max)
-  } else if (loss=="logit"){
-    empirical = apply(abs(t(X) %*% matrix(sample(c(0,1), n*nsamples, replace = TRUE), nrow=n)), 2, max)
-  }
-  lam = mean(empirical)*sigma/n
-  return(lam)
-}
-
-
 compute_coverage = function(ci, beta){
   nactive=length(beta)
   coverage_vector = rep(0, nactive)
@@ -439,21 +309,6 @@ approximate = function(X, active_set){
   return(M_active)
 }
 
-estimate_sigma = function(X, y, beta_hat_cv){
-  n=nrow(X)
-  p=ncol(X)
-  if (n<p){
-    # Reid et al. (2016) "A study of error variance estimation in lasso regression"
-    residuals = y-X%*% beta_hat_cv
-    nactive=length(which(beta_hat_cv!=0))
-    sigma_est_sq = drop(t(residuals) %*% residuals/(nrow(X)-nactive))
-    sigma_est=sqrt(sigma_est_sq)
-  } else{
-    m = lm(y~X-1)
-    sigma_est = summary(m)$sigma
-  }
-  return(sigma_est)
-}
 
 
 get_QB = function(X, y, soln, active_set, loss){
@@ -489,10 +344,11 @@ get_QB = function(X, y, soln, active_set, loss){
   } else{
     
     M_active = approximate(W_root %*% X, active_set) ## this should be the active rows of \Sigma_i (W^{1/2} X)^T
-    Q = hessian(X, soln, loss)
-    Q_sq = W_root %*% X
     QiE = M_active %*% t(M_active)
     beta_barE = soln[active_set] + M_active %*% diag(as.vector(1/diagonal)) %*% residuals
+    
+    Q = hessian(X, soln, loss)
+    Q_sq = W_root %*% X
     Qbeta_bar = Q%*%soln-gradient(X,y,soln,loss=loss)
   }
   
@@ -511,15 +367,19 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
   }
   active_groups = unique(groups[active_vars])
   nactive_groups = length(active_groups)
-
+  
+  print(c("nactive", nactive_groups))
+  
+  begin_setup = Sys.time()
   setup_params = get_QB(X=X, y=y, soln=soln, active_set=active_vars, loss=loss)
   Q=setup_params$Q
   Q_sq=setup_params$Q_sq
   QiE=as.matrix(setup_params$QiE)
   beta_barE = setup_params$beta_barE
   Qbeta_bar = setup_params$Qbeta_bar
-  
   QiE = QiE * sigma_est^2
+  end_setup = Sys.time()
+  cat("setup time", end_setup-begin_setup, "\n")
   
   pvalues = NULL
   naive_pvalues = NULL
@@ -537,9 +397,13 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
     target_stat = beta_barE[group_varsE]
     target_cov = as.matrix(QiE)[group_varsE,group_varsE]
     
+    begin_TS = Sys.time()
     TS =  truncation_set(X=X, y=y, Qbeta_bar=Qbeta_bar, Q=Q, Q_sq=Q_sq, target_cov=target_cov, sigma_est=sigma_est, 
                          group=group, target_stat=target_stat, groups=groups, lambda=lambda, 
                          penalty_factor=penalty_factor, loss=loss, algo=algo)
+    end_TS = Sys.time()
+    cat("TS time", end_TS-begin_TS, "\n")
+    
     center = TS$center
     radius = TS$radius
     

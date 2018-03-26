@@ -5,7 +5,7 @@ library(glmnet)
 
 # testing Liu et al type=full in high dimensional settings -- uses debiasing matrix
 
-test_liu_full = function(seed=1, outfile=NULL, nrep=1, n=1000, p=10000, s=50, rho=0.){
+test_liu_full = function(seed=1, outfile=NULL, nrep=1, n=1000, p=10000, s=20, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
@@ -33,13 +33,14 @@ test_liu_full = function(seed=1, outfile=NULL, nrep=1, n=1000, p=10000, s=50, rh
     beta=data$beta
     cat("true nonzero:", which(beta!=0), "\n")
     
-    CV = cv.glmnet(X, y, standardize=FALSE, intercept=FALSE, family=selectiveInference:::family_label(loss))
-    
-    #sigma_est=selectiveInference:::estimate_sigma(X,y,coef(CV, s="lambda.min")[-1]) # sigma via Reid et al.
-    #print(c("sigma est", sigma_est))
+    # CV = cv.glmnet(X, y, standardize=FALSE, intercept=FALSE, family=selectiveInference:::family_label(loss))
+    # sigma_est=selectiveInference:::estimate_sigma(X,y,coef(CV, s="lambda.min")[-1]) # sigma via Reid et al.
     sigma_est=1
+    print(c("sigma est", sigma_est))
+    
     # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))]  # lambda via randomized cv 
     lambda = 0.8*selectiveInference:::theoretical.lambda(X, loss, sigma_est)  # theoretical lambda
+    print(c("lambda", lambda))
     
     soln = selectiveInference:::solve_problem_glmnet(X, y, lambda, penalty_factor=penalty_factor, loss=loss)
     #soln = solve_problem_gglasso(X, y, groups=1:ncol(X), lambda, penalty_factor=penalty_factor, loss=loss)
@@ -95,5 +96,5 @@ test_liu_full = function(seed=1, outfile=NULL, nrep=1, n=1000, p=10000, s=50, rh
   return(list(pvalues=pvalues, naive_pvalues=naive_pvalues))
 }
 
-#test_liu_full()
+test_liu_full()
 
