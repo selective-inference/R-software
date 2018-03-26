@@ -1,6 +1,6 @@
 
 
-test_randomized = function(seed=1, outfile, type="full", nrep=10, n=1000, p=2000, s=30, rho=0.){
+test_randomized = function(seed=1, outfile, type="full", nrep=1, n=1000, p=10000, s=50, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   

@@ -1,4 +1,5 @@
 
+
 selective.plus.BH = function(beta, selected.vars, pvalues, q){
   
   if (is.null(selected.vars)){
@@ -86,6 +87,29 @@ gaussian_instance = function(n, p, s, rho, sigma, snr, random_signs=TRUE, scale=
   
   beta=sample(beta)
   y = X %*% beta + rnorm(n)*sigma 
+  result <- list(X=X,y=y,beta=beta)
+  return(result)
+}
+
+logistic_instance = function(n, p, s, rho, sigma, snr, random_signs=TRUE, scale=FALSE, design="AR"){
+  
+  if (design=="AR"){
+    X=AR_design(n,p,rho, scale)
+  } else if (design=="equicorrelated"){
+    X=equicorrelated_design(n,p, rho, scale)
+  }
+  
+  beta = rep(0, p)
+  beta[1:s]=snr
+  if (random_signs==TRUE && s>0){
+    signs = sample(c(-1,1), s, replace = TRUE)
+    beta[1:s] = beta[1:s] * signs
+  }
+  beta=sample(beta)
+  mu = X %*% beta
+  prob = exp(mu)/(1+exp(mu))
+  y = rbinom(n, 1, prob)
+  
   result <- list(X=X,y=y,beta=beta)
   return(result)
 }
@@ -393,7 +417,7 @@ approximate = function(X, active_set){
   
   Xordered = X[,c(active_set,inactive_set,recursive=T)]
   hsigmaS = 1/n*(t(X_active)%*%X_active) # hsigma[S,S]
-  hsigmaSinv =  ginv(hsigmaS) # generalized inverse solve(hsigmaS) #
+  hsigmaSinv =  ginv(hsigmaS) # generalized inverse solve(hsigmaS) # ginv
   FS = rbind(diag(nactive),matrix(0,p-nactive,nactive))
   GS = cbind(diag(nactive),matrix(0,nactive,p-nactive))
   hsigma = 1/n*(t(Xordered)%*%Xordered)
