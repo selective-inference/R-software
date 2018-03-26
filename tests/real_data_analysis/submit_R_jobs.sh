@@ -10,7 +10,7 @@ method4=knockoff+
 method5=randomized_full
 method6=randomized_partial
 
-for i in {1..10}
+for i in {1..1}
 do
 	sbatch single_R_run.sbatch $method1
 	sbatch single_R_run.sbatch $method2

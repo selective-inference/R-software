@@ -1,31 +1,32 @@
 library(glmnet)
 library(selectiveInference)
 library(MASS)
+library(knockoff)
 
 setwd(getwd())
 args = commandArgs(trailingOnly=TRUE)
 method = toString(args[1])
 
 outdir = "/scratch/users/jelenam/full/"
-label = paste("randomized_", method, "_results", sep="")
+label = paste(method, "_results", sep="")
 outfile = file.path(outdir, paste(sep="",label, ".rds"))
 
 #setwd("/Users/Jelena/Dropbox/kevin/jelena/real_data")
-data=readRDS("real_data.rds")
-X=data$X
-y=data$y
-
 set.seed(1)
-
-penalty_factor = rep(1, ncol(X))
 loss="ls"
 sigma_est = 0.62
-lambda =  0.8*selectiveInference:::theoretical.lambda(X, loss, sigma_est)
-print(c("lambda", lambda))
+lambda = 0.0352479
+#lambda =  0.8*selectiveInference:::theoretical.lambda(X, loss, sigma_est) # "lambda" "0.0352479112219816"
+#print(c("lambda", lambda))
 
 
 liu_full = function(outfile){
-
+  data=readRDS("real_data1.rds")
+  X=data$X
+  y=data$y
+  n=nrow(X)
+  penalty_factor = rep(1, ncol(X))
+  
   soln = selectiveInference:::solve_problem_glmnet(X, y, lambda, penalty_factor=penalty_factor, loss=loss)
   PVS = selectiveInference:::inference_group_lasso(X, y, soln, groups=1:ncol(X), lambda=lambda, penalty_factor=penalty_factor, 
                                                  sigma_est, loss=loss, algo="Q", construct_ci = TRUE)
@@ -39,10 +40,13 @@ liu_full = function(outfile){
 
 
 lee_full = function(outfile){
-  
+  data=readRDS("real_data2.rds")
+  X=data$X
+  y=data$y
+  n=nrow(X)
+
   lasso = glmnet(X, y, family=selectiveInference:::family_label(loss), alpha=1, standardize=FALSE, intercept=FALSE, thresh=1e-12)
   soln = as.numeric(coef(lasso,x=X,y=y, family=selectiveInference:::family_label(loss), s=lambda, exact=TRUE))[-1]
-  
   PVS = selectiveInference:::fixedLassoInf(X,y,soln, intercept=FALSE, lambda*n, family=selectiveInference:::family_label(loss),
                                            type="full",sigma=sigma_est)
   
@@ -61,6 +65,15 @@ lee_full = function(outfile){
 
 
 knockoff = function(method, outfile){
+  if (method=="knockoff"){
+    data=readRDS("real_data3.rds")
+  } else if (method=="knockoff+"){
+    data=readRDS("real_data4.rds")
+  }
+  
+  X=data$X
+  y=data$y
+  
   offset=0
   if (method=="knockoff+"){
     offset=1
@@ -71,6 +84,16 @@ knockoff = function(method, outfile){
 
 
 randomized = function(type, outfile){
+  if (type=="full"){
+    data=readRDS("real_data5.rds")
+  } else if (type=="partial"){
+    data=readRDS("real_data6.rds")
+  }
+  
+  X=data$X
+  y=data$y
+  n=nrow(X)
+  
   rand_lasso_soln = selectiveInference:::randomizedLasso(X, 
                                                          y, 
                                                          lambda*n, 
