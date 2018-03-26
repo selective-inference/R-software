@@ -29,7 +29,7 @@ liu_full = function(outfile){
   
   soln = selectiveInference:::solve_problem_glmnet(X, y, lambda, penalty_factor=penalty_factor, loss=loss)
   PVS = selectiveInference:::inference_group_lasso(X, y, soln, groups=1:ncol(X), lambda=lambda, penalty_factor=penalty_factor, 
-                                                 sigma_est, loss=loss, algo="Q", construct_ci = TRUE)
+                                                 sigma_est, loss=loss, algo="glmnet", construct_ci = TRUE)
   saveRDS(list(active_vars=PVS$active_vars, 
                sel_intervals=PVS$sel_intervals, naive_intervals=PVS$naive_intervals,
                pvalues=PVS$pvalues, naive_pvalues=PVS$naive_pvalues), file=outfile)

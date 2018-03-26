@@ -5,7 +5,7 @@ library(glmnet)
 
 # testing Liu et al type=full in high dimensional settings -- uses debiasing matrix
 
-test_liu_full = function(seed=1, outfile=NULL, nrep=1, n=1000, p=10000, s=20, rho=0.){
+test_liu_full = function(seed=1, outfile=NULL, nrep=1, n=100, p=200, s=20, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
@@ -45,7 +45,7 @@ test_liu_full = function(seed=1, outfile=NULL, nrep=1, n=1000, p=10000, s=20, rh
     soln = selectiveInference:::solve_problem_glmnet(X, y, lambda, penalty_factor=penalty_factor, loss=loss)
     #soln = solve_problem_gglasso(X, y, groups=1:ncol(X), lambda, penalty_factor=penalty_factor, loss=loss)
     PVS = selectiveInference:::inference_group_lasso(X, y, soln, groups=1:ncol(X), lambda=lambda, penalty_factor=penalty_factor, 
-                                sigma_est, loss=loss, algo="Q", construct_ci = construct_ci)
+                                sigma_est, loss=loss, algo="glmnet", construct_ci = construct_ci)
     active_vars=PVS$active_vars
     cat("active_vars:",active_vars,"\n")
     pvalues = c(pvalues, PVS$pvalues)
