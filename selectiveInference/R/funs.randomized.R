@@ -513,7 +513,7 @@ set.target = function(rand_lasso_soln,
 
 
 randomizedLassoInf = function(rand_lasso_soln,
-                              full_targets=NULL,
+                              targets=NULL,
                               level=0.9,
                               sampler=c("norejection", "adaptMCMC"),
                               nsample=10000,
