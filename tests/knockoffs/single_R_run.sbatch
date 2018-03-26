@@ -21,7 +21,7 @@
 #number of nodes you are requesting, the more you ask for the longer you wait
 #SBATCH --nodes=1
 #################
-#SBATCH --mem=4000
+#SBATCH --mem=16000
 
 # You can use srun if your job is parallel
 #srun R CMD BATCH  ./rtest.R 

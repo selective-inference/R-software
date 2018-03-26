@@ -1,44 +1,23 @@
-#library(gglasso)
 library(MASS)
 library(selectiveInference)
 library(glmnet)
-#source("/Users/Jelena/GitHub Jelena/full/code/group_lasso_fns.R")
 
 
-logistic_instance = function(n, p, s, sigma=1, rho=0, snr=7, 
-                             random_signs=TRUE, scale=FALSE, center=FALSE){
+test_logistic = function(seed=1, outfile=NULL, nrep=10, n=1000, p=2000, s=30, rho=0.){
   
-  X = sqrt(1-rho)*matrix(rnorm(n*p),n) + sqrt(rho)*matrix(rep(rnorm(n), p), nrow = n)
-  if (scale==TRUE){
-    X = scale(X)
-    X = X/sqrt(n)
-  }
-  beta = rep(0, p)
-  beta[1:s]=snr
-  if (random_signs==TRUE && s>0){
-    signs = sample(c(-1,1), s, replace = TRUE)
-    beta[1:s] = beta[1:s] * signs
-  }
-  beta=sample(beta)
-  mu = X %*% beta
-  prob = exp(mu)/(1+exp(mu))
-  y = rbinom(n, 1, prob)
+  snr = sqrt(2*log(p)/n)
+  snr = 2*snr
+  #print(snr)
+  #empirical=empirical = apply(abs(t(matrix(rnorm(n*p), nrow=n)) %*% matrix(rnorm(n*1000), nrow=n)), 2, max)
+  #print(mean(empirical)/n)
   
-  result <- list(X=X,y=y,beta=beta)
-  return(result)
-}
-
-
-test_logistic = function(nrep=10){
+  #empirical = apply(abs(t(matrix(rnorm(n*p), nrow=n)) %*% matrix(sample(c(0,1), n*1000, replace = TRUE), nrow=n)), 2, max)
+  #snr=mean(empirical)/n
+  #print(snr)
   
-  set.seed(1)
+  set.seed(seed)
   loss="logit"
   construct_ci=TRUE
-  n=300
-  p=50
-  s=10
- 
-  snr=2/sqrt(n)
   
   penalty_factor = rep(1, p)
   
@@ -51,27 +30,20 @@ test_logistic = function(nrep=10){
   sel_lengths=NULL
   naive_lengths=NULL
   
+  FDR_sample = NULL
+  power_sample=NULL
   
   for (i in 1:nrep){
-    #data = logistic_instance(n, p, s, snr=snr)
-    #X=data$X
-    #y=data$y
-    #beta=data$beta
-    X = matrix(rnorm(n*p),n)
-    beta=rep(0,p)
-    beta[1:s]=snr
-    mu = X %*% beta
-    prob = exp(mu)/(1+exp(mu))
-    y=rbinom(n,1, prob)
+    data = selectiveInference:::logistic_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
+    X=data$X
+    y=data$y
+    beta=data$beta
     
-    print("beta")
-    print(which(beta!=0))
+    cat("true nonzero:", which(beta!=0), "\n")
     
-    lambda=10/n
-    #lambda = 0.7*selectiveInference:::theoretical.lambda(X, loss, sigma=1)
+    lambda = 0.4*selectiveInference:::theoretical.lambda(X, loss, sigma=1)
     
     soln = selectiveInference:::solve_problem_glmnet(X, y, lambda, penalty_factor=penalty_factor, loss=loss)
-    
     PVS = selectiveInference:::inference_group_lasso(X,y, soln, groups=1:ncol(X), lambda=lambda, penalty_factor=penalty_factor,
                                 sigma_est=1, loss=loss, algo="glmnet", construct_ci = construct_ci)
     
@@ -106,7 +78,27 @@ test_logistic = function(nrep=10){
       print(c("selective length:", mean(sel_lengths)))
       print(c("naive length:", mean(naive_lengths)))
     }
+    
+    mc = selectiveInference:::selective.plus.BH(beta, active_vars, PVS$pvalues, q=0.2)
+    FDR_sample=c(FDR_sample, mc$FDR)
+    power_sample=c(power_sample, mc$power)
+    
+    if (length(FDR_sample)>0){
+      print(c("FDR:", mean(FDR_sample)))
+      print(c("power:", mean(power_sample)))
+    }
   }
+  
+  if (is.null(outfile)){
+    outfile="liu_logistic_full.rds"
+  }
+  
+  saveRDS(list(sel_intervals=sel_intervals, sel_coverages=sel_coverages, sel_lengths=sel_lengths,
+               naive_intervals=naive_intervals, naive_coverages=naive_coverages, naive_lengths=naive_lengths,
+               pvalues=pvalues, naive_pvalues=naive_pvalues,
+               FDR_sample=FDR_sample, power_sample=power_sample,
+               n=n, p=p, s=s, snr=snr, rho=rho), file=outfile)
+  
   
   return(list(pvalues=pvalues, naive_pvalues=naive_pvalues))
 }

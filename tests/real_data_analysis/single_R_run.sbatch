@@ -21,18 +21,18 @@
 #number of nodes you are requesting, the more you ask for the longer you wait
 #SBATCH --nodes=1
 #################
-#SBATCH --mem=16000
+#SBATCH --mem=32000
 
 # You can use srun if your job is parallel
 #srun R CMD BATCH  ./rtest.R 
 # otherwise: 
 
-SEED=$1
+method=$1
 
 # cd to program directory
-cd /home/users/jelenam/R-selective/tests/liu_high_dim_full
+cd /home/users/jelenam/R-selective/tests/real_data_analysis
 
 module load R/3.4.0
 
-Rscript cluster.R $SEED 
+Rscript real_data_analysis.R $method
 
