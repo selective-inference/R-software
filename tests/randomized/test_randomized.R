@@ -7,7 +7,11 @@ smoke_test = function() {
     lam = 20 / sqrt(n)
     noise_scale = 0.01 * sqrt(n)
     ridge_term = .1 / sqrt(n)
-    selectiveInference:::randomizedLasso(X, y, lam, noise_scale, ridge_term)
+    selectiveInference:::randomizedLasso(X, 
+                                         y, 
+                                         lam, 
+                                         noise_scale=noise_scale, 
+                                         ridge_term=ridge_term)
 }
 
 A = smoke_test()
@@ -20,8 +24,13 @@ sampler_test = function() {
     lam = 20 / sqrt(n)
     noise_scale = 0.01 * sqrt(n)
     ridge_term = .1 / sqrt(n)
-    obj = selectiveInference:::randomizedLasso(X, y, lam, noise_scale, ridge_term)
-    S = selectiveInference:::sample_opt_variables(obj, jump_scale=rep(1/sqrt(n), p), nsample=10000)
+    obj = selectiveInference:::randomizedLasso(X, 
+                                               y, 
+                                               lam, 
+                                               noise_scale=noise_scale, 
+                                               ridge_term=ridge_term,
+ 					       condition_subgrad=FALSE)
+    S = selectiveInference:::sample_opt_variables(obj$law, jump_scale=rep(1/sqrt(n), p), nsample=10000)
     return(S$samples[2001:10000,])
 }
 B = sampler_test()
