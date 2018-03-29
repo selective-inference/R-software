@@ -7,7 +7,7 @@ randomizedLasso = function(X,
                            y, 
                            lam, 
                            family=c("gaussian","binomial"),
-			                     condition_subgrad=TRUE,
+                           condition_subgrad=TRUE,
                            noise_scale=NULL, 
                            ridge_term=NULL, 
                            max_iter=100,        # how many iterations for each optimization problem
@@ -113,7 +113,6 @@ randomizedLasso = function(X,
     observed_unpen = result$soln[unpenalized]
     observed_subgrad = -n*result$gradient[inactive]
     
-    print(c("nactive", length(active_set)))
     if (sum(abs(observed_subgrad)>lam[inactive]*(1.001)) > 0){
       stop("subgradient eq not satisfied")
     }
@@ -273,14 +272,14 @@ randomizedLasso = function(X,
     return(list(X=X,
                 y=y,
                 lam=lam,
-		            family=family,
+                family=family,
                 active_set=active_set,
                 inactive_set=inactive_set,
                 unpenalized_set=unpenalized_set,
                 sign_soln=sign_soln,
                 law=law,
                 internal_transform=internal_transform,
-		            observed_internal=observed_internal,
+	        observed_internal=observed_internal,
                 observed_raw=observed_raw,
                 noise_scale=noise_scale,
                 soln=result$soln,
@@ -410,10 +409,10 @@ conditional_opt_transform = function(noise_scale,
 	      cond_mean=cond_mean))
 }
 
-set.target = function(rand_lasso_soln, 
-                      type, 
-                      construct_pvalues=NULL,
-                      construct_ci=NULL){
+compute_target = function(rand_lasso_soln, 
+                          type, 
+                          construct_pvalues=NULL,
+                          construct_ci=NULL){
   
   # compute internal representation of the data
   y = rand_lasso_soln$y
@@ -444,6 +443,15 @@ set.target = function(rand_lasso_soln,
     crosscov_target_internal=rbind(cov_target, matrix(0, nrow=p-nactive, ncol=nactive))
   } 
   
+  alternatives = c()
+  for (i in 1:length(rand_lasso_soln$sign_soln)) {
+      if (rand_lasso_soln$sign_soln[i] == 1) {
+          alternatives = c(alternatives, 'greater')
+      } else {
+          alternatives = c(alternatives, 'less')
+      }
+  }
+
   if (type=="full"){
     
     lasso.est = rand_lasso_soln$soln
@@ -462,10 +470,10 @@ set.target = function(rand_lasso_soln,
       
       if (!is_wide) {
         hsigma = 1/n*(t(Xordered)%*%Xordered)
-        htheta = selectiveInference:::debiasingMatrix(hsigma, is_wide, n, 1:nactive)
+        htheta = debiasingMatrix(hsigma, is_wide, n, 1:nactive)
         ithetasigma = (GS-(htheta%*%hsigma))
       } else {
-        htheta = selectiveInference:::debiasingMatrix(Xordered, is_wide, n, 1:nactive)
+        htheta = debiasingMatrix(Xordered, is_wide, n, 1:nactive)
         ithetasigma = (GS-((htheta%*%t(Xordered)) %*% Xordered)/n)
       }
       M_active <- ((htheta%*%t(Xordered))+ithetasigma%*%FS%*%hsigmaSinv%*%t(X_active))/n
@@ -478,17 +486,9 @@ set.target = function(rand_lasso_soln,
       M_active = pseudo_invX[active_set,] %*% t(X)
       M_inactive = (pseudo_invX[,inactive_set] %*% t(X_inactive))[active_set,]
     }
-    #print(c("M_active size", dim(M_active)))
-    #print(c("M_inactive size", dim(M_inactive)))
-    #print(M_inactive[,1:10])
-    #pseudo_invX = pinv(crossprod(X))
-    #M_inactive = (pseudo_invX[,inactive_set] %*% t(X_inactive))[active_set,]
-    #print(M_inactive[,1:10])
-    
-    #print(c("M_active size", dim(M_active)))
-    #print(c("M_inactive size", dim(M_inactive)))
+
     residuals = y-X%*%lasso.est
-    scalar = 1 #sqrt(n)
+    scalar = 1 #sqrt(n) # JT: this is sigma?
     observed_target = lasso.est[active_set]+scalar*M_active %*% residuals
     cov_target = vcov(glm_y) + scalar^2*M_inactive %*% t(M_inactive)
     crosscov_target_internal = rbind(vcov(glm_y), scalar*t(X_inactive) %*% t(M_inactive))
@@ -515,7 +515,8 @@ set.target = function(rand_lasso_soln,
   
   return(list(targets=targets,
               construct_ci=construct_ci, 
-              construct_pvalues=construct_pvalues))
+              construct_pvalues=construct_pvalues,
+              alternatives=alternatives))
 }
 
 
@@ -524,8 +525,7 @@ randomizedLassoInf = function(rand_lasso_soln,
                               level=0.9,
                               sampler=c("norejection", "adaptMCMC"),
                               nsample=10000,
-                              burnin=2000,
-                              alternative = c("two-sided", "greated", "less"))
+                              burnin=2000)
  {
 
   n = nrow(rand_lasso_soln$X)
@@ -558,17 +558,18 @@ randomizedLassoInf = function(rand_lasso_soln,
                                    law$sampling_transform$offset_term,
                                    law$constraints,
                                    nsamples=nsample,
-		                               burnin=burnin)
+		                   burnin=burnin)
   }
 
-  if (is.null(full_targets)){
-    full_targets=set.target(rand_lasso_soln, type="partial")
+  if (is.null(targets)){
+    targets = compute_target(rand_lasso_soln, type="partial")
   }
   
-  targets=full_targets$targets
-  construct_ci=full_targets$construct_ci
-  construct_pvalues = full_targets$construct_pvalues
-  
+  alternatives = targets$alternatives
+  construct_ci = targets$construct_ci
+  construct_pvalues = targets$construct_pvalues
+  targets = targets$targets
+     		  
   observed_internal = rand_lasso_soln$observed_internal
   
   importance_transform = law$importance_transform
@@ -663,9 +664,9 @@ randomizedLassoInf = function(rand_lasso_soln,
     
     if (construct_pvalues[i]==1){
       pvalues[i] = pivot(0)
-      if (alternative=="two-sided"){
+      if (alternatives[i]=="two-sided"){
         pvalues[i] = 2*min(pvalues[i], 1-pvalues[i])
-      } else if (alternative=="greater"){
+      } else if (alternatives[i]=="greater"){
         pvalues[i]= 1-pvalues[i]
       } 
     }
@@ -687,7 +688,7 @@ randomizedLassoInf = function(rand_lasso_soln,
       }
     }
   }
-  return(list(full_targets=full_targets, pvalues=pvalues, ci=ci))
+  return(list(targets=targets, pvalues=pvalues, ci=ci))
 }
 
 logistic_fitted = function(X, beta){
