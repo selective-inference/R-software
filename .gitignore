@@ -12,3 +12,8 @@ forLater/josh/**
 *~
 */*~
 */*/*~
+# this code is copied from C-software
+selectiveInference/src/matrixcomps.*
+selectiveInference/src/debias.*
+selectiveInference/src/randomized_lasso.*
+selectiveInference/src/quadratic_program*.c
