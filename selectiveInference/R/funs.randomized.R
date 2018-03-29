@@ -409,8 +409,10 @@ conditional_opt_transform = function(noise_scale,
 	      cond_mean=cond_mean))
 }
 
+
 compute_target = function(rand_lasso_soln, 
                           type, 
+                          sigma_est=1,
                           construct_pvalues=NULL,
                           construct_ci=NULL){
   
@@ -427,14 +429,17 @@ compute_target = function(rand_lasso_soln,
   
   if (rand_lasso_soln$family == 'gaussian') {
     glm_y = glm(y ~ X_E-1)
+    sigma_res = sigma(glm_y)
+    glm_cov = vcov(glm_y)*sigma_est^2/(sigma_res^2)
   } else if (rand_lasso_soln$family == 'binomial') {
     glm_y = glm(y ~ X_E-1, family=binomial())
+    glm_cov = vcov(glm_y)
   }
   
   if (type=="partial"){
     
     observed_target = as.vector(glm_y$coefficients)
-    cov_target = vcov(glm_y)
+    cov_target = glm_cov
     
     if (sum(is.na(observed_target)) > 0) {
       stop("unregularized (relaxed) fit has NA values -- X[,active_set] likely singular")
@@ -490,8 +495,8 @@ compute_target = function(rand_lasso_soln,
     residuals = y-X%*%lasso.est
     scalar = 1 #sqrt(n) # JT: this is sigma?
     observed_target = lasso.est[active_set]+scalar*M_active %*% residuals
-    cov_target = vcov(glm_y) + scalar^2*M_inactive %*% t(M_inactive)
-    crosscov_target_internal = rbind(vcov(glm_y), scalar*t(X_inactive) %*% t(M_inactive))
+    cov_target = glm_cov + sigma_est^2*scalar^2*M_inactive %*% t(M_inactive)
+    crosscov_target_internal = rbind(glm_cov, sigma_est^2*scalar*t(X_inactive) %*% t(M_inactive))
     
   }
   
