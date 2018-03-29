@@ -1,0 +1,3 @@
+n=1000, p=2000, rho=0,
+snr = sqrt(2*log(p)/n)
+nrep=100

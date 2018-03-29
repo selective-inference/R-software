@@ -1,0 +1,517 @@
+
+
+family_label = function(loss){
+  if (loss=="ls"){
+    return("gaussian")
+  } else if (loss=="logit"){
+    return("binomial")
+  }
+}
+
+# solves full lasso problem via glmnet
+solve_problem_glmnet = function(X, y, lambda, penalty_factor, loss){
+  if (is.null(lambda)){
+    cv = cv.glmnet(x=X, y=y, family=family_label(loss), penalty.factor=penalty_factor, intercept=FALSE,  thresh = 1e-12)
+    beta_hat = coef(cv, s="lambda.min")
+  }
+  else {
+    lasso = glmnet(x=X, y=y, family=family_label(loss), penalty.factor=penalty_factor,alpha=1,
+               standardize=FALSE, intercept=FALSE, thresh = 1e-20)
+    beta_hat = coef(lasso, s=lambda)
+  }
+  return(beta_hat[-1])
+}
+
+# solves full group lasso problem via gglasso
+solve_problem_gglasso = function(X, y, groups, lambda, penalty_factor, loss){
+  if (is.null(lambda)){
+    cv <- cv.gglasso(x=X, y=y, group=groups, loss=loss, pf=penalty_factor, intercept=FALSE, eps=1e-12)
+    beta_hat = coef(cv, s="lambda.min")
+  }
+  else {
+      # gglasso for logit loss needs the response to be in {-1,1}
+      if (loss=="logit"){
+        y_pm1 = rep(y)
+        y_pm1[which(y==0)]=-1
+      } else if (loss=="ls"){
+       y_pm1 = rep(y)
+      }
+      m <- gglasso(x=X, y=y_pm1, group=groups, loss=loss, pf=penalty_factor, intercept = FALSE, eps=1e-20)
+      beta_hat = coef(m, s=lambda)
+  }
+    #which(beta_hat!=0)
+    #beta_hat[which(beta_hat!=0)]
+  return(beta_hat[-1])
+}
+
+# solves the restricted problem
+solve_restricted_problem = function(X, y, groups, group, lambda, penalty_factor, loss, algo){
+  ngroups = length(unique(groups))
+  if ((ngroups<ncol(X)) && algo=="glmnet"){
+    algo="gglasso"
+  }
+  if (algo=="glmnet"){
+    restricted_soln=rep(0, ncol(X))
+    restricted_soln[-group] = solve_problem_glmnet(X[,-group], y, lambda, penalty_factor[-group], loss=loss)
+  } else if (algo=="gglasso"){
+    penalty_factor_rest = rep(penalty_factor)
+    penalty_factor_rest[group] = 10^10
+    restricted_soln = solve_problem_gglasso(X,y,groups, lambda, penalty_factor=penalty_factor_rest, loss=loss)
+  }
+  return(restricted_soln)
+}
+
+solve_problem_Q = function(Q_sq, Qbeta_bar, lambda, penalty_factor,
+                           max_iter=50,
+                           kkt_tol=1.e-4, 
+                           objective_tol=1.e-4, 
+                           parameter_tol=1.e-4,
+                           kkt_stop=TRUE,
+                           objective_stop=TRUE,	
+                           parameter_stop=TRUE){
+  n=nrow(Q_sq)
+  p=ncol(Q_sq)
+
+  Xinfo = Q_sq
+  linear_func = -as.numeric(Qbeta_bar)
+  soln = as.numeric(rep(0., p))
+  ever_active = as.integer(rep(0, p))
+  ever_active[1] = 1
+  ever_active = as.integer(ever_active)
+  nactive = as.integer(1)
+  Xsoln = as.numeric(rep(0, nrow(Xinfo)))
+  gradient = 1. * linear_func 
+  max_active=as.integer(p)
+  
+  linear_func = linear_func/n
+  gradient = gradient/n
+  
+  #solve_QP_wide solves n*slinear_func^T\beta+\beta^T Xinfo\beta+\sum\lambda_i|\beta_i|
+  result = selectiveInference:::solve_QP_wide(Xinfo,         # this is a design matrix
+                         as.numeric(penalty_factor*lambda),  # vector of Lagrange multipliers
+                         0,                          # ridge_term 
+                         max_iter, 
+                         soln, 
+                         linear_func, 
+                         gradient, 
+                         Xsoln,
+                         ever_active, 
+                         nactive, 
+                         kkt_tol, 
+                         objective_tol, 
+                         parameter_tol,
+                         max_active,
+                         kkt_stop,
+                         objective_stop,	
+                         parameter_stop)
+  
+  return(result$soln)
+}
+
+
+# the selection event is |sigma_est^2*(target_cov)^{-1}Z+center|>radius
+truncation_set = function(X, y, Qbeta_bar, QE, sigma_est, 
+                          target_stat, target_cov,
+                          group, groups, active_vars,
+                          lambda, penalty_factor, loss, algo){
+  
+  if (algo=="Q"){
+    penalty_factor_rest = rep(penalty_factor)
+    penalty_factor_rest[group] = 10^10
+    restricted_soln = solve_problem_Q(Q_sq, Qbeta_bar, lambda, penalty_factor=penalty_factor_rest)
+  } else {
+    restricted_soln = solve_restricted_problem(X, y, groups, group, lambda, penalty_factor=penalty_factor, 
+                                             loss=loss, algo=algo)
+  }
+  #print("restricted soln")
+  #print(restricted_soln)
+  n = nrow(X)
+  p = length(Qbeta_bar)
+  I = diag(p) * sigma_est^2
+  group_vars = which(groups==group)
+  group_varsE = match(group_vars, active_vars)
+  nuisance = (Qbeta_bar - I[,group_vars] %*% solve(target_cov) %*% target_stat)/n
+  center = nuisance[group_vars] - (QE[group_varsE,] %*% restricted_soln/n)
+  radius = penalty_factor[group]*lambda
+  return(list(target_cov=target_cov, center=center*n, radius=radius*n))
+}
+
+
+linear_contrast = function(i, target_stat, target_cov, sigma_est,center, radius){
+  target_cov_inv = solve(target_cov)
+  target_stat_scaled = target_cov_inv %*% target_stat
+  I=diag(length(target_stat)) * sigma_est^2
+  nuisance = target_stat_scaled - I[,i]*target_stat[i]/target_cov[i,i]
+  new_center = center[i]+ nuisance[i]
+  new_radius = sqrt(max(radius^2-norm(nuisance[-i])^2,0))
+  return(list(target_cov=target_cov[i,i], center=new_center, radius=new_radius))
+}
+
+# the pvalue if prob(Z>obs given  |sigma_est^2/variance * Z+center|>radius)
+# where Z~N(param, variance)
+test_TG = function(param, observed, variance, sigma_est, center, radius, alt){
+  st.error = sqrt(variance)
+  lower = variance*(-center-radius)/(sigma_est^2)
+  upper = variance*(-center+radius)/(sigma_est^2)
+  if (observed<=lower){
+     case=1
+     num = pnorm(upper, mean=param, sd=st.error, lower.tail = FALSE)+pnorm(lower, mean=param, sd=st.error)-pnorm(observed, mean=param, sd=st.error)
+  } else if (observed>=upper){
+    case=2
+    num = pnorm(observed, mean=param, sd=st.error, lower.tail = FALSE)
+  } else{
+    case=3
+    num = pnorm(upper, mean=param, sd=st.error, lower.tail = FALSE)
+    return(NULL)
+    #stop("observation in the unallowed range")
+  }
+  den = pnorm(upper, mean=param, sd=st.error, lower.tail = FALSE)+pnorm(lower, mean=param, sd=st.error)
+  pivot = num/den
+  if (alt=="two-sided"){
+    return(2*pmin(pivot, 1-pivot))
+  } else if (alt=="upper"){
+    return(pivot)
+  } else if (alt=="lower"){
+    return(1-pivot)
+  }
+}
+
+
+# returns P(Z > z | z in union of intervals)
+tnorm.union.surv = function(z, mean, sd, intervals, bits = NULL){
+  # intervals is a I x 2 matrix of disjoint intervals where the first column contains the lower endpoint
+  
+  pval = matrix(NA, nr = dim(intervals)[1], nc = length(mean))
+  for(jj in 1:dim(intervals)[1]){
+    if(z <= intervals[jj,1]){
+      pval[jj,] = 1
+    }else if(z >= intervals[jj,2]){
+      pval[jj,] = 0
+    }else{
+      pval[jj,] = selectiveInference:::tnorm.surv(z, mean, sd, intervals[jj,1], intervals[jj,2], bits = bits)
+    }
+  }
+  
+  ww = matrix(NA, nr = dim(intervals)[1], nc = length(as.vector(mean)))
+  for(jj in 1:dim(intervals)[1]){
+    ww[jj,] = pnorm(intervals[jj,2], mean = mean, sd = sd) - pnorm(intervals[jj,1], mean = mean, sd = sd)
+  }
+  
+  ww = ww%*%diag(as.vector(1/apply(ww,2,sum)), nrow=ncol(ww))
+  
+  pval = apply(pval*ww,2,sum)
+  
+  return(as.numeric(pval))
+}
+
+create_tnorm_interval = function(z, sd, alpha, intervals, gridrange=c(-20,20), gridpts = 10000, 
+                                 griddepth = 2, bits = NULL){
+  
+  grid = seq(gridrange[1]*sd,gridrange[2]*sd,length=gridpts)
+  fun = function(x) { return(tnorm.union.surv(z, x, sd, intervals, bits)) }
+  
+  int = selectiveInference:::grid.search(grid, fun, alpha/2, 1-alpha/2, gridpts, griddepth)
+  #print(int)
+  return(int)
+}
+
+selective_CI = function(observed, variance, sigma_est, center, radius,
+                        alpha=0.1, gridrange=c(-20,20), gridpts=10000, griddepth=2){
+  
+  pivot = function(param){
+    return(test_TG(param, observed, variance, sigma_est, center, radius, alt="upper"))
+  }
+  st.error = sqrt(variance)
+  param_grid = seq(observed+gridrange[1] * st.error, observed+gridrange[2] * st.error, length=gridpts)
+  interval = selectiveInference:::grid.search(param_grid, pivot, alpha/2, 1-alpha/2, gridpts, griddepth)
+  return(interval)
+}
+
+
+norm = function(x){sqrt(sum(x*x))}
+
+
+pvalue_naive_linear = function(observed, variance){
+  pval = pnorm(observed, mean=0, sd = sqrt(variance), lower.tail = FALSE)
+  return(2*min(pval, 1-pval))
+}
+
+naive_CI = function(observed, variance, alpha=0.1){
+  quantile = abs(qnorm(alpha/2, mean=0, sd = 1))
+  st.error = sqrt(variance)
+  interval = c(observed - st.error*quantile, observed + st.error*quantile)
+  return(interval)
+}
+
+
+compute_coverage = function(ci, beta){
+  nactive=length(beta)
+  coverage_vector = rep(0, nactive)
+  for (i in 1:nactive){
+    if (beta[i]>=ci[1,i] && beta[i]<=ci[2,i]){
+      coverage_vector[i]=1
+    }
+  }
+  return(coverage_vector)
+}
+
+
+
+gradient = function(X,y,beta,loss){
+  fit = X %*% beta
+  if (loss=="logit"){
+    fit=exp(fit)/(1+exp(fit))
+  }
+  return(-t(X)%*%(y-fit))
+}
+
+hessian = function(X, beta, loss){
+  if (loss=="logit"){
+    fit = X%*%beta
+    W=diag(as.vector(exp(fit)/((1+exp(fit))^2)))
+  } else if (loss=="ls"){
+    W=diag(nrow(X))
+  }
+  return(t(X) %*% W %*% X)
+}
+
+
+hessian_active = function(X, beta, loss, active_set){
+  if (loss=="logit"){
+    fit = X%*%beta
+    W=diag(as.vector(exp(fit)/((1+exp(fit))^2)))
+  } else if (loss=="ls"){
+    W=diag(nrow(X))
+  }
+  return(t(X[, active_set]) %*% W %*% X)
+}
+
+
+mle=function(X,y,loss){
+  reg = glm(y~X-1, family=family_label(loss))
+  return(reg$coefficients)
+}
+
+approximate = function(X, active_set){
+  n=nrow(X)
+  p=ncol(X)
+  nactive=length(active_set)
+  inactive_set=setdiff(1:p, active_set)
+  X_active = X[, active_set]
+  X_inactive = X[, inactive_set]
+  
+  Xordered = X[,c(active_set,inactive_set,recursive=T)]
+  hsigmaS = 1/n*(t(X_active)%*%X_active) # hsigma[S,S]
+  hsigmaSinv =  ginv(hsigmaS) # generalized inverse solve(hsigmaS) # ginv
+  FS = rbind(diag(nactive),matrix(0,p-nactive,nactive))
+  GS = cbind(diag(nactive),matrix(0,nactive,p-nactive))
+  hsigma = 1/n*(t(Xordered)%*%Xordered)
+  is_wide = n < (2 * p)
+  
+  if (!is_wide) {
+    hsigma = 1/n*(t(Xordered)%*%Xordered)
+    htheta = selectiveInference:::debiasingMatrix(hsigma, is_wide, n, 1:nactive)
+    ithetasigma = (GS-(htheta%*%hsigma))
+  } else {
+    htheta = selectiveInference:::debiasingMatrix(Xordered, is_wide, n, 1:nactive)
+    ithetasigma = (GS-((htheta%*%t(Xordered)) %*% Xordered)/n)
+  }
+  M_active <- ((htheta%*%t(Xordered))+ithetasigma%*%FS%*%hsigmaSinv%*%t(X_active))/n
+  #M_inactive  =  (htheta[, (nactive+1):p]%*%t(X[,inactive_set])/n)
+  #M=matrix(nrow=p, ncol=n)
+  #M[active_set, ]= M_active
+  #M[inactive_set, ]=matrix(0,nrow=length(inactive_set), ncol=n)
+  return(M_active)
+}
+
+
+
+get_QB = function(X, y, soln, active_set, loss){
+  n=nrow(X)
+  p=ncol(X)
+  
+  fit = X%*%soln
+  if (loss=="ls"){
+    diagonal = rep(1,n)
+    W_root=diag(as.vector(diagonal))
+    residuals = y-fit
+  }
+  if (loss=="logit"){
+    diagonal = exp(fit/2)/(1+exp(fit))  ## sqrt(pi*(1-pi))
+    W_root = diag(as.vector(diagonal))
+    residuals = y-(exp(fit)/(1+exp(fit)))
+  } 
+  
+  if (n>p){
+    Q=hessian(X, soln, loss=loss)
+    QE=Q[active_set,]
+    Qi=solve(Q)
+    QiE=Qi[active_set, active_set]
+    #Q_sq =  W_root %*% X
+    #beta_bar = mle(X,y,loss=loss)
+    #print("mle")
+    #print(mle(X,y,loss=loss))
+    beta_bar = soln - Qi %*% gradient(X,y,soln, loss=loss)
+    #beta_bar = (soln - Qi %*% gradient(X,y,soln, loss=loss)+mle(X,y,loss))/2
+    #print("one step")
+    #print(beta_bar)
+    Qbeta_bar = Q%*%soln - gradient(X,y,soln, loss=loss)
+    beta_barE = beta_bar[active_set]
+    
+  } else{
+    
+    M_active = approximate(W_root %*% X, active_set) ## this should be the active rows of \Sigma_i (W^{1/2} X)^T
+    QiE = M_active %*% t(M_active)
+    beta_barE = soln[active_set] + M_active %*% diag(as.vector(1/diagonal)) %*% residuals
+    
+    QE = hessian_active(X, soln, loss, active_set)
+    #Q_sq = W_root %*% X
+    Qbeta_bar = t(QE)%*%soln[active_set]-gradient(X,y,soln,loss=loss)
+  }
+  
+  return(list(QE=QE, Qbeta_bar=Qbeta_bar, QiE=QiE, beta_barE=beta_barE))  
+}
+
+
+
+inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sigma_est,
+                                 loss, algo, construct_ci){
+  
+  active_vars = which(soln!=0)
+  
+  if (length(active_vars)==0){
+    return(list(pvalues=NULL, naive_pvalues=NULL))
+  }
+  active_groups = unique(groups[active_vars])
+  nactive_groups = length(active_groups)
+  
+  print(c("nactive", nactive_groups))
+  
+  begin_setup = Sys.time()
+  setup_params = get_QB(X=X, y=y, soln=soln, active_set=active_vars, loss=loss)
+  QE=as.matrix(setup_params$QE)
+  #Q_sq=setup_params$Q_sq
+  QiE=as.matrix(setup_params$QiE)
+  beta_barE = setup_params$beta_barE
+  Qbeta_bar = setup_params$Qbeta_bar
+  QiE = QiE * sigma_est^2
+  end_setup = Sys.time()
+  cat("setup time", end_setup-begin_setup, "\n")
+  
+  pvalues = NULL
+  naive_pvalues = NULL
+  selected_vars=NULL
+  sel_intervals = NULL
+  naive_intervals= NULL
+  
+  
+  for (i in 1:nactive_groups){
+    group=active_groups[i]
+    group_vars = which(groups==group)
+    cat("selected group:", group_vars, "\n")
+    
+    group_varsE = match(group_vars, active_vars)
+    target_stat = beta_barE[group_varsE]
+    target_cov = as.matrix(QiE)[group_varsE,group_varsE]
+    
+    begin_TS = Sys.time()
+    TS =  truncation_set(X=X, y=y, Qbeta_bar=Qbeta_bar, QE=QE, sigma_est=sigma_est, 
+                         target_cov=target_cov, target_stat=target_stat, 
+                         group=group, groups=groups, active_vars=active_vars,
+                         lambda=lambda, penalty_factor=penalty_factor, loss=loss, algo=algo)
+    end_TS = Sys.time()
+    cat("TS time", end_TS-begin_TS, "\n")
+    
+    center = TS$center
+    radius = TS$radius
+    
+    if (length(target_stat)>1){
+      for (i in 1:length(target_stat)){
+        LC = linear_contrast(i=i, target_stat=target_stat, target_cov=target_cov, 
+                             sigma_est=sigma_est, center=center, radius=radius)
+        lower = target_cov[i,i]*(-LC$center-LC$radius)/(sigma_est^2)
+        upper = target_cov[i,i]*(-LC$center+LC$radius)/(sigma_est^2)
+        
+        if (target_stat[i]<=lower | target_stat[i]>=upper)
+        {
+          intervals = matrix(nrow=2, ncol=2)
+          intervals[1,] = c(-Inf, lower)
+          intervals[2,] = c(upper, Inf)
+          pval = tnorm.union.surv(target_stat[i], mean=0, sd=sqrt(target_cov[i,i]), intervals)
+          #pval = test_TG(0, target_stat[i], target_cov[i,i], sigma_est, center, radius, alt="two-sided")
+          pval = 2*min(pval, 1-pval)
+          pvalues = c(pvalues, pval)
+          
+          naive_pval =  pvalue_naive_linear(target_stat[i], target_cov[i,i])
+          naive_pvalues = c(naive_pvalues, naive_pval)
+          
+          selected_vars = c(selected_vars, group_vars[i])
+          
+          if (construct_ci){
+            sel_int = create_tnorm_interval(z=target_stat[i], sd=sqrt(target_cov[i,i]), alpha=0.1, intervals=intervals)
+            #sel_int = selective_CI(target_stat, target_cov, sigma_est, center, radius)
+            naive_int = naive_CI(target_stat[i], target_cov[i,i])
+            #cat("sel interval", sel_int, "\n")
+            #cat("naive interval", naive_int, "\n")
+            sel_intervals = cbind(sel_intervals, sel_int)
+            naive_intervals = cbind(naive_intervals, naive_int)
+          }
+        } else{
+          print("observation not within the truncation limits!")
+        }
+      }
+    } else{
+      
+      lower = target_cov*(-center-radius)/(sigma_est^2)
+      upper = target_cov*(-center+radius)/(sigma_est^2)
+      
+      if (target_stat<=lower | target_stat>=upper)
+      {
+        intervals = matrix(nrow=2, ncol=2)
+        intervals[1,] = c(-Inf, lower)
+        intervals[2,] = c(upper, Inf)
+        pval = tnorm.union.surv(target_stat, mean=0, sd=sqrt(target_cov), intervals)
+        #pval = test_TG(0, target_stat, target_cov, sigma_est, center, radius, alt="two-sided")
+        pval = 2*min(pval, 1-pval)
+        #print(c("pval", pval))
+        pvalues = c(pvalues, pval)
+        
+        selected_vars = c(selected_vars, group_vars)
+        
+        naive_pval =  pvalue_naive_linear(target_stat, target_cov)
+        naive_pvalues = c(naive_pvalues, naive_pval)
+        
+        if (construct_ci){
+          sel_int = create_tnorm_interval(z=target_stat, sd=sqrt(target_cov), alpha=0.1, intervals=intervals)
+          #print(c("tg intervals", sel_int))
+          #sel_int = selective_CI(target_stat, target_cov, sigma_est, center, radius)
+          #print(c("jelena int", sel_int))
+          naive_int = naive_CI(target_stat, target_cov)
+          #cat("sel interval", sel_int, "\n")
+          #cat("naive interval", naive_int, "\n")
+          sel_intervals = cbind(sel_intervals, sel_int)
+          naive_intervals = cbind(naive_intervals, naive_int)
+        }
+      } else{
+        print("observation not within the truncation limits!")
+      }
+      
+    }
+    
+    #reference = get_reference(center, radius, target_stat, solve(target_cov))
+    #samples = sampling(target_cov, reference, center, radius, n=nrow(X), nsample=nsample)
+    #tilting_weights = compute_tilting_weights(reference, solve(target_cov), samples)
+    #pvalues[i] = weighted_pvalue(samples, tilting_weights, target_stat)
+    #naive_pvalues[i] = p_value(mvrnorm(n=nsample, mu=rep(0, length(target_stat)), Sigma = target_cov), target_stat)
+    #print(c("sampling", pvalues[i]))
+  }
+  
+  return(list(pvalues=pvalues, naive_pvalues=naive_pvalues, active_vars=selected_vars,
+              sel_intervals = sel_intervals, naive_intervals=naive_intervals))
+}
+
+
+
+
+
+
