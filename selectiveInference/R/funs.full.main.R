@@ -113,11 +113,11 @@ solve_problem_Q = function(Q_sq, Qbeta_bar, lambda, penalty_factor,
 truncation_set = function(X, y, Qbeta_bar, QE, sigma_est, 
                           target_stat, target_cov,
                           group, groups, active_vars,
-                          lambda, penalty_factor, loss, algo){
+                          lambda, penalty_factor, loss, algo, Q_sq=NULL){
   
   if (algo=="Q"){
     penalty_factor_rest = rep(penalty_factor)
-    penalty_factor_rest[group] = 10^10
+    penalty_factor_rest[group] = 10^10 * penalty_factor
     restricted_soln = solve_problem_Q(Q_sq, Qbeta_bar, lambda, penalty_factor=penalty_factor_rest)
   } else {
     restricted_soln = solve_restricted_problem(X, y, groups, group, lambda, penalty_factor=penalty_factor, 
