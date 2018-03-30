@@ -412,6 +412,7 @@ conditional_opt_transform = function(noise_scale,
 
 compute_target = function(rand_lasso_soln, 
                           type, 
+                          sigma_est=1,
                           construct_pvalues=NULL,
                           construct_ci=NULL){
   
