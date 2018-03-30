@@ -11,6 +11,7 @@ Depends:
     intervals,
     survival,
     adaptMCMC,
+    gglasso
 Suggests:
     Rmpfr
 Description: New tools for post-selection inference, for use with forward

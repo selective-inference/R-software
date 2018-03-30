@@ -87,7 +87,7 @@ solve_problem_Q = function(Q_sq, Qbeta_bar, lambda, penalty_factor,
   gradient = gradient/n
   
   #solve_QP_wide solves n*slinear_func^T\beta+\beta^T Xinfo\beta+\sum\lambda_i|\beta_i|
-  result = selectiveInference:::solve_QP_wide(Xinfo,         # this is a design matrix
+  result = solve_QP_wide(Xinfo,         # this is a design matrix
                          as.numeric(penalty_factor*lambda),  # vector of Lagrange multipliers
                          0,                          # ridge_term 
                          max_iter, 
@@ -123,8 +123,7 @@ truncation_set = function(X, y, Qbeta_bar, QE, sigma_est,
     restricted_soln = solve_restricted_problem(X, y, groups, group, lambda, penalty_factor=penalty_factor, 
                                              loss=loss, algo=algo)
   }
-  #print("restricted soln")
-  #print(restricted_soln)
+
   n = nrow(X)
   p = length(Qbeta_bar)
   I = diag(p) * sigma_est^2
@@ -188,7 +187,7 @@ tnorm.union.surv = function(z, mean, sd, intervals, bits = NULL){
     }else if(z >= intervals[jj,2]){
       pval[jj,] = 0
     }else{
-      pval[jj,] = selectiveInference:::tnorm.surv(z, mean, sd, intervals[jj,1], intervals[jj,2], bits = bits)
+      pval[jj,] = tnorm.surv(z, mean, sd, intervals[jj,1], intervals[jj,2], bits = bits)
     }
   }
   
@@ -210,8 +209,8 @@ create_tnorm_interval = function(z, sd, alpha, intervals, gridrange=c(-20,20), g
   grid = seq(gridrange[1]*sd,gridrange[2]*sd,length=gridpts)
   fun = function(x) { return(tnorm.union.surv(z, x, sd, intervals, bits)) }
   
-  int = selectiveInference:::grid.search(grid, fun, alpha/2, 1-alpha/2, gridpts, griddepth)
-  #print(int)
+  int = grid.search(grid, fun, alpha/2, 1-alpha/2, gridpts, griddepth)
+
   return(int)
 }
 
@@ -223,7 +222,7 @@ selective_CI = function(observed, variance, sigma_est, center, radius,
   }
   st.error = sqrt(variance)
   param_grid = seq(observed+gridrange[1] * st.error, observed+gridrange[2] * st.error, length=gridpts)
-  interval = selectiveInference:::grid.search(param_grid, pivot, alpha/2, 1-alpha/2, gridpts, griddepth)
+  interval = grid.search(param_grid, pivot, alpha/2, 1-alpha/2, gridpts, griddepth)
   return(interval)
 }
 
@@ -302,7 +301,7 @@ approximate = function(X, active_set){
   
   Xordered = X[,c(active_set,inactive_set,recursive=T)]
   hsigmaS = 1/n*(t(X_active)%*%X_active) # hsigma[S,S]
-  hsigmaSinv =  ginv(hsigmaS) # generalized inverse solve(hsigmaS) # ginv
+  hsigmaSinv =  solve(hsigmaS) # inverse of hsigma[S,S]
   FS = rbind(diag(nactive),matrix(0,p-nactive,nactive))
   GS = cbind(diag(nactive),matrix(0,nactive,p-nactive))
   hsigma = 1/n*(t(Xordered)%*%Xordered)
@@ -310,17 +309,13 @@ approximate = function(X, active_set){
   
   if (!is_wide) {
     hsigma = 1/n*(t(Xordered)%*%Xordered)
-    htheta = selectiveInference:::debiasingMatrix(hsigma, is_wide, n, 1:nactive)
+    htheta = debiasingMatrix(hsigma, is_wide, n, 1:nactive)
     ithetasigma = (GS-(htheta%*%hsigma))
   } else {
-    htheta = selectiveInference:::debiasingMatrix(Xordered, is_wide, n, 1:nactive)
+    htheta = debiasingMatrix(Xordered, is_wide, n, 1:nactive)
     ithetasigma = (GS-((htheta%*%t(Xordered)) %*% Xordered)/n)
   }
   M_active <- ((htheta%*%t(Xordered))+ithetasigma%*%FS%*%hsigmaSinv%*%t(X_active))/n
-  #M_inactive  =  (htheta[, (nactive+1):p]%*%t(X[,inactive_set])/n)
-  #M=matrix(nrow=p, ncol=n)
-  #M[active_set, ]= M_active
-  #M[inactive_set, ]=matrix(0,nrow=length(inactive_set), ncol=n)
   return(M_active)
 }
 
