@@ -29,3 +29,11 @@ You will have to run
 ```
 make Rcpp
 ```
+
+## To test
+
+```
+make check
+```
+
+These tests are also run on [travis](http://travis-ci.org) based on .travis.yml setup. 
