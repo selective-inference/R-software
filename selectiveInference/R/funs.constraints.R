@@ -24,16 +24,16 @@ factor_covariance = function(S, rank=NA) {
 # whitening map
 #
 
-# law is Z \sim N(mean, covariance) subject to constraints linear_part %*% Z \leq offset
+# law is Z \sim N(mean_param, covariance) subject to constraints linear_part %*% Z \leq offset
 
-whiten_constraint = function(linear_part, offset, mean, covariance) {
+whiten_constraint = function(linear_part, offset, mean_param, covariance) {
 
     factor_cov = factor_covariance(covariance)
     sqrt_cov = factor_cov$sqrt_cov
     sqrt_inv = factor_cov$sqrt_inv
 
     new_A = linear_part %*% sqrt_cov
-    new_b = offset - linear_part %*% mean
+    new_b = offset - linear_part %*% mean_param
 
     # rescale rows to have length 1
 
@@ -44,11 +44,13 @@ whiten_constraint = function(linear_part, offset, mean, covariance) {
     # TODO: check these functions will behave when Z is a matrix.
 
     inverse_map = function(Z) {
-        return(sqrt_cov %*% Z + mean)
+	# broadcasting here
+        # the columns of Z are same length as mean_param
+        return(sqrt_cov %*% Z + as.numeric(mean_param))
     }
 
     forward_map = function(W) {
-        return(sqrt_inv %*% (W - mean))
+        return(sqrt_inv %*% (W - mean_param))
     }    
 
     return(list(linear_part=new_A,
@@ -60,11 +62,11 @@ whiten_constraint = function(linear_part, offset, mean, covariance) {
 #
 # sample from the law
 #
-# Z \sim N(mean, covariance) subject to constraints linear_part %*% Z \leq offset
+# Z \sim N(mean_param, covariance) subject to constraints linear_part %*% Z \leq offset
 
 sample_from_constraints = function(linear_part,
                                    offset,
-                                   mean,
+                                   mean_param,
                                    covariance,
                                    initial_point, # point must be feasible for constraints
                                    ndraw=8000,
@@ -74,7 +76,7 @@ sample_from_constraints = function(linear_part,
 
     whitened_con = whiten_constraint(linear_part,
                                      offset,
-				     mean,
+				     mean_param,
                                      covariance)
     white_initial = whitened_con$forward_map(initial_point)
 
@@ -121,42 +123,60 @@ sample_from_constraints = function(linear_part,
 	# In theory, these rows can be dropped
 
 	rows_to_keep = white_offset < Inf
-	white_linear = white_linear[rows_to_keep,]
-	white_offset = white_offset[rows_to_keep,]
+	white_linear = white_linear[rows_to_keep,,drop=FALSE]
+	white_offset = white_offset[rows_to_keep]
 
         nstate = length(white_initial)
 	if (sum(rows_to_keep) > 0) {
-            nconstraint = nrow(white_linear)
+	    if (ncol(white_linear) > 1) {
+                nconstraint = nrow(white_linear)
 
-            directions = rbind(diag(rep(1, nstate)),
-                               matrix(rnorm(nstate^2), nstate, nstate))
+                directions = rbind(diag(rep(1, nstate)),
+                                   matrix(rnorm(nstate^2), nstate, nstate))
 
-            # normalize rows to have length 1
+                # normalize rows to have length 1
 
-            scaling = apply(directions, 1, function(x) {  return(sqrt(sum(x^2))) }) 
-            directions = directions / scaling
-            ndirection = nrow(directions)
+                scaling = apply(directions, 1, function(x) {  return(sqrt(sum(x^2))) }) 
+                directions = directions / scaling
+                ndirection = nrow(directions)
 
-            alphas = directions %*% t(white_linear)
-            U = white_linear %*% white_initial - white_offset
-            Z_sample = matrix(rep(0, nstate * ndraw), nstate, ndraw)
+                alphas = directions %*% t(white_linear)
+                U = white_linear %*% white_initial - white_offset
+                Z_sample = matrix(rep(0, nstate * ndraw), nstate, ndraw)
 
-            result = .C("sample_truncnorm_white",
-                        as.numeric(white_initial),
-                        as.numeric(U),
-                        as.numeric(t(directions)),
-                        as.numeric(t(alphas)),
-                        output=Z_sample,
-                        as.integer(nconstraint),
-                        as.integer(ndirection),
-                        as.integer(nstate),
-                        as.integer(burnin),
-                        as.integer(ndraw),
-                        package="selectiveInference")
-            Z_sample = result$output
-       }
-       else {
-            Z_sample = matrix(rnorm(nstate * ndraw), nstate, ndraw)
+                result = .C("sample_truncnorm_white",
+                            as.numeric(white_initial),
+                            as.numeric(U),
+                            as.numeric(t(directions)),
+                            as.numeric(t(alphas)),
+                            output=Z_sample,
+                            as.integer(nconstraint),
+                            as.integer(ndirection),
+                            as.integer(nstate),
+                            as.integer(burnin),
+                            as.integer(ndraw),
+                            package="selectiveInference")
+                Z_sample = result$output
+           } else { # the distribution is univariate
+                    # we can just work out upper and lower limits
+
+                white_linear = as.numeric(white_linear)
+                pos = (white_linear * white_offset) >= 0
+                neg = (white_linear * white_offset) <= 0
+		if (sum(pos) > 0) {
+                    U = min((white_offset / white_linear)[pos])
+                } else {
+		    U = Inf
+                }
+		if (sum(neg) < 0) {
+                    L = max((white_offset / white_linear)[neg])
+                } else {
+                    L = -Inf
+                }
+                Z_sample = matrix(qnorm((pnorm(U) - pnorm(L)) * runif(ndraw) + pnorm(L)), 1, ndraw)
+           }
+       } else {
+           Z_sample = matrix(rnorm(nstate * ndraw), nstate, ndraw)
        }
     }
 

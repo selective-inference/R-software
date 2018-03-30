@@ -512,7 +512,7 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, k=NULL,
 	  cur_offset = as.numeric(t(cur_X) %*% cur_fitted)
       }
       else {
-          cur_fitted = 0
+          cur_fitted = rep(0, length(y))
           cur_offset = rep(0, length(inactive))
       }
 
@@ -533,32 +533,56 @@ fsInf_maxZ = function(obj, sigma=NULL, alpha=0.1, k=NULL,
 
       # IMPORTANT: after sampling Y_star, we have to add back cur_fitted
 
-      # if n > p, we could actually just draw cur_adjusted_Xt %*% Y_star
+      # if n >= p, we could actually just draw cur_adjusted_Xt %*% Y_star
       # because this has a simple box constraint
       # with a generically non-degenerate covariance
 
-      linear_part = rbind(cur_adjusted_Xt, -cur_adjusted_Xt)
-      offset = c(final_upper, -final_lower)
-      covariance = diag(rep(sigma^2, length(y)))
-      mean = rep(0, length(y))
-      initial_point = y
+      if (nrow(cur_adjusted_Xt) > length(y)) {
+          linear_part = rbind(cur_adjusted_Xt, -cur_adjusted_Xt)
+          offset = c(final_upper, -final_lower)
+          covariance = diag(rep(sigma^2, length(y)))
+          mean_param = cur_fitted # rep(0, length(y))
+          initial_point = y
 
-      truncated_y = sample_from_constraints(linear_part, 
-                                            offset, 
-                                            mean, 
-                                            covariance, 
-                                            initial_point, 
-                                            burnin=burnin, 
-                                            ndraw=ndraw)
+          truncated_y = sample_from_constraints(linear_part, 
+                                                offset, 
+                                                mean_param, 
+                                                covariance, 
+                                                initial_point, 
+                                                burnin=burnin, 
+                                                ndraw=ndraw)
 
-      truncated_noise = truncated_y %*% t(cur_adjusted_Xt)
-      sample_maxZ = apply(abs(t(truncated_noise) / cur_scale), 2, max)
+          truncated_noise = truncated_y %*% t(cur_adjusted_Xt)
+          sample_maxZ = apply(abs(t(truncated_noise) / cur_scale), 2, max)
+      } else {  # sample from a smaller dimensional gaussian
+          if (nrow(cur_adjusted_Xt) > 1) {
+              linear_part = rbind(diag(rep(1, nrow(cur_adjusted_Xt))),
+                                  diag(rep(-1, nrow(cur_adjusted_Xt))))
+              covariance = sigma^2 * (cur_adjusted_Xt %*% t(cur_adjusted_Xt))
+              offset = c(final_upper, -final_lower)
+              mean_param = cur_adjusted_Xt %*% cur_fitted # rep(0, nrow(cur_adjusted_Xt))
+              initial_point = cur_adjusted_Xt %*% y
+          } else {
+              mean_param = as.numeric(sum(as.numeric(cur_adjusted_Xt) * as.numeric(cur_fitted)))
+              covariance = matrix(sigma^2 * sum(cur_adjusted_Xt^2))
+              linear_part = matrix(c(1,-1), 2, 1)
+              offset = c(final_upper, -final_lower)
+              initial_point = as.numeric(sum(as.numeric(cur_adjusted_Xt) * as.numeric(y)))
+          }
+          truncated_noise = sample_from_constraints(linear_part, 
+                                                offset, 
+                                                mean_param, 
+                                                covariance, 
+                                                initial_point, 
+                                                burnin=burnin, 
+                                                ndraw=ndraw)
+          sample_maxZ = apply(abs(t(truncated_noise) / cur_scale), 2, max)
+
+         } 
 
       observed_maxZ = obj$realized_maxZ[j]
-
       pval = sum(sample_maxZ > observed_maxZ) / ndraw
       pval = 2 * min(pval, 1 - pval)
-
       pv = c(pv, pval)
   }
 
