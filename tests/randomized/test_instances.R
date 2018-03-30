@@ -41,7 +41,7 @@ test_randomized_lasso = function(n=100,p=200,s=0){
   lam = 2.
   noise_scale = 0.5
   ridge_term = 1./sqrt(n)
-  result = selectiveInference:::randomizedLasso(X,y,lam, noise_scale, ridge_term)
+  result = selectiveInference:::randomizedLasso(X, y, lam, noise_scale, ridge_term)
   print(result$soln)
   print(length(which(result$soln!=0)))
   print(result$observed_opt_state) # compared with python code
@@ -108,11 +108,11 @@ collect_results = function(n,p,s, nsim=100, level=0.9,
                                                            family=family,
                                                            condition_subgrad=condition_subgrad)
     
-    full_targets=selectiveInference:::set.target(rand_lasso_soln,type=type)
-    
+    targets=selectiveInference:::compute_target(rand_lasso_soln,type=type)
+    print(targets$construct_pvalues)    
     result = selectiveInference:::randomizedLassoInf(rand_lasso_soln,
-                                                     full_targets=full_targets,
-                                                     sampler = "norejection", #"adaptMCMC", #
+                                                     targets=targets,
+                                                     sampler="norejection", #"adaptMCMC", #
                                                      level=level, 
                                                      burnin=1000, 
                                                      nsample=5000)

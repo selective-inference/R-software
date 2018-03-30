@@ -8,4 +8,4 @@ clean:
 	rm -f *o
 
 Rcpp:
-	Rscript -e "library(Rcpp); Rcpp::compileAttributes('..')"
+	$(R_HOME)/bin/Rscript -e "library(Rcpp); Rcpp::compileAttributes('..')"
