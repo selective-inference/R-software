@@ -181,6 +181,7 @@ tnorm.union.surv = function(z, mean, sd, intervals, bits = NULL){
   # intervals is a I x 2 matrix of disjoint intervals where the first column contains the lower endpoint
   
   pval = matrix(NA, nrow = dim(intervals)[1], ncol = length(mean))
+
   for(jj in 1:dim(intervals)[1]){
     if(z <= intervals[jj,1]){
       pval[jj,] = 1
@@ -191,7 +192,9 @@ tnorm.union.surv = function(z, mean, sd, intervals, bits = NULL){
     }
   }
   
+
   ww = matrix(NA, nrow = dim(intervals)[1], ncol = length(as.vector(mean)))
+
   for(jj in 1:dim(intervals)[1]){
     ww[jj,] = pnorm(intervals[jj,2], mean = mean, sd = sd) - pnorm(intervals[jj,1], mean = mean, sd = sd)
   }
