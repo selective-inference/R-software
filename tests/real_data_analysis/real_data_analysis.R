@@ -14,9 +14,9 @@ outfile = file.path(outdir, paste(sep="",label, ".rds"))
 #setwd("/Users/Jelena/Dropbox/kevin/jelena/real_data")
 set.seed(1)
 loss="ls"
-sigma_est = 0.62
-lambda = 0.0352479
-#lambda =  0.8*selectiveInference:::theoretical.lambda(X, loss, sigma_est) # "lambda" "0.0352479112219816"
+sigma_est = 0.4814
+lambda =  0.02735951
+#lambda =  0.8*selectiveInference:::theoretical.lambda(X, loss, sigma_est)
 #print(c("lambda", lambda))
 
 
