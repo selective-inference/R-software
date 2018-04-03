@@ -96,5 +96,5 @@ test_liu_full = function(seed=1, outfile=NULL, nrep=1, n=4000, p=70000, s=20, rh
   return(list(pvalues=pvalues, naive_pvalues=naive_pvalues))
 }
 
-test_liu_full()
+#test_liu_full()
 
