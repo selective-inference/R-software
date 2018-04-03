@@ -110,10 +110,10 @@ solve_problem_Q = function(Q_sq, Qbeta_bar, lambda, penalty_factor,
 
 
 # the selection event is |sigma_est^2*(target_cov)^{-1}Z+center|>radius
-truncation_set = function(X, y, Qbeta_bar, QE, sigma_est, 
+truncation_set = function(X, y, Qbeta_bar, QE, Q_sq, sigma_est, 
                           target_stat, target_cov,
                           group, groups, active_vars,
-                          lambda, penalty_factor, loss, algo, Q_sq=NULL){
+                          lambda, penalty_factor, loss, algo){
   
   if (algo=="Q"){
     penalty_factor_rest = rep(penalty_factor)
@@ -345,7 +345,7 @@ get_QB = function(X, y, soln, active_set, loss){
     QE=Q[active_set,]
     Qi=solve(Q)
     QiE=Qi[active_set, active_set]
-    #Q_sq =  W_root %*% X
+    Q_sq =  W_root %*% X
     #beta_bar = mle(X,y,loss=loss)
     #print("mle")
     #print(mle(X,y,loss=loss))
@@ -363,11 +363,11 @@ get_QB = function(X, y, soln, active_set, loss){
     beta_barE = soln[active_set] + M_active %*% diag(as.vector(1/diagonal)) %*% residuals
     
     QE = hessian_active(X, soln, loss, active_set)
-    #Q_sq = W_root %*% X
+    Q_sq = W_root %*% X
     Qbeta_bar = t(QE)%*%soln[active_set]-gradient(X,y,soln,loss=loss)
   }
   
-  return(list(QE=QE, Qbeta_bar=Qbeta_bar, QiE=QiE, beta_barE=beta_barE))  
+  return(list(QE=QE, Q_sq=Q_sq, Qbeta_bar=Qbeta_bar, QiE=QiE, beta_barE=beta_barE))  
 }
 
 
@@ -388,7 +388,7 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
   begin_setup = Sys.time()
   setup_params = get_QB(X=X, y=y, soln=soln, active_set=active_vars, loss=loss)
   QE=as.matrix(setup_params$QE)
-  #Q_sq=setup_params$Q_sq
+  Q_sq=setup_params$Q_sq
   QiE=as.matrix(setup_params$QiE)
   beta_barE = setup_params$beta_barE
   Qbeta_bar = setup_params$Qbeta_bar
@@ -413,7 +413,7 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
     target_cov = as.matrix(QiE)[group_varsE,group_varsE]
     
     begin_TS = Sys.time()
-    TS =  truncation_set(X=X, y=y, Qbeta_bar=Qbeta_bar, QE=QE, sigma_est=sigma_est, 
+    TS =  truncation_set(X=X, y=y, Qbeta_bar=Qbeta_bar, QE=QE, Q_sq=Q_sq, sigma_est=sigma_est, 
                          target_cov=target_cov, target_stat=target_stat, 
                          group=group, groups=groups, active_vars=active_vars,
                          lambda=lambda, penalty_factor=penalty_factor, loss=loss, algo=algo)
