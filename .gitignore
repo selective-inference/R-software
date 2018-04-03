@@ -1,3 +1,10 @@
+*.rds
+tests/*.rds
+tests/*/*.rds
+tests/*/*/*.rds
+tests/*.csv
+tests/*/*.csv
+tests/*/*/*.csv
 **DS_Store**
 **Rcheck**
 **tar.gz
@@ -7,3 +14,13 @@
 **.o
 **.so
 forLater/josh/**
+*/R/RcppExports.R
+*/src/RcppExports.cpp
+*~
+*/*~
+*/*/*~
+# this code is copied from C-software
+selectiveInference/src/matrixcomps.*
+selectiveInference/src/debias.*
+selectiveInference/src/randomized_lasso.*
+selectiveInference/src/quadratic_program*.c

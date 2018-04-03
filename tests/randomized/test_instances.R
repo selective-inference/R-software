@@ -35,17 +35,35 @@ get_instance = function(n, p, s, sigma=1, rho=0, signal=6, family="gaussian",
 
 test_randomized_lasso = function(n=100,p=200,s=0){
   set.seed(1)
-  data = gaussian_instance(n=n,p=p,s=s, rho=0.3, sigma=3)
+  data = get_instance(n=n,p=p,s=s, rho=0.3, sigma=1, family="binomial")
   X=data$X
   y=data$y
   lam = 2.
   noise_scale = 0.5
   ridge_term = 1./sqrt(n)
-  result = selectiveInference:::randomizedLasso(X,y,lam, noise_scale, ridge_term)
+  result = selectiveInference:::randomizedLasso(X, y, lam, noise_scale, ridge_term)
   print(result$soln)
   print(length(which(result$soln!=0)))
   print(result$observed_opt_state) # compared with python code
 }
+
+test_randomized_logistic = function(n=100,p=20,s=0){
+  set.seed(1)
+  data = get_instance(n=n,p=p,s=s, rho=0.3, sigma=1, family="binomial")
+  X=data$X
+  y=data$y
+  lam = 0.5
+  noise_scale = 0.5
+  ridge_term = 1./sqrt(n)
+  set.seed(1)
+  perturb = rnorm(p)*noise_scale
+  result = selectiveInference:::solve_logistic(X,y,lam, ridge_term, perturb)
+  print(result$soln)
+  print(length(which(result$soln!=0)))
+}
+
+#test_randomized_logistic()
+
 
 test_KKT=function(){
   set.seed(1)
@@ -67,14 +85,15 @@ test_KKT=function(){
   #print(result$perturb)
   print(opt_linear %*% observed_opt_state+opt_offset+result$observed_raw-result$perturb) ## should be zero
 }
-  
 
 
 collect_results = function(n,p,s, nsim=100, level=0.9, 
-                           family = "binomial",
-                           condition_subgrad=FALSE, lam=1.2){
+                           family = "gaussian",
+                           condition_subgrad=TRUE, 
+                           type="full",
+                           lam=1.2){
 
-  rho=0.3
+  rho=0.
   sigma=1
   sample_pvalues = c()
   sample_coverage = c()
@@ -82,17 +101,23 @@ collect_results = function(n,p,s, nsim=100, level=0.9,
     data = get_instance(n=n,p=p,s=s, rho=rho, sigma=sigma, family=family)
     X=data$X
     y=data$y
-    result = selectiveInference:::randomizedLassoInf(X, y, 
-                                                     lam, 
-                                                     family = family,
-                                                     sampler = "adaptMCMC",
-                                                     sigma=sigma,
+
+    rand_lasso_soln = selectiveInference:::randomizedLasso(X, 
+                                                           y, 
+                                                           lam, 
+                                                           family=family,
+                                                           condition_subgrad=condition_subgrad)
+    
+    targets=selectiveInference:::compute_target(rand_lasso_soln,type=type)
+    print(targets$construct_pvalues)    
+    result = selectiveInference:::randomizedLassoInf(rand_lasso_soln,
+                                                     targets=targets,
+                                                     sampler="norejection", #"adaptMCMC", #
                                                      level=level, 
                                                      burnin=1000, 
-                                                     nsample=5000, 
-                                                     condition_subgrad=condition_subgrad)
-    if (length(result$active_set)>0){
-      true_beta = data$beta[result$active_set]
+                                                     nsample=5000)
+    if (length(result$pvalues)>0){
+      true_beta = data$beta[rand_lasso_soln$active_set]
       coverage = rep(0, nrow(result$ci))
       for (i in 1:nrow(result$ci)){
         if (result$ci[i,1]<true_beta[i] & result$ci[i,2]>true_beta[i]){
@@ -114,8 +139,6 @@ collect_results = function(n,p,s, nsim=100, level=0.9,
   }
 }
 
-#set.seed(1)
-collect_results(n=500, p=200, s=0, lam=0.8)
-#test_randomized_lasso()
-#test_KKT()
+set.seed(1)
+collect_results(n=100, p=20, s=0, lam=1.)
 

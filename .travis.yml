@@ -2,7 +2,7 @@ language: r
 cache: packages
 sudo: false
 r:
-  - oldrel
+  #- oldrel
   - release
   - devel
 addons:
