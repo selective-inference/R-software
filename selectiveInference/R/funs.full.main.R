@@ -299,26 +299,16 @@ approximate = function(X, active_set){
   p=ncol(X)
   nactive=length(active_set)
   inactive_set=setdiff(1:p, active_set)
-  X_active = X[, active_set]
-  X_inactive = X[, inactive_set]
   
-  Xordered = X[,c(active_set,inactive_set,recursive=T)]
-  hsigmaS = 1/n*(t(X_active)%*%X_active) # hsigma[S,S]
-  hsigmaSinv =  solve(hsigmaS) # inverse of hsigma[S,S]
-  FS = rbind(diag(nactive),matrix(0,p-nactive,nactive))
-  GS = cbind(diag(nactive),matrix(0,nactive,p-nactive))
-  hsigma = 1/n*(t(Xordered)%*%Xordered)
   is_wide = n < (2 * p)
   
   if (!is_wide) {
-    hsigma = 1/n*(t(Xordered)%*%Xordered)
-    htheta = debiasingMatrix(hsigma, is_wide, n, 1:nactive)
-    ithetasigma = (GS-(htheta%*%hsigma))
+    hsigma = 1/n*(t(X) %*% X)
+    htheta = debiasingMatrix(hsigma, is_wide, n, active_set)
   } else {
-    htheta = debiasingMatrix(Xordered, is_wide, n, 1:nactive)
-    ithetasigma = (GS-((htheta%*%t(Xordered)) %*% Xordered)/n)
+    htheta = debiasingMatrix(X, is_wide, n, active_set)
   }
-  M_active <- ((htheta%*%t(Xordered))+ithetasigma%*%FS%*%hsigmaSinv%*%t(X_active))/n
+  M_active <- htheta%*%t(X) / n # the n is so that we approximate the inverse of (X^TX)^{-1} instead of (X^TX/n)^{-1}.
   return(M_active)
 }
 
@@ -361,7 +351,6 @@ get_QB = function(X, y, soln, active_set, loss){
     M_active = approximate(W_root %*% X, active_set) ## this should be the active rows of \Sigma_i (W^{1/2} X)^T
     QiE = M_active %*% t(M_active)
     beta_barE = soln[active_set] + M_active %*% diag(as.vector(1/diagonal)) %*% residuals
-    
     QE = hessian_active(X, soln, loss, active_set)
     Q_sq = W_root %*% X
     Qbeta_bar = t(QE)%*%soln[active_set]-gradient(X,y,soln,loss=loss)
