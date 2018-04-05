@@ -308,7 +308,7 @@ approximate = function(X, active_set){
   } else {
     htheta = debiasingMatrix(X, is_wide, n, active_set)
   }
-  M_active <- htheta%*%t(X) / n # the n is so that we approximate the inverse of (X^TX)^{-1} instead of (X^TX/n)^{-1}.
+  M_active <- htheta / n # the n is so that we approximate the inverse of (X^TX)^{-1} instead of (X^TX/n)^{-1}.
   return(M_active)
 }
 
@@ -320,15 +320,14 @@ get_QB = function(X, y, soln, active_set, loss){
   
   fit = X%*%soln
   if (loss=="ls"){
-    diagonal = rep(1,n)
-    W_root=diag(as.vector(diagonal))
+    W = rep(1,n)
     residuals = y-fit
   }
   if (loss=="logit"){
-    diagonal = exp(fit/2)/(1+exp(fit))  ## sqrt(pi*(1-pi))
-    W_root = diag(as.vector(diagonal))
+    W = exp(fit/2)/(1+exp(fit))  ## sqrt(pi*(1-pi))
     residuals = y-(exp(fit)/(1+exp(fit)))
   } 
+  W_root=diag(as.vector(W))
   
   if (n>p){
     Q=hessian(X, soln, loss=loss)
@@ -336,24 +335,20 @@ get_QB = function(X, y, soln, active_set, loss){
     Qi=solve(Q)
     QiE=Qi[active_set, active_set]
     Q_sq =  W_root %*% X
-    #beta_bar = mle(X,y,loss=loss)
-    #print("mle")
-    #print(mle(X,y,loss=loss))
     beta_bar = soln - Qi %*% gradient(X,y,soln, loss=loss)
-    #beta_bar = (soln - Qi %*% gradient(X,y,soln, loss=loss)+mle(X,y,loss))/2
-    #print("one step")
-    #print(beta_bar)
     Qbeta_bar = Q%*%soln - gradient(X,y,soln, loss=loss)
     beta_barE = beta_bar[active_set]
     
   } else{
     
-    M_active = approximate(W_root %*% X, active_set) ## this should be the active rows of \Sigma_i (W^{1/2} X)^T
-    QiE = M_active %*% t(M_active)
-    beta_barE = soln[active_set] + M_active %*% diag(as.vector(1/diagonal)) %*% residuals
-    QE = hessian_active(X, soln, loss, active_set)
     Q_sq = W_root %*% X
-    Qbeta_bar = t(QE)%*%soln[active_set]-gradient(X,y,soln,loss=loss)
+    M_active = approximate(Q_sq, active_set) ## this should be the active rows of \Sigma_i (W^{1/2} X)^T
+    G = gradient(X,y,soln,loss=loss)
+    M2 = M_active %*% t(X)
+    QiE = M2 %*% (diag(W) %*% t(M2))  # is there a more efficient way to do this diag multiplication? also above
+    beta_barE = soln[active_set] - M_active %*% G
+    QE = hessian_active(X, soln, loss, active_set)
+    Qbeta_bar = t(QE)%*%soln[active_set] - G
   }
   
   return(list(QE=QE, Q_sq=Q_sq, Qbeta_bar=Qbeta_bar, QiE=QiE, beta_barE=beta_barE))  
