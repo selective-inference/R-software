@@ -343,7 +343,7 @@ get_QB = function(X, y, soln, active_set, loss){
     
     Q_sq = W_root %*% X
     M_active = approximate(Q_sq, active_set) ## this should be the active rows of \Sigma_i (W^{1/2} X)^T
-    G = gradient(X,y,soln,loss=loss)
+    G = gradient(X, y, soln, loss=loss)
     M2 = M_active %*% t(X)
     QiE = M2 %*% (diag(W) %*% t(M2))  # is there a more efficient way to do this diag multiplication? also above
     beta_barE = soln[active_set] - M_active %*% G
@@ -357,7 +357,7 @@ get_QB = function(X, y, soln, active_set, loss){
 
 
 inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sigma_est,
-                                 loss, algo, construct_ci){
+                                 loss, algo, construct_ci, verbose=FALSE){
   
   active_vars = which(soln!=0)
   
@@ -367,8 +367,10 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
   active_groups = unique(groups[active_vars])
   nactive_groups = length(active_groups)
   
-  print(c("nactive", nactive_groups))
-  
+  if (verbose) {
+      print(c("nactive", nactive_groups))
+  }
+
   begin_setup = Sys.time()
   setup_params = get_QB(X=X, y=y, soln=soln, active_set=active_vars, loss=loss)
   QE=as.matrix(setup_params$QE)
@@ -378,8 +380,9 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
   Qbeta_bar = setup_params$Qbeta_bar
   QiE = QiE * sigma_est^2
   end_setup = Sys.time()
-  cat("setup time", end_setup-begin_setup, "\n")
-  
+  if (verbose) {
+     cat("setup time", end_setup-begin_setup, "\n")
+  }
   pvalues = NULL
   naive_pvalues = NULL
   selected_vars=NULL
@@ -402,8 +405,9 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
                          group=group, groups=groups, active_vars=active_vars,
                          lambda=lambda, penalty_factor=penalty_factor, loss=loss, algo=algo)
     end_TS = Sys.time()
-    cat("TS time", end_TS-begin_TS, "\n")
-    
+    if (verbose) {
+       cat("TS time", end_TS-begin_TS, "\n")
+    }
     center = TS$center
     radius = TS$radius
     
@@ -438,11 +442,11 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
             sel_intervals = cbind(sel_intervals, sel_int)
             naive_intervals = cbind(naive_intervals, naive_int)
           }
-        } else{
-          print("observation not within the truncation limits!")
+        } else {
+             warning("observation not within the truncation limits!")
         }
       }
-    } else{
+    } else {
       
       lower = target_cov*(-center-radius)/(sigma_est^2)
       upper = target_cov*(-center+radius)/(sigma_est^2)
@@ -453,9 +457,7 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
         intervals[1,] = c(-Inf, lower)
         intervals[2,] = c(upper, Inf)
         pval = tnorm.union.surv(target_stat, mean=0, sd=sqrt(target_cov), intervals)
-        #pval = test_TG(0, target_stat, target_cov, sigma_est, center, radius, alt="two-sided")
         pval = 2*min(pval, 1-pval)
-        #print(c("pval", pval))
         pvalues = c(pvalues, pval)
         
         selected_vars = c(selected_vars, group_vars)
@@ -463,29 +465,17 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
         naive_pval =  pvalue_naive_linear(target_stat, target_cov)
         naive_pvalues = c(naive_pvalues, naive_pval)
         
-        if (construct_ci){
+        if (construct_ci) {
           sel_int = create_tnorm_interval(z=target_stat, sd=sqrt(target_cov), alpha=0.1, intervals=intervals)
-          #print(c("tg intervals", sel_int))
-          #sel_int = selective_CI(target_stat, target_cov, sigma_est, center, radius)
-          #print(c("jelena int", sel_int))
           naive_int = naive_CI(target_stat, target_cov)
-          #cat("sel interval", sel_int, "\n")
-          #cat("naive interval", naive_int, "\n")
           sel_intervals = cbind(sel_intervals, sel_int)
           naive_intervals = cbind(naive_intervals, naive_int)
         }
-      } else{
-        print("observation not within the truncation limits!")
+      } else {
+           warning("observation not within the truncation limits!")
       }
       
     }
-    
-    #reference = get_reference(center, radius, target_stat, solve(target_cov))
-    #samples = sampling(target_cov, reference, center, radius, n=nrow(X), nsample=nsample)
-    #tilting_weights = compute_tilting_weights(reference, solve(target_cov), samples)
-    #pvalues[i] = weighted_pvalue(samples, tilting_weights, target_stat)
-    #naive_pvalues[i] = p_value(mvrnorm(n=nsample, mu=rep(0, length(target_stat)), Sigma = target_cov), target_stat)
-    #print(c("sampling", pvalues[i]))
   }
   
   return(list(pvalues=pvalues, naive_pvalues=naive_pvalues, active_vars=selected_vars,
