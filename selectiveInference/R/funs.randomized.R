@@ -42,6 +42,7 @@ randomizedLasso = function(X,
     }
     
     if (noise_scale > 0) {
+        set.seed(1)
         perturb_ = rnorm(p) * noise_scale
     } else {
         perturb_ = rep(0, p)
@@ -98,7 +99,7 @@ randomizedLasso = function(X,
                               parameter_stop=parameter_stop)
     }
     sign_soln = sign(result$soln)
-    
+    print(c("length", length(result$soln)))
     unpenalized = lam == 0
     active = (!unpenalized) & (sign_soln != 0)
     inactive = (!unpenalized) & (sign_soln == 0)
@@ -447,7 +448,8 @@ compute_target = function(rand_lasso_soln,
     
     crosscov_target_internal=rbind(cov_target, matrix(0, nrow=p-nactive, ncol=nactive))
   } 
-  
+  print("signs")
+  print(rand_lasso_soln$sign_soln)
   alternatives = c()
   for (i in 1:length(rand_lasso_soln$sign_soln)) {
       if (rand_lasso_soln$sign_soln[i] == 1) {
@@ -521,7 +523,7 @@ compute_target = function(rand_lasso_soln,
   return(list(targets=targets,
               construct_ci=construct_ci, 
               construct_pvalues=construct_pvalues,
-              alternatives=alternatives))
+              alternatives=alternatives[active_set]))
 }
 
 
@@ -655,7 +657,7 @@ randomizedLassoInf = function(rand_lasso_soln,
       arg_ = candidate * sufficient_stat + log_reference_measure
       arg_ = arg_ - max(arg_)
       weights = exp(arg_)
-      p = mean((target_sample + candidate < targets$observed_target[i]) * weights)/mean(weights)
+      p = mean((target_sample + candidate <= targets$observed_target[i]) * weights)/mean(weights)
       return(p)
     }
 
@@ -666,14 +668,15 @@ randomizedLassoInf = function(rand_lasso_soln,
     rootL = function(candidate){
       return(pivot(targets$observed_target[i]+candidate)-(1+level)/2)
     }
-    
+
     if (construct_pvalues[i]==1){
+      print(alternatives[i])
       pvalues[i] = pivot(0)
       if (alternatives[i]=="two-sided"){
         pvalues[i] = 2*min(pvalues[i], 1-pvalues[i])
       } else if (alternatives[i]=="greater"){
         pvalues[i]= 1-pvalues[i]
-      } 
+      }
     }
     
     if (construct_ci[i]==1){
