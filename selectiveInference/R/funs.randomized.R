@@ -66,22 +66,22 @@ randomizedLasso = function(X,
       nactive = as.integer(0)
       
       result = solve_QP_wide(X,                  # design matrix
-                           lam / n,            # vector of Lagrange multipliers
-                           ridge_term / n,     # ridge_term 
-                           max_iter, 
-                           soln, 
-                           linear_func, 
-                           gradient, 
-                           Xsoln,
-                           ever_active, 
-                           nactive, 
-                           kkt_tol, 
-                           objective_tol, 
-                           parameter_tol,
-                           p,
-                           objective_stop,     # objective_stop
-                           kkt_stop,           # kkt_stop
-                           parameter_stop)         # param_stop
+                             lam / n,            # vector of Lagrange multipliers
+                             ridge_term / n,     # ridge_term 
+                             max_iter, 
+                             soln, 
+                             linear_func, 
+                             gradient, 
+                             Xsoln,
+                             ever_active, 
+                             nactive, 
+                             kkt_tol, 
+                             objective_tol, 
+                             parameter_tol,
+                             p,                  # this removes max_active as a reason to stop 
+                             objective_stop,     # objective_stop
+                             kkt_stop,           # kkt_stop
+                             parameter_stop)         # param_stop
     } else if (family=="binomial"){
       result = solve_logistic(X, 
                               y, 
@@ -749,7 +749,7 @@ solve_logistic=function(X,
                            kkt_tol, 
                            objective_tol, 
                            parameter_tol,
-                           p,
+                           p,                  # this removes max_active as a reason to stop 
                            objective_stop,     # objective_stop
                            kkt_stop,           # kkt_stop
                            parameter_stop)         # param_stop
