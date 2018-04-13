@@ -41,8 +41,8 @@ randomizedLasso = function(X,
         }
     }
     
+    print(c("noise scale", noise_scale))
     if (noise_scale > 0) {
-        set.seed(1)
         perturb_ = rnorm(p) * noise_scale
     } else {
         perturb_ = rep(0, p)
@@ -98,8 +98,11 @@ randomizedLasso = function(X,
                               kkt_stop=kkt_stop,
                               parameter_stop=parameter_stop)
     }
+    #print("SOLN")
+    #print(result$soln)
+    #print(c("length", length(result$soln)))
+    
     sign_soln = sign(result$soln)
-    print(c("length", length(result$soln)))
     unpenalized = lam == 0
     active = (!unpenalized) & (sign_soln != 0)
     inactive = (!unpenalized) & (sign_soln == 0)
