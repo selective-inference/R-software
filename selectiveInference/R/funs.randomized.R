@@ -43,6 +43,7 @@ randomizedLasso = function(X,
     
     print(c("noise scale", noise_scale))
     if (noise_scale > 0) {
+        #set.seed(1)
         perturb_ = rnorm(p) * noise_scale
     } else {
         perturb_ = rep(0, p)
@@ -490,19 +491,22 @@ compute_target = function(rand_lasso_soln,
       M_inactive  =  (htheta[, (nactive+1):p]%*%t(X[,inactive_set])/n)
                        #+ithetasigma_inactive%*%FS%*%hsigmaSinv%*%t(X_active))/n)
       M_inactive_full = htheta[, (nactive+1)]
+      
+      cov_target = sigma_est^2*scalar^2*M_active %*% t(M_active)
     }
     else{
       pseudo_invX = pinv(crossprod(X))
       M_active = pseudo_invX[active_set,] %*% t(X)
       M_inactive = (pseudo_invX[,inactive_set] %*% t(X_inactive))[active_set,]
+      
+      cov_target = sigma_est^2*pseudo_invX[active_set,active_set]
     }
 
     residuals = y-X%*%lasso.est
     scalar = 1 #sqrt(n) # JT: this is sigma?
     observed_target = lasso.est[active_set]+scalar*M_active %*% residuals
-    cov_target = glm_cov + sigma_est^2*scalar^2*M_inactive %*% t(M_inactive)
-    crosscov_target_internal = rbind(glm_cov, sigma_est^2*scalar*t(X_inactive) %*% t(M_inactive))
-    
+    hat_matrix = X_active %*% solve(t(X_active) %*% X_active)
+    crosscov_target_internal = sigma_est^2*rbind(M_active %*% hat_matrix, t(X_inactive) %*% t(M_inactive))
   }
   
   if (!is.null(colnames(X))) {
