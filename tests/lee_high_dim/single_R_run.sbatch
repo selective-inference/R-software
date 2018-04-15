@@ -28,11 +28,12 @@
 # otherwise: 
 
 SEED=$1
+type=$2
 
 # cd to program directory
-cd /home/users/jelenam/R-selective/tests/lee_high_dim_full
+cd /home/users/jelenam/R-selective/tests/lee_high_dim
 
 module load R/3.4.0
 
-Rscript cluster.R $SEED 
+Rscript cluster.R $SEED $type
 

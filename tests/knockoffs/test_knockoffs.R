@@ -34,9 +34,9 @@ compute.knockoff = function(data, method, q=0.2, model.free=TRUE){
 
 
 test_knockoffs = function(seed=1, outfile=NULL, method = "knockoff", 
-                          nrep=10, n=100, p=200, s=10, rho=0.){
+                          nrep=10, n=1000, p=10000, s=50, rho=0.){
   
-  snr = 4*sqrt(2*log(p)/n)
+  snr = sqrt(2*log(p)/n)
   
   set.seed(seed)
 
@@ -69,4 +69,4 @@ test_knockoffs = function(seed=1, outfile=NULL, method = "knockoff",
   return(list(FDR_sample=FDR_sample, power_sample=power_sample))
 }
 
-test_knockoffs()
+#test_knockoffs()

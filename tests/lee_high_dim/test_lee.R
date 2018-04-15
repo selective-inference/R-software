@@ -1,9 +1,10 @@
 library(selectiveInference)
 library(glmnet)
 
-# testing Lee et al type=full in high dimensional settings -- uses debiasing matrix
+# testing Lee et al in high dimensional setting
+# uses debiasing matrix for type=full
 
-test_lee_full = function(seed=1, outfile=NULL, nrep=1, n=1000, p=10000, s=50, rho=0.){
+test_lee = function(seed=1, outfile=NULL, type="full", nrep=10, n=1000, p=10000, s=50, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
@@ -34,13 +35,13 @@ test_lee_full = function(seed=1, outfile=NULL, nrep=1, n=1000, p=10000, s=50, rh
     sigma_est=1
     
     # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))] # lambda via randomized cv 
-    lambda = 0.8*selectiveInference:::theoretical.lambda(X, loss, sigma_est) # theoretical lambda
+    lambda = 0.75*selectiveInference:::theoretical.lambda(X, loss, sigma_est) # theoretical lambda
     
     lasso = glmnet(X, y, family=selectiveInference:::family_label(loss), alpha=1, standardize=FALSE, intercept=FALSE, thresh=1e-12)
     soln = as.numeric(coef(lasso,x=X,y=y, family=selectiveInference:::family_label(loss), s=lambda, exact=TRUE))[-1]
 
     PVS = selectiveInference:::fixedLassoInf(X,y,soln, intercept=FALSE, lambda*n, family=selectiveInference:::family_label(loss),
-                                             type="full",sigma=sigma_est)
+                                             type=type,sigma=sigma_est)
     
     abs_soln = abs(soln)
     beta_threshold = abs_soln[order(abs_soln,decreasing=TRUE)][length(PVS$pv)]
@@ -75,18 +76,18 @@ test_lee_full = function(seed=1, outfile=NULL, nrep=1, n=1000, p=10000, s=50, rh
   }
   
   if (is.null(outfile)){
-    outfile="lee_full.rds"
+    outfile=paste("lee_", type, ".rds", sep="")
   }
   
   saveRDS(list(sel_intervals=sel_intervals, sel_coverages=sel_coverages, sel_lengths=sel_lengths,
                pvalues=pvalues,
                FDR_sample=FDR_sample, power_sample=power_sample,
-               n=n, p=p, s=s, snr=snr, rho=rho), file=outfile)
+               n=n, p=p, s=s, snr=snr, rho=rho, type=type), file=outfile)
   
   return(list(pvalues=pvalues))
 }
 
-#test_lee_full()
+#test_lee()
 
 
 
