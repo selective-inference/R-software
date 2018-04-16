@@ -492,7 +492,7 @@ compute_target = function(rand_lasso_soln,
                        #+ithetasigma_inactive%*%FS%*%hsigmaSinv%*%t(X_active))/n)
       M_inactive_full = htheta[, (nactive+1)]
       
-      cov_target = sigma_est^2*scalar^2*M_active %*% t(M_active)
+      cov_target = sigma_est^2*M_active %*% t(M_active)
     }
     else{
       pseudo_invX = pinv(crossprod(X))
