@@ -13,7 +13,7 @@
 #################
 #time you think you need; default is 2 hours
 #format could be dd-hh:mm:ss, hh:mm:ss, mm:ss, or mm
-#SBATCH --time=10:00:00
+#SBATCH --time=5:00:00
 #################
 #SBATCH --qos=normal
 #SBATCH -p normal 
@@ -21,7 +21,7 @@
 #number of nodes you are requesting, the more you ask for the longer you wait
 #SBATCH --nodes=1
 #################
-#SBATCH --mem=32000
+#SBATCH --mem=16000
 
 # You can use srun if your job is parallel
 #srun R CMD BATCH  ./rtest.R 
