@@ -44,8 +44,8 @@ test_knockoffs = function(seed=1, outfile=NULL, method = "knockoff",
   power_sample=NULL
   
   for (i in 1:nrep){
-    #data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
-    data = selectiveInference:::logistic_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
+    data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
+    #data = selectiveInference:::logistic_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
     
     cat("true nonzero:", which(data$beta!=0), "\n")
     
@@ -64,7 +64,7 @@ test_knockoffs = function(seed=1, outfile=NULL, method = "knockoff",
   }
   
   saveRDS(list(FDR_sample=FDR_sample, power_sample=power_sample,
-               n=n,p=p, s=s, snr=snr, rho=rho), file=outfile)
+               n=n,p=p, s=s, snr=snr, rho=rho, method=method), file=outfile)
   
   return(list(FDR_sample=FDR_sample, power_sample=power_sample))
 }

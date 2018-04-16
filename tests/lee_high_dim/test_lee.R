@@ -28,10 +28,10 @@ test_lee = function(seed=1, outfile=NULL, type="full", nrep=10, n=1000, p=10000,
     beta=data$beta
     cat("true nonzero:", which(beta!=0), "\n")
     
-    CV = cv.glmnet(X, y, standardize=FALSE, intercept=FALSE, family=selectiveInference:::family_label(loss))
-    
+    #CV = cv.glmnet(X, y, standardize=FALSE, intercept=FALSE, family=selectiveInference:::family_label(loss))
     #sigma_est=selectiveInference:::estimate_sigma(X,y,coef(CV, s="lambda.min")[-1])  # sigma via Reid et al.
     #print(c("sigma est", sigma_est))
+    
     sigma_est=1
     
     # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))] # lambda via randomized cv 
