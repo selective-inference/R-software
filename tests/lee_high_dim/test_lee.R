@@ -4,7 +4,7 @@ library(glmnet)
 # testing Lee et al in high dimensional setting
 # uses debiasing matrix for type=full
 
-test_lee = function(seed=1, outfile=NULL, type="full", nrep=10, n=200, p=1000, s=20, rho=0.){
+test_lee = function(seed=1, outfile=NULL, type="full", nrep=10, n=200, p=800, s=20, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
@@ -35,7 +35,7 @@ test_lee = function(seed=1, outfile=NULL, type="full", nrep=10, n=200, p=1000, s
     sigma_est=1
     
     # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))] # lambda via randomized cv 
-    lambda = 0.75*selectiveInference:::theoretical.lambda(X, loss, sigma_est) # theoretical lambda
+    lambda = 0.8*selectiveInference:::theoretical.lambda(X, loss, sigma_est) # theoretical lambda
     
     lasso = glmnet(X, y, family=selectiveInference:::family_label(loss), alpha=1, standardize=FALSE, intercept=FALSE, thresh=1e-12)
     soln = as.numeric(coef(lasso,x=X,y=y, family=selectiveInference:::family_label(loss), s=lambda, exact=TRUE))[-1]

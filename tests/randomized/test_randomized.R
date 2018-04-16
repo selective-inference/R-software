@@ -2,7 +2,7 @@ library(MASS)
 library(selectiveInference)
 library(glmnet)
 
-test_randomized = function(seed=1, outfile=NULL, type="full", nrep=10, n=200, p=1000, s=20, rho=0.){
+test_randomized = function(seed=1, outfile=NULL, type="full", nrep=10, n=200, p=800, s=20, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
@@ -31,7 +31,7 @@ test_randomized = function(seed=1, outfile=NULL, type="full", nrep=10, n=200, p=
     #print(c("sigma est", sigma_est))
     sigma_est=1
     # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))]  # lambda via randomized cv 
-    lambda = 0.75*selectiveInference:::theoretical.lambda(X, loss, sigma_est)  # theoretical lambda
+    lambda = 0.8*selectiveInference:::theoretical.lambda(X, loss, sigma_est)  # theoretical lambda
     
     
     rand_lasso_soln = selectiveInference:::randomizedLasso(X, 

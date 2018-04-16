@@ -5,7 +5,7 @@ library(glmnet)
 
 # testing Liu et al type=full in high dimensional settings -- uses debiasing matrix
 
-test_liu_full = function(seed=1, outfile=NULL, nrep=10, n=200, p=1000, s=20, rho=0.){
+test_liu_full = function(seed=1, outfile=NULL, nrep=10, n=200, p=800, s=20, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
@@ -39,7 +39,7 @@ test_liu_full = function(seed=1, outfile=NULL, nrep=10, n=200, p=1000, s=20, rho
     print(c("sigma est", sigma_est))
     
     # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))]  # lambda via randomized cv 
-    lambda = 0.75*selectiveInference:::theoretical.lambda(X, loss, sigma_est)  # theoretical lambda
+    lambda = 0.8*selectiveInference:::theoretical.lambda(X, loss, sigma_est)  # theoretical lambda
     print(c("lambda", lambda))
     
     soln = selectiveInference:::solve_problem_glmnet(X, y, lambda, penalty_factor=penalty_factor, loss=loss)
