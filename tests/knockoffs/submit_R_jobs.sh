@@ -4,7 +4,7 @@
 # load local environment
 
 type1=knockoff
-type2=knockoff+
+type2=knockoff_plus
 
 for i in {1..10}
 do

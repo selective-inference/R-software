@@ -9,7 +9,7 @@ compute.knockoff = function(data, method, q=0.2, model.free=TRUE){
   true.nonzero = which(data$beta!=0)
   s=length(true.nonzero)
   offset=0
-  if (method=="knockoff+"){
+  if (method=="knockoff_plus"){
     offset=1
   }
   
@@ -34,7 +34,7 @@ compute.knockoff = function(data, method, q=0.2, model.free=TRUE){
 
 
 test_knockoffs = function(seed=1, outfile=NULL, method = "knockoff", 
-                          nrep=10, n=200, p=800, s=20, rho=0.){
+                          nrep=10, n=200, p=1000, s=30, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
@@ -69,4 +69,4 @@ test_knockoffs = function(seed=1, outfile=NULL, method = "knockoff",
   return(list(FDR_sample=FDR_sample, power_sample=power_sample))
 }
 
-#test_knockoffs()
+test_knockoffs()
