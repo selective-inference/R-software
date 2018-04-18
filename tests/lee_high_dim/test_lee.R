@@ -4,7 +4,8 @@ library(glmnet)
 # testing Lee et al in high dimensional setting
 # uses debiasing matrix for type=full
 
-test_lee = function(seed=1, outfile=NULL, type="full", nrep=10, n=200, p=1000, s=30, rho=0.){
+test_lee = function(seed=1, outfile=NULL, type="full", 
+                    nrep=5, n=500, p=5000, s=30, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   

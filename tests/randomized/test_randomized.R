@@ -2,7 +2,9 @@ library(MASS)
 library(selectiveInference)
 library(glmnet)
 
-test_randomized = function(seed=1, outfile=NULL, type="full", nrep=10, n=200, p=1000, s=30, rho=0.){
+
+test_randomized = function(seed=1, outfile=NULL, type="full", 
+                           nrep=5, n=500, p=500, s=30, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
@@ -97,3 +99,5 @@ test_randomized = function(seed=1, outfile=NULL, type="full", nrep=10, n=200, p=
 }
 
 #test_randomized()
+
+

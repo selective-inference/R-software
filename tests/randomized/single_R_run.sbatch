@@ -13,7 +13,7 @@
 #################
 #time you think you need; default is 2 hours
 #format could be dd-hh:mm:ss, hh:mm:ss, mm:ss, or mm
-#SBATCH --time=5:00:00
+#SBATCH --time=10:00:00
 #################
 #SBATCH --qos=normal
 #SBATCH -p normal 
@@ -29,11 +29,12 @@
 
 SEED=$1
 type=$2
+rho=$3
 
 # cd to program directory
 cd /home/users/jelenam/R-selective/tests/randomized
 
 module load R/3.4.0
 
-Rscript cluster.R $SEED $type
+Rscript cluster.R $SEED $type $rho
 

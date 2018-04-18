@@ -1,4 +1,6 @@
 library(knockoff)
+library(selectiveInference)
+
 
 compute.knockoff = function(data, method, q=0.2, model.free=TRUE){
   
@@ -34,7 +36,7 @@ compute.knockoff = function(data, method, q=0.2, model.free=TRUE){
 
 
 test_knockoffs = function(seed=1, outfile=NULL, method = "knockoff", 
-                          nrep=10, n=200, p=1000, s=30, rho=0.){
+                          nrep=5, n=500, p=5000, s=30, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
@@ -69,4 +71,4 @@ test_knockoffs = function(seed=1, outfile=NULL, method = "knockoff",
   return(list(FDR_sample=FDR_sample, power_sample=power_sample))
 }
 
-test_knockoffs()
+#test_knockoffs()

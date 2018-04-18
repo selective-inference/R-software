@@ -13,7 +13,7 @@
 #################
 #time you think you need; default is 2 hours
 #format could be dd-hh:mm:ss, hh:mm:ss, mm:ss, or mm
-#SBATCH --time=5:00:00
+#SBATCH --time=10:00:00
 #################
 #SBATCH --qos=normal
 #SBATCH -p normal 
@@ -28,11 +28,12 @@
 # otherwise: 
 
 SEED=$1
+rho=$2
 
 # cd to program directory
 cd /home/users/jelenam/R-selective/tests/liu_high_dim_full
 
 module load R/3.4.0
 
-Rscript cluster.R $SEED 
+Rscript cluster.R $SEED $rho
 
