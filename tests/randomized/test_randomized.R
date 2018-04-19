@@ -4,7 +4,7 @@ library(glmnet)
 
 
 test_randomized = function(seed=1, outfile=NULL, type="full", 
-                           nrep=5, n=500, p=500, s=30, rho=0.){
+                           nrep=5, n=500, p=5000, s=30, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
