@@ -8,7 +8,7 @@ library(glmnet)
 test_liu_full = function(seed=1, outfile=NULL, loss="logit", lambda_frac=0.4,
                          nrep=5, n=200, p=300, s=20, rho=0.){
   
-  snr = 5*sqrt(2*log(p)/n)
+  snr = 2*sqrt(2*log(p)/n)
   
   set.seed(seed)
   construct_ci=TRUE
@@ -50,8 +50,9 @@ test_liu_full = function(seed=1, outfile=NULL, loss="logit", lambda_frac=0.4,
     
     soln = selectiveInference:::solve_problem_glmnet(X, y, lambda, penalty_factor=penalty_factor, loss=loss)
     #soln = solve_problem_gglasso(X, y, groups=1:ncol(X), lambda, penalty_factor=penalty_factor, loss=loss)
-    PVS = selectiveInference:::inference_group_lasso(X, y, soln, groups=1:ncol(X), lambda=lambda, penalty_factor=penalty_factor, 
-                                sigma_est, loss=loss, algo="glmnet", construct_ci = construct_ci)
+    PVS = selectiveInference:::inference_debiased_full(X, y, soln, lambda=lambda, penalty_factor=penalty_factor, 
+                                sigma_est, loss=loss, algo="glmnet", construct_ci = construct_ci, verbose=TRUE)
+    
     active_vars=PVS$active_vars
     cat("active_vars:",active_vars,"\n")
     pvalues = c(pvalues, PVS$pvalues)

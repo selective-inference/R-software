@@ -299,27 +299,31 @@ approximate = function(X, active_set){
   n=nrow(X)
   p=ncol(X)
   nactive=length(active_set)
-  inactive_set=setdiff(1:p, active_set)
+  #inactive_set=setdiff(1:p, active_set)
   X_active = X[, active_set]
-  X_inactive = X[, inactive_set]
+  #X_inactive = X[, inactive_set]
   
-  Xordered = X[,c(active_set,inactive_set,recursive=T)]
-  hsigmaS = 1/n*(t(X_active)%*%X_active) # hsigma[S,S]
-  hsigmaSinv =  ginv(hsigmaS) # generalized inverse solve(hsigmaS) # ginv
-  FS = rbind(diag(nactive),matrix(0,p-nactive,nactive))
-  GS = cbind(diag(nactive),matrix(0,nactive,p-nactive))
+  #Xordered = X[,c(active_set,inactive_set,recursive=T)]
+  #hsigmaS = 1/n*(t(X_active)%*%X_active) # hsigma[S,S]
+  #hsigmaSinv =  ginv(hsigmaS) # generalized inverse solve(hsigmaS) # ginv
+  #FS = rbind(diag(nactive),matrix(0,p-nactive,nactive))
+  #GS = cbind(diag(nactive),matrix(0,nactive,p-nactive))
+  
   is_wide = n < (2 * p)
-  
+
   if (!is_wide) {
-    hsigma = 1/n*(t(Xordered)%*%Xordered)
-    htheta = selectiveInference:::debiasingMatrix(hsigma, is_wide, n, 1:nactive)  ## approximate inverse of $X^TX/n$
-    ithetasigma = (GS-(htheta%*%hsigma))
+    #hsigma = 1/n*(t(Xordered)%*%Xordered)
+    #htheta = selectiveInference:::debiasingMatrix(hsigma, is_wide, n, 1:nactive)  ## approximate inverse of $X^TX/n$
+    #ithetasigma = (GS-(htheta%*%hsigma))
+    hsigma = 1/n*(t(X)%*%X)
+    htheta = selectiveInference:::debiasingMatrix(hsigma, is_wide, n, active_set)
   } else {
-    htheta = selectiveInference:::debiasingMatrix(Xordered, is_wide, n, 1:nactive)
-    ithetasigma = (GS-((htheta%*%t(Xordered)) %*% Xordered)/n)
+    #htheta = selectiveInference:::debiasingMatrix(Xordered, is_wide, n, 1:nactive)
+    #ithetasigma = (GS-((htheta%*%t(Xordered)) %*% Xordered)/n)
+    htheta = selectiveInference:::debiasingMatrix(X, is_wide, n, active_set)
   }
-  M_active <- ((htheta%*%t(Xordered))+ithetasigma%*%FS%*%hsigmaSinv%*%t(X_active))/n
-  
+  #M_active <- ((htheta%*%t(Xordered))+ithetasigma%*%FS%*%hsigmaSinv%*%t(X_active))/n
+  M_active = htheta%*%t(X)/n
   return(M_active)
 }
 
@@ -362,8 +366,8 @@ get_QB = function(X, y, soln, active_set, loss){
     
   } else{
     
-    M_active = approximate(W_root %*% X, active_set) ## this should be the active rows of \Sigma_i (W^{1/2} X)^T
-    QiE = M_active %*% t(M_active)
+    M_active = approximate(W_root %*% X, active_set) ## this should be the active rows of \hat{\Sigma}(W^{1/2} X)^T/n, so size |E|\times p 
+    QiE = M_active %*% t(M_active) # size |E|\times |E|
     beta_barE = soln[active_set] + M_active %*% diag(as.vector(1/diagonal)) %*% residuals
     
     QE = hessian_active(X, soln, loss, active_set)
@@ -376,18 +380,19 @@ get_QB = function(X, y, soln, active_set, loss){
 
 
 
-inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sigma_est,
-                                 loss, algo, construct_ci){
+inference_debiased_full = function(X, y, soln, lambda, penalty_factor, sigma_est,
+                                 loss, algo, construct_ci, verbose=FALSE){
   
   active_vars = which(soln!=0)
+  nactive_vars = length(active_vars)
   
-  if (length(active_vars)==0){
+  if (nactive_vars==0){
     return(list(pvalues=NULL, naive_pvalues=NULL))
   }
-  active_groups = unique(groups[active_vars])
-  nactive_groups = length(active_groups)
   
-  print(c("nactive", nactive_groups))
+  if (verbose){
+    print(c("nactive", nactive_vars))
+  }
   
   begin_setup = Sys.time()
   setup_params = get_QB(X=X, y=y, soln=soln, active_set=active_vars, loss=loss)
@@ -398,7 +403,10 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
   Qbeta_bar = setup_params$Qbeta_bar
   QiE = QiE * sigma_est^2
   end_setup = Sys.time()
-  cat("setup time", end_setup-begin_setup, "\n")
+  
+  if (verbose){
+    cat("setup time", end_setup-begin_setup, "\n")
+  }
   
   pvalues = NULL
   naive_pvalues = NULL
@@ -407,67 +415,29 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
   naive_intervals= NULL
   
   
-  for (i in 1:nactive_groups){
-    group=active_groups[i]
-    group_vars = which(groups==group)
-    cat("selected group:", group_vars, "\n")
+  for (i in 1:nactive_vars){
     
-    group_varsE = match(group_vars, active_vars)
-    target_stat = beta_barE[group_varsE]
-    target_cov = as.matrix(QiE)[group_varsE,group_varsE]
+    target_stat = beta_barE[i]
+    target_cov = as.matrix(QiE)[i,i]
     
     begin_TS = Sys.time()
     TS =  truncation_set(X=X, y=y, Qbeta_bar=Qbeta_bar, QE=QE, Q_sq=Q_sq, sigma_est=sigma_est, 
                          target_cov=target_cov, target_stat=target_stat, 
-                         group=group, groups=groups, active_vars=active_vars,
+                         group=active_vars[i], groups=1:ncol(X), active_vars=active_vars,
                          lambda=lambda, penalty_factor=penalty_factor, loss=loss, algo=algo)
     end_TS = Sys.time()
-    cat("TS time", end_TS-begin_TS, "\n")
-    
+    if (verbose){
+      cat("TS time", end_TS-begin_TS, "\n")
+      cat("variable", active_vars[i], "\n")
+    }
     center = TS$center
     radius = TS$radius
-    
-    if (length(target_stat)>1){
-      for (i in 1:length(target_stat)){
-        LC = linear_contrast(i=i, target_stat=target_stat, target_cov=target_cov, 
-                             sigma_est=sigma_est, center=center, radius=radius)
-        lower = target_cov[i,i]*(-LC$center-LC$radius)/(sigma_est^2)
-        upper = target_cov[i,i]*(-LC$center+LC$radius)/(sigma_est^2)
-        
-        if (target_stat[i]<=lower | target_stat[i]>=upper)
-        {
-          intervals = matrix(nrow=2, ncol=2)
-          intervals[1,] = c(-Inf, lower)
-          intervals[2,] = c(upper, Inf)
-          pval = tnorm.union.surv(target_stat[i], mean=0, sd=sqrt(target_cov[i,i]), intervals)
-          #pval = test_TG(0, target_stat[i], target_cov[i,i], sigma_est, center, radius, alt="two-sided")
-          pval = 2*min(pval, 1-pval)
-          pvalues = c(pvalues, pval)
-          
-          naive_pval =  pvalue_naive_linear(target_stat[i], target_cov[i,i])
-          naive_pvalues = c(naive_pvalues, naive_pval)
-          
-          selected_vars = c(selected_vars, group_vars[i])
-          
-          if (construct_ci){
-            sel_int = create_tnorm_interval(z=target_stat[i], sd=sqrt(target_cov[i,i]), alpha=0.1, intervals=intervals)
-            #sel_int = selective_CI(target_stat, target_cov, sigma_est, center, radius)
-            naive_int = naive_CI(target_stat[i], target_cov[i,i])
-            #cat("sel interval", sel_int, "\n")
-            #cat("naive interval", naive_int, "\n")
-            sel_intervals = cbind(sel_intervals, sel_int)
-            naive_intervals = cbind(naive_intervals, naive_int)
-          }
-        } else{
-          print("observation not within the truncation limits!")
-        }
-      }
-    } else{
+  
       
-      lower = target_cov*(-center-radius)/(sigma_est^2)
-      upper = target_cov*(-center+radius)/(sigma_est^2)
+    lower = target_cov*(-center-radius)/(sigma_est^2)
+    upper = target_cov*(-center+radius)/(sigma_est^2)
       
-      if (target_stat<=lower | target_stat>=upper)
+    if (target_stat<=lower | target_stat>=upper)
       {
         intervals = matrix(nrow=2, ncol=2)
         intervals[1,] = c(-Inf, lower)
@@ -478,7 +448,7 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
         #print(c("pval", pval))
         pvalues = c(pvalues, pval)
         
-        selected_vars = c(selected_vars, group_vars)
+        selected_vars = c(selected_vars, active_vars[i])
         
         naive_pval =  pvalue_naive_linear(target_stat, target_cov)
         naive_pvalues = c(naive_pvalues, naive_pval)
@@ -497,15 +467,7 @@ inference_group_lasso = function(X, y, soln, groups, lambda, penalty_factor, sig
       } else{
         print("observation not within the truncation limits!")
       }
-      
-    }
     
-    #reference = get_reference(center, radius, target_stat, solve(target_cov))
-    #samples = sampling(target_cov, reference, center, radius, n=nrow(X), nsample=nsample)
-    #tilting_weights = compute_tilting_weights(reference, solve(target_cov), samples)
-    #pvalues[i] = weighted_pvalue(samples, tilting_weights, target_stat)
-    #naive_pvalues[i] = p_value(mvrnorm(n=nsample, mu=rep(0, length(target_stat)), Sigma = target_cov), target_stat)
-    #print(c("sampling", pvalues[i]))
   }
   
   return(list(pvalues=pvalues, naive_pvalues=naive_pvalues, active_vars=selected_vars,

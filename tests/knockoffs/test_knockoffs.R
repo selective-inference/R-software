@@ -36,9 +36,9 @@ compute.knockoff = function(data, method, q=0.2, model.free=TRUE){
 
 
 test_knockoffs = function(seed=1, outfile=NULL, method = "knockoff", loss="logit",
-                          nrep=5, n=200, p=300, s=20, rho=0.){
+                          nrep=10, n=200, p=300, s=20, rho=0.){
   
-  snr = 10*sqrt(2*log(p)/n)
+  snr = 5*sqrt(2*log(p)/n)
   
   set.seed(seed)
 

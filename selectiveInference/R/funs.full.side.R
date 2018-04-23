@@ -1,5 +1,5 @@
 
-selective.plus.BH = function(beta, selected.vars, pvalues, q){
+selective.plus.BH = function(beta, selected.vars, pvalues, q, verbose=FALSE){
   
   if (is.null(selected.vars)){
     return(list(power=NA, FDR=NA, pvalues=NULL, null.pvalues=NULL, ci=NULL, nselected=0))
@@ -9,11 +9,15 @@ selective.plus.BH = function(beta, selected.vars, pvalues, q){
   p.adjust.BH = p.adjust(pvalues, method = "BH", n = nselected)
   rejected = selected.vars[which(p.adjust.BH<q)]
   nrejected=length(rejected)
-  print(paste("sel+BH rejected", nrejected, "vars:",toString(rejected)))
+  if (verbose){
+      print(paste("sel+BH rejected", nrejected, "vars:",toString(rejected)))
+  }
   
   true.nonzero = which(beta!=0)
   true.nulls = which(beta==0)
-  print(paste("true nonzero", length(true.nonzero), "vars:", toString(true.nonzero)))
+  if (verbose){
+    print(paste("true nonzero", length(true.nonzero), "vars:", toString(true.nonzero)))
+  }
   
   TP = length(intersect(rejected, true.nonzero))
   s = length(true.nonzero)
@@ -35,7 +39,9 @@ selective.plus.BH = function(beta, selected.vars, pvalues, q){
   null.pvalues=NA
   if (length(selected.nulls)>0){
     null.pvalues = pvalues[selected.nulls]
-    print(paste("selected nulls", length(selected.nulls), "vars:",toString(selected.vars[selected.nulls])))
+    if (verbose){
+      print(paste("selected nulls", length(selected.nulls), "vars:",toString(selected.vars[selected.nulls])))
+    }
   }
   
   return(list(power=power, 
