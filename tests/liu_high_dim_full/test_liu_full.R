@@ -8,7 +8,7 @@ library(glmnet)
 test_liu_full = function(seed=1, outfile=NULL, loss="logit", lambda_frac=0.4,
                          nrep=5, n=200, p=300, s=20, rho=0.){
   
-  snr = 10*sqrt(2*log(p)/n)
+  snr = 5*sqrt(2*log(p)/n)
   
   set.seed(seed)
   construct_ci=TRUE
