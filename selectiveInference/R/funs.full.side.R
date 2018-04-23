@@ -91,7 +91,7 @@ gaussian_instance = function(n, p, s, rho, sigma, snr, random_signs=TRUE, scale=
   return(result)
 }
 
-logistic_instance = function(n, p, s, rho, sigma, snr, random_signs=TRUE, scale=FALSE, design="AR"){
+logistic_instance = function(n, p, s, rho, snr, random_signs=TRUE, scale=FALSE, design="AR"){
   
   if (design=="AR"){
     X=AR_design(n,p,rho, scale)

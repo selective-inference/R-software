@@ -5,13 +5,12 @@ library(glmnet)
 
 # testing Liu et al type=full in high dimensional settings -- uses debiasing matrix
 
-test_liu_full = function(seed=1, outfile=NULL, 
-                         nrep=5, n=500, p=5000, s=30, rho=0.){
+test_liu_full = function(seed=1, outfile=NULL, loss="logit", lambda_frac=0.4,
+                         nrep=5, n=200, p=300, s=20, rho=0.){
   
-  snr = sqrt(2*log(p)/n)
+  snr = 10*sqrt(2*log(p)/n)
   
   set.seed(seed)
-  loss="ls"
   construct_ci=TRUE
   penalty_factor = rep(1, p)
   
@@ -28,7 +27,13 @@ test_liu_full = function(seed=1, outfile=NULL,
   power_sample=NULL
   
   for (i in 1:nrep){
-    data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
+    
+    if (loss=="ls"){
+      data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
+    } else if (loss=="logit"){
+      data = selectiveInference:::logistic_instance(n=n, p=p, s=s, rho=rho, snr=snr)
+    }
+
     X=data$X
     y=data$y
     beta=data$beta
@@ -40,7 +45,7 @@ test_liu_full = function(seed=1, outfile=NULL,
     print(c("sigma est", sigma_est))
     
     # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))]  # lambda via randomized cv 
-    lambda = 0.8*selectiveInference:::theoretical.lambda(X, loss, sigma_est)  # theoretical lambda
+    lambda = lambda_frac*selectiveInference:::theoretical.lambda(X, loss, sigma_est)  # theoretical lambda
     print(c("lambda", lambda))
     
     soln = selectiveInference:::solve_problem_glmnet(X, y, lambda, penalty_factor=penalty_factor, loss=loss)
@@ -97,5 +102,5 @@ test_liu_full = function(seed=1, outfile=NULL,
   return(list(pvalues=pvalues, naive_pvalues=naive_pvalues))
 }
 
-#test_liu_full()
+test_liu_full()
 

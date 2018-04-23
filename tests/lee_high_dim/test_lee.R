@@ -4,13 +4,12 @@ library(glmnet)
 # testing Lee et al in high dimensional setting
 # uses debiasing matrix for type=full
 
-test_lee = function(seed=1, outfile=NULL, type="full", 
-                    nrep=5, n=500, p=5000, s=30, rho=0.){
+test_lee = function(seed=1, outfile=NULL, type="full", loss="logit", lambda_frac=0.4,
+                    nrep=5, n=500, p=100, s=30, rho=0.){
   
-  snr = sqrt(2*log(p)/n)
+  snr = 0.5*sqrt(2*log(p)/n)
   
   set.seed(seed)
-  loss="ls"
   construct_ci=TRUE
   penalty_factor = rep(1, p)
   
@@ -23,7 +22,11 @@ test_lee = function(seed=1, outfile=NULL, type="full",
   power_sample=NULL
   
   for (i in 1:nrep){
-    data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
+    if (loss=="ls"){
+        data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
+    } else if (loss=="logit"){
+        data = selectiveInference:::logistic_instance(n=n, p=p, s=s, rho=rho, snr=snr)
+    }
     X=data$X
     y=data$y
     beta=data$beta
@@ -36,13 +39,13 @@ test_lee = function(seed=1, outfile=NULL, type="full",
     sigma_est=1
     
     # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))] # lambda via randomized cv 
-    lambda = 0.8*selectiveInference:::theoretical.lambda(X, loss, sigma_est) # theoretical lambda
+    lambda = lambda_frac*selectiveInference:::theoretical.lambda(X, loss, sigma_est) # theoretical lambda
     
     lasso = glmnet(X, y, family=selectiveInference:::family_label(loss), alpha=1, standardize=FALSE, intercept=FALSE, thresh=1e-12)
-    soln = as.numeric(coef(lasso,x=X,y=y, family=selectiveInference:::family_label(loss), s=lambda, exact=TRUE))[-1]
-
+    soln = as.numeric(coef(lasso,x=X,y=y, family=selectiveInference:::family_label(loss), s=lambda, exact=TRUE))
+    
     PVS = selectiveInference:::fixedLassoInf(X,y,soln, intercept=FALSE, lambda*n, family=selectiveInference:::family_label(loss),
-                                             type=type,sigma=sigma_est)
+                                             type=type, sigma=sigma_est)
     
     abs_soln = abs(soln)
     beta_threshold = abs_soln[order(abs_soln,decreasing=TRUE)][length(PVS$pv)]
@@ -88,7 +91,7 @@ test_lee = function(seed=1, outfile=NULL, type="full",
   return(list(pvalues=pvalues))
 }
 
-#test_lee()
+test_lee()
 
 
 

@@ -308,24 +308,21 @@ approximate = function(X, active_set){
   hsigmaSinv =  ginv(hsigmaS) # generalized inverse solve(hsigmaS) # ginv
   FS = rbind(diag(nactive),matrix(0,p-nactive,nactive))
   GS = cbind(diag(nactive),matrix(0,nactive,p-nactive))
-  hsigma = 1/n*(t(Xordered)%*%Xordered)
   is_wide = n < (2 * p)
   
   if (!is_wide) {
     hsigma = 1/n*(t(Xordered)%*%Xordered)
-    htheta = selectiveInference:::debiasingMatrix(hsigma, is_wide, n, 1:nactive)
+    htheta = selectiveInference:::debiasingMatrix(hsigma, is_wide, n, 1:nactive)  ## approximate inverse of $X^TX/n$
     ithetasigma = (GS-(htheta%*%hsigma))
   } else {
     htheta = selectiveInference:::debiasingMatrix(Xordered, is_wide, n, 1:nactive)
     ithetasigma = (GS-((htheta%*%t(Xordered)) %*% Xordered)/n)
   }
   M_active <- ((htheta%*%t(Xordered))+ithetasigma%*%FS%*%hsigmaSinv%*%t(X_active))/n
-  #M_inactive  =  (htheta[, (nactive+1):p]%*%t(X[,inactive_set])/n)
-  #M=matrix(nrow=p, ncol=n)
-  #M[active_set, ]= M_active
-  #M[inactive_set, ]=matrix(0,nrow=length(inactive_set), ncol=n)
+  
   return(M_active)
 }
+
 
 
 
@@ -346,20 +343,22 @@ get_QB = function(X, y, soln, active_set, loss){
   } 
   
   if (n>p){
-    Q=hessian(X, soln, loss=loss)
+    Q=hessian(X, soln, loss=loss)  ## X^TWX
     QE=Q[active_set,]
-    Qi=solve(Q)
+    Qi=solve(Q)   ## (X^TWX)^{-1}
     QiE=Qi[active_set, active_set]
-    Q_sq =  W_root %*% X
+    Q_sq=W_root %*% X
     #beta_bar = mle(X,y,loss=loss)
     #print("mle")
     #print(mle(X,y,loss=loss))
-    beta_bar = soln - Qi %*% gradient(X,y,soln, loss=loss)
-    #beta_bar = (soln - Qi %*% gradient(X,y,soln, loss=loss)+mle(X,y,loss))/2
-    #print("one step")
-    #print(beta_bar)
+    beta_bar = soln - Qi %*% gradient(X,y,soln, loss=loss)  # beta.hat+(X^TWX)^{-1} (y-\pi(X\beta.hat))
     Qbeta_bar = Q%*%soln - gradient(X,y,soln, loss=loss)
     beta_barE = beta_bar[active_set]
+    
+    
+    #M_active = approximate(W_root %*% X, active_set)
+    #print(QiE-M_active %*% t(M_active))
+    
     
   } else{
     

@@ -3,13 +3,12 @@ library(selectiveInference)
 library(glmnet)
 
 
-test_randomized = function(seed=1, outfile=NULL, type="full", 
+test_randomized = function(seed=1, outfile=NULL, type="full", loss="logit", lambda_frac=0.4,
                            nrep=5, n=500, p=5000, s=30, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
   set.seed(seed)
-  loss="ls"
   construct_ci=TRUE
   penalty_factor = rep(1, p)
   
@@ -22,7 +21,13 @@ test_randomized = function(seed=1, outfile=NULL, type="full",
   power_sample=NULL
   
   for (i in 1:nrep){
-    data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
+    
+    if (loss=="ls"){
+      data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
+    } else if (loss=="logit"){
+      data = selectiveInference:::logistic_instance(n=n, p=p, s=s, rho=rho, snr=snr)
+    }
+    
     X=data$X
     y=data$y
     beta=data$beta
@@ -33,7 +38,7 @@ test_randomized = function(seed=1, outfile=NULL, type="full",
     #print(c("sigma est", sigma_est))
     sigma_est=1
     # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))]  # lambda via randomized cv 
-    lambda = 0.8*selectiveInference:::theoretical.lambda(X, loss, sigma_est)  # theoretical lambda
+    lambda = lambda_frac*selectiveInference:::theoretical.lambda(X, loss, sigma_est)  # theoretical lambda
     
     
     rand_lasso_soln = selectiveInference:::randomizedLasso(X, 

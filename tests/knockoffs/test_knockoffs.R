@@ -35,19 +35,23 @@ compute.knockoff = function(data, method, q=0.2, model.free=TRUE){
 
 
 
-test_knockoffs = function(seed=1, outfile=NULL, method = "knockoff", 
-                          nrep=5, n=500, p=5000, s=30, rho=0.){
+test_knockoffs = function(seed=1, outfile=NULL, method = "knockoff", loss="logit",
+                          nrep=5, n=200, p=300, s=20, rho=0.){
   
-  snr = sqrt(2*log(p)/n)
+  snr = 10*sqrt(2*log(p)/n)
   
   set.seed(seed)
 
-  FDR_sample = NULL
+  FDR_sample=NULL
   power_sample=NULL
   
   for (i in 1:nrep){
-    data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
-    #data = selectiveInference:::logistic_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
+    
+    if (loss=="ls"){
+      data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
+    } else if (loss=="logit"){
+      data = selectiveInference:::logistic_instance(n=n, p=p, s=s, rho=rho, snr=snr)
+    }
     
     cat("true nonzero:", which(data$beta!=0), "\n")
     
@@ -71,4 +75,4 @@ test_knockoffs = function(seed=1, outfile=NULL, method = "knockoff",
   return(list(FDR_sample=FDR_sample, power_sample=power_sample))
 }
 
-#test_knockoffs()
+test_knockoffs()
