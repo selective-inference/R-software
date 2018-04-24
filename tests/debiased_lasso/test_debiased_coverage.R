@@ -39,7 +39,8 @@ debiased_lasso_inference=function(X, y, soln, loss){
 test_debiased_coverage = function(seed=1, outfile=NULL, loss="logit", lambda_frac=0.4,
                          nrep=10, n=200, p=300, s=20, rho=0.){
   
-  snr = 2*sqrt(2*log(p)/n)
+  #snr = 5*sqrt(2*log(p)/n)
+  snr = 5*sqrt(2*log(p))
   
   set.seed(seed)
   construct_ci=TRUE
@@ -59,7 +60,7 @@ test_debiased_coverage = function(seed=1, outfile=NULL, loss="logit", lambda_fra
     if (loss=="ls"){
       data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
     } else if (loss=="logit"){
-      data = selectiveInference:::logistic_instance(n=n, p=p, s=s, rho=rho, snr=snr)
+      data = selectiveInference:::logistic_instance(n=n, p=p, s=s, rho=rho, snr=snr, scale=TRUE)
     }
     
     X=data$X

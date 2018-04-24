@@ -38,7 +38,8 @@ compute.knockoff = function(data, method, q=0.2, model.free=TRUE){
 test_knockoffs = function(seed=1, outfile=NULL, method = "knockoff", loss="logit",
                           nrep=10, n=200, p=300, s=20, rho=0.){
   
-  snr = 5*sqrt(2*log(p)/n)
+  #snr = 10*sqrt(2*log(p)/n)
+  snr = 5*sqrt(2*log(p))
   
   set.seed(seed)
 
@@ -50,7 +51,7 @@ test_knockoffs = function(seed=1, outfile=NULL, method = "knockoff", loss="logit
     if (loss=="ls"){
       data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
     } else if (loss=="logit"){
-      data = selectiveInference:::logistic_instance(n=n, p=p, s=s, rho=rho, snr=snr)
+      data = selectiveInference:::logistic_instance(n=n, p=p, s=s, rho=rho, snr=snr, scale=TRUE)
     }
     
     cat("true nonzero:", which(data$beta!=0), "\n")
