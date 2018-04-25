@@ -147,7 +147,7 @@ theoretical.lambda = function(X, loss="ls", sigma=1){
   if (loss=="ls"){
     empirical = apply(abs(t(X) %*% matrix(rnorm(n*nsamples), nrow=n)), 2, max)
   } else if (loss=="logit"){
-    empirical = apply(abs(t(X) %*% matrix(sample(c(0,1), n*nsamples, replace = TRUE), nrow=n)), 2, max)
+    empirical = apply(abs(t(X) %*% matrix(sample(c(-0.5,0.5), n*nsamples, replace = TRUE), nrow=n)), 2, max)
   }
   lam = mean(empirical)*sigma/n
   return(lam)

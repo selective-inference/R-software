@@ -36,11 +36,11 @@ debiased_lasso_inference=function(X, y, soln, loss){
 
 
 
-test_debiased_coverage = function(seed=1, outfile=NULL, loss="logit", lambda_frac=0.4,
+test_debiased_coverage = function(seed=1, outfile=NULL, loss="logit", lambda_frac=0.8,
                          nrep=10, n=200, p=300, s=20, rho=0.){
   
-  #snr = 5*sqrt(2*log(p)/n)
-  snr = 5*sqrt(2*log(p))
+  snr = 10 #*sqrt(2*log(p)/n)
+  #snr = 5*sqrt(2*log(p))
   
   set.seed(seed)
   construct_ci=TRUE
@@ -60,7 +60,7 @@ test_debiased_coverage = function(seed=1, outfile=NULL, loss="logit", lambda_fra
     if (loss=="ls"){
       data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
     } else if (loss=="logit"){
-      data = selectiveInference:::logistic_instance(n=n, p=p, s=s, rho=rho, snr=snr, scale=TRUE)
+      data = selectiveInference:::logistic_instance(n=n, p=p, s=s, rho=rho, snr=snr)
     }
     
     X=data$X
@@ -78,7 +78,7 @@ test_debiased_coverage = function(seed=1, outfile=NULL, loss="logit", lambda_fra
     print(c("lambda", lambda))
     
     soln = selectiveInference:::solve_problem_glmnet(X, y, lambda, penalty_factor=penalty_factor, loss=loss)
-    active_set = 1:p #which(soln!=0)
+    active_set = 1:5 # which(soln!=0)
     
     PVS = debiased_lasso_inference(X,y,soln,loss=loss)
     

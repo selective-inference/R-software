@@ -3,8 +3,8 @@ library(selectiveInference)
 library(glmnet)
 
 
-test_randomized = function(seed=1, outfile=NULL, type="full", loss="logit", lambda_frac=0.4,
-                           nrep=5, n=500, p=5000, s=30, rho=0.){
+test_randomized = function(seed=1, outfile=NULL, type="full", loss="ls", lambda_frac=1.5,
+                           nrep=50, n=1000, p=2000, s=20, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
@@ -103,6 +103,6 @@ test_randomized = function(seed=1, outfile=NULL, type="full", loss="logit", lamb
   return(list(pvalues=pvalues))
 }
 
-#test_randomized()
+test_randomized()
 
 
