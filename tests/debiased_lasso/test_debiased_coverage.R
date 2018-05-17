@@ -36,10 +36,10 @@ debiased_lasso_inference=function(X, y, soln, loss){
 
 
 
-test_debiased_coverage = function(seed=1, outfile=NULL, loss="logit", lambda_frac=0.8,
+test_debiased_coverage = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.4,
                          nrep=10, n=200, p=300, s=20, rho=0.){
   
-  snr = 10 #*sqrt(2*log(p)/n)
+  snr=1 #*sqrt(2*log(p)/n)
   #snr = 5*sqrt(2*log(p))
   
   set.seed(seed)
@@ -78,7 +78,8 @@ test_debiased_coverage = function(seed=1, outfile=NULL, loss="logit", lambda_fra
     print(c("lambda", lambda))
     
     soln = selectiveInference:::solve_problem_glmnet(X, y, lambda, penalty_factor=penalty_factor, loss=loss)
-    active_set = 1:5 # which(soln!=0)
+    print(c("nactive", length(which(soln!=0))))
+    active_set = which(beta!=0) #1:5 # which(soln!=0) #
     
     PVS = debiased_lasso_inference(X,y,soln,loss=loss)
     
@@ -94,7 +95,10 @@ test_debiased_coverage = function(seed=1, outfile=NULL, loss="logit", lambda_fra
       
       naive_coverages=c(naive_coverages, selectiveInference:::compute_coverage(PVS$naive_intervals[, active_set], beta[active_set]))
       naive_lengths=c(naive_lengths, as.vector(PVS$naive_intervals[2,active_set]-PVS$naive_intervals[1,active_set]))
-      print(c("naive coverage:", mean(naive_coverages)))
+      print(c("naive coverage:", length(which(naive_coverages==1))/length(naive_coverages)))
+      print(c("param. on the left:", length(which(naive_coverages==-1))/length(naive_coverages)))
+      print(c("param. on the right:", length(which(naive_coverages==0))/length(naive_coverages)))
+      
       print(c("naive length mean:", mean(naive_lengths)))
       print(c("naive length median:", median(naive_lengths)))
     }

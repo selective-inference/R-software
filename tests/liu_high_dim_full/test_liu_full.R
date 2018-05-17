@@ -5,10 +5,10 @@ library(glmnet)
 
 # testing Liu et al type=full in high dimensional settings -- uses debiasing matrix
 
-test_liu_full = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.8,
-                         nrep=5, n=200, p=500, s=20, rho=0.){
+test_liu_full = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.7,
+                         nrep=50, n=500, p=100, s=20, rho=0.){
   
-  snr = sqrt(2*log(p)/n)
+  snr = sqrt(2*log(p)/n)/4
   
   set.seed(seed)
   construct_ci=TRUE
@@ -29,8 +29,10 @@ test_liu_full = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.8,
   for (i in 1:nrep){
     
     if (loss=="ls"){
-      data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
+      sigma=0.5
+      data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=sigma, snr=snr)
     } else if (loss=="logit"){
+      sigma=1
       data = selectiveInference:::logistic_instance(n=n, p=p, s=s, rho=rho, snr=snr)
     }
 
@@ -41,7 +43,7 @@ test_liu_full = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.8,
     
     # CV = cv.glmnet(X, y, standardize=FALSE, intercept=FALSE, family=selectiveInference:::family_label(loss))
     # sigma_est=selectiveInference:::estimate_sigma(X,y,coef(CV, s="lambda.min")[-1]) # sigma via Reid et al.
-    sigma_est=1
+    sigma_est=sigma
     print(c("sigma est", sigma_est))
     
     # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))]  # lambda via randomized cv 
@@ -51,7 +53,7 @@ test_liu_full = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.8,
     soln = selectiveInference:::solve_problem_glmnet(X, y, lambda, penalty_factor=penalty_factor, loss=loss)
     #soln = solve_problem_gglasso(X, y, groups=1:ncol(X), lambda, penalty_factor=penalty_factor, loss=loss)
     PVS = selectiveInference:::inference_debiased_full(X, y, soln, lambda=lambda, penalty_factor=penalty_factor, 
-                                sigma_est, loss=loss, algo="glmnet", construct_ci = construct_ci, verbose=FALSE)
+                                sigma_est, loss=loss, algo="glmnet", construct_ci = construct_ci, verbose=TRUE)
     
     active_vars=PVS$active_vars
     cat("active_vars:",active_vars,"\n")
@@ -103,5 +105,5 @@ test_liu_full = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.8,
   return(list(pvalues=pvalues, naive_pvalues=naive_pvalues))
 }
 
-#test_liu_full()
+test_liu_full()
 

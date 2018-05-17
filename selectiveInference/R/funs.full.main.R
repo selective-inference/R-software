@@ -127,13 +127,12 @@ truncation_set = function(X, y, Qbeta_bar, QE, Q_sq=Q_sq, sigma_est,
   #print(restricted_soln)
   n = nrow(X)
   p = length(Qbeta_bar)
-  I = diag(p) * sigma_est^2
-  group_vars = which(groups==group)
-  group_varsE = match(group_vars, active_vars)
-  nuisance = (Qbeta_bar - I[,group_vars] %*% solve(target_cov) %*% target_stat)/n
-  center = nuisance[group_vars] - (QE[group_varsE,] %*% restricted_soln/n)
+  group_vars = which(groups==group) # vars corresponding to the current group
+  group_varsE = match(group_vars, active_vars) # active_vars[group_varsE]=group_vars
+  nuisance_res = (Qbeta_bar[group_vars] - sigma_est^2*solve(target_cov) %*% target_stat)/n # nuisance stat restricted to active vars
+  center = nuisance_res - (QE[group_varsE,] %*% restricted_soln/n)
   radius = penalty_factor[group]*lambda
-  return(list(target_cov=target_cov, center=center*n, radius=radius*n))
+  return(list(center=center*n, radius=radius*n))
 }
 
 
@@ -253,6 +252,8 @@ compute_coverage = function(ci, beta){
   for (i in 1:nactive){
     if (beta[i]>=ci[1,i] && beta[i]<=ci[2,i]){
       coverage_vector[i]=1
+    } else if (beta[i]<ci[1,i]){ # true param on the left of the ci
+      coverage_vector[i]=-1
     }
   }
   return(coverage_vector)
@@ -399,9 +400,9 @@ inference_debiased_full = function(X, y, soln, lambda, penalty_factor, sigma_est
   QE=as.matrix(setup_params$QE)
   Q_sq=setup_params$Q_sq
   QiE=as.matrix(setup_params$QiE)
+  QiE = QiE * sigma_est^2
   beta_barE = setup_params$beta_barE
   Qbeta_bar = setup_params$Qbeta_bar
-  QiE = QiE * sigma_est^2
   end_setup = Sys.time()
   
   if (verbose){
@@ -427,13 +428,15 @@ inference_debiased_full = function(X, y, soln, lambda, penalty_factor, sigma_est
                          lambda=lambda, penalty_factor=penalty_factor, loss=loss, algo=algo)
     end_TS = Sys.time()
     if (verbose){
+      print(c("current var", active_vars[i]))
       cat("TS time", end_TS-begin_TS, "\n")
       cat("variable", active_vars[i], "\n")
     }
+    
     center = TS$center
     radius = TS$radius
   
-      
+  
     lower = target_cov*(-center-radius)/(sigma_est^2)
     upper = target_cov*(-center+radius)/(sigma_est^2)
       
@@ -445,7 +448,9 @@ inference_debiased_full = function(X, y, soln, lambda, penalty_factor, sigma_est
         pval = tnorm.union.surv(target_stat, mean=0, sd=sqrt(target_cov), intervals)
         #pval = test_TG(0, target_stat, target_cov, sigma_est, center, radius, alt="two-sided")
         pval = 2*min(pval, 1-pval)
-        #print(c("pval", pval))
+        if (verbose==TRUE){
+          print(c("pval", pval))
+        }
         pvalues = c(pvalues, pval)
         
         selected_vars = c(selected_vars, active_vars[i])

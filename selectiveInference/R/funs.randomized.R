@@ -43,7 +43,6 @@ randomizedLasso = function(X,
     
     print(c("noise scale", noise_scale))
     if (noise_scale > 0) {
-        #set.seed(1)
         perturb_ = rnorm(p) * noise_scale
     } else {
         perturb_ = rep(0, p)
@@ -101,7 +100,7 @@ randomizedLasso = function(X,
     }
     #print("SOLN")
     #print(result$soln)
-    #print(c("length", length(result$soln)))
+    print(c("nactive", length(which(result$soln!=0))))
     
     sign_soln = sign(result$soln)
     unpenalized = lam == 0
@@ -452,8 +451,8 @@ compute_target = function(rand_lasso_soln,
     
     crosscov_target_internal=rbind(cov_target, matrix(0, nrow=p-nactive, ncol=nactive))
   } 
-  print("signs")
-  print(rand_lasso_soln$sign_soln)
+  #print("signs")
+  #print(rand_lasso_soln$sign_soln)
   alternatives = c()
   for (i in 1:length(rand_lasso_soln$sign_soln)) {
       if (rand_lasso_soln$sign_soln[i] == 1) {
@@ -677,7 +676,7 @@ randomizedLassoInf = function(rand_lasso_soln,
     }
 
     if (construct_pvalues[i]==1){
-      print(alternatives[i])
+      #print(alternatives[i])
       pvalues[i] = pivot(0)
       if (alternatives[i]=="two-sided"){
         pvalues[i] = 2*min(pvalues[i], 1-pvalues[i])

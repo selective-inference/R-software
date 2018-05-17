@@ -9,6 +9,7 @@ selective.plus.BH = function(beta, selected.vars, pvalues, q, verbose=FALSE){
   p.adjust.BH = p.adjust(pvalues, method = "BH", n = nselected)
   rejected = selected.vars[which(p.adjust.BH<q)]
   nrejected=length(rejected)
+  
   if (verbose){
       print(paste("sel+BH rejected", nrejected, "vars:",toString(rejected)))
   }
