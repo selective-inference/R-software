@@ -45,18 +45,14 @@ solve_problem_gglasso = function(X, y, groups, lambda, penalty_factor, loss){
 }
 
 # solves the restricted problem
-solve_restricted_problem = function(X, y, groups, group, lambda, penalty_factor, loss, algo){
-  ngroups = length(unique(groups))
-  if ((ngroups<ncol(X)) && algo=="glmnet"){
-    algo="gglasso"
-  }
+solve_restricted_problem = function(X, y, var, lambda, penalty_factor, loss, algo){
   if (algo=="glmnet"){
     restricted_soln=rep(0, ncol(X))
-    restricted_soln[-group] = solve_problem_glmnet(X[,-group], y, lambda, penalty_factor[-group], loss=loss)
+    restricted_soln[-var] = solve_problem_glmnet(X[,-var], y, lambda, penalty_factor[-var], loss=loss)
   } else if (algo=="gglasso"){
     penalty_factor_rest = rep(penalty_factor)
-    penalty_factor_rest[group] = 10^10
-    restricted_soln = solve_problem_gglasso(X,y,groups, lambda, penalty_factor=penalty_factor_rest, loss=loss)
+    penalty_factor_rest[var] = 10^10
+    restricted_soln = solve_problem_gglasso(X,y, 1:ncol(X), lambda, penalty_factor=penalty_factor_rest, loss=loss)
   }
   return(restricted_soln)
 }
@@ -110,28 +106,24 @@ solve_problem_Q = function(Q_sq, Qbeta_bar, lambda, penalty_factor,
 
 
 # the selection event is |sigma_est^2*(target_cov)^{-1}Z+center|>radius
+# var is one of 1..p variables that we are buliding truncation set for
 truncation_set = function(X, y, Qbeta_bar, QE, Q_sq=Q_sq, sigma_est, 
                           target_stat, target_cov,
-                          group, groups, active_vars,
+                          var, active_vars,
                           lambda, penalty_factor, loss, algo){
   
   if (algo=="Q"){
     penalty_factor_rest = rep(penalty_factor)
-    penalty_factor_rest[group] = 10^10
+    penalty_factor_rest[var] = 10^10
     restricted_soln = solve_problem_Q(Q_sq, Qbeta_bar, lambda, penalty_factor=penalty_factor_rest)
   } else {
-    restricted_soln = solve_restricted_problem(X, y, groups, group, lambda, penalty_factor=penalty_factor, 
-                                             loss=loss, algo=algo)
+    restricted_soln = solve_restricted_problem(X, y, var, lambda, penalty_factor=penalty_factor, loss=loss, algo=algo)
   }
-  #print("restricted soln")
-  #print(restricted_soln)
   n = nrow(X)
-  p = length(Qbeta_bar)
-  group_vars = which(groups==group) # vars corresponding to the current group
-  group_varsE = match(group_vars, active_vars) # active_vars[group_varsE]=group_vars
-  nuisance_res = (Qbeta_bar[group_vars] - sigma_est^2*solve(target_cov) %*% target_stat)/n # nuisance stat restricted to active vars
-  center = nuisance_res - (QE[group_varsE,] %*% restricted_soln/n)
-  radius = penalty_factor[group]*lambda
+  idx = match(var, active_vars) # active_vars[idx]=var
+  nuisance_res = (Qbeta_bar[var] - sigma_est^2*solve(target_cov) %*% target_stat)/n # nuisance stat restricted to active vars
+  center = nuisance_res - (QE[idx,] %*% restricted_soln/n)
+  radius = penalty_factor[var]*lambda
   return(list(center=center*n, radius=radius*n))
 }
 
@@ -424,7 +416,7 @@ inference_debiased_full = function(X, y, soln, lambda, penalty_factor, sigma_est
     begin_TS = Sys.time()
     TS =  truncation_set(X=X, y=y, Qbeta_bar=Qbeta_bar, QE=QE, Q_sq=Q_sq, sigma_est=sigma_est, 
                          target_cov=target_cov, target_stat=target_stat, 
-                         group=active_vars[i], groups=1:ncol(X), active_vars=active_vars,
+                         var=active_vars[i], active_vars=active_vars,
                          lambda=lambda, penalty_factor=penalty_factor, loss=loss, algo=algo)
     end_TS = Sys.time()
     if (verbose){
@@ -449,6 +441,8 @@ inference_debiased_full = function(X, y, soln, lambda, penalty_factor, sigma_est
         #pval = test_TG(0, target_stat, target_cov, sigma_est, center, radius, alt="two-sided")
         pval = 2*min(pval, 1-pval)
         if (verbose==TRUE){
+          print(c("target stat", target_stat))
+          print(c("target cov", target_cov))
           print(c("pval", pval))
         }
         pvalues = c(pvalues, pval)
@@ -464,15 +458,16 @@ inference_debiased_full = function(X, y, soln, lambda, penalty_factor, sigma_est
           #sel_int = selective_CI(target_stat, target_cov, sigma_est, center, radius)
           #print(c("jelena int", sel_int))
           naive_int = naive_CI(target_stat, target_cov)
-          #cat("sel interval", sel_int, "\n")
-          #cat("naive interval", naive_int, "\n")
+          if (verbose==TRUE){
+            cat("sel interval", sel_int, "\n")
+            cat("naive interval", naive_int, "\n")
+          }
           sel_intervals = cbind(sel_intervals, sel_int)
           naive_intervals = cbind(naive_intervals, naive_int)
         }
       } else{
         print("observation not within the truncation limits!")
       }
-    
   }
   
   return(list(pvalues=pvalues, naive_pvalues=naive_pvalues, active_vars=selected_vars,
