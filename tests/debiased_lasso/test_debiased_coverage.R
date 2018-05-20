@@ -2,7 +2,7 @@ library(selectiveInference)
 library(glmnet)
 library(MASS)
 
-debiased_lasso_inference=function(X, y, soln, loss){
+debiased_lasso_inference=function(X, y, soln, loss, sigma_est){
   
   n=nrow(X)
   p=ncol(X)
@@ -19,7 +19,7 @@ debiased_lasso_inference=function(X, y, soln, loss){
   } 
   
   M = selectiveInference:::approximate(W_root %*% X, 1:p)
-  covariance = M %*% t(M)
+  covariance = sigma_est^2*M %*% t(M)
   estimator = soln + M %*% diag(as.vector(1/diagonal)) %*% residuals
   
   naive_pvalues=NULL
@@ -36,12 +36,11 @@ debiased_lasso_inference=function(X, y, soln, loss){
 
 
 
-test_debiased_coverage = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.4,
-                         nrep=10, n=200, p=300, s=20, rho=0.){
+test_debiased_coverage = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.8,
+                         nrep=10, n=500, p=1000, s=30, rho=0.){
   
-  snr=1 #*sqrt(2*log(p)/n)
-  #snr = 5*sqrt(2*log(p))
-  
+  snr=sqrt(2*log(p)/n)
+
   set.seed(seed)
   construct_ci=TRUE
   penalty_factor = rep(1, p)
@@ -71,6 +70,7 @@ test_debiased_coverage = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0
     # CV = cv.glmnet(X, y, standardize=FALSE, intercept=FALSE, family=selectiveInference:::family_label(loss))
     # sigma_est=selectiveInference:::estimate_sigma(X,y,coef(CV, s="lambda.min")[-1]) # sigma via Reid et al.
     sigma_est=1
+    #sigma_est = selectiveInference:::estimate_sigma_data_spliting(X,y)
     print(c("sigma est", sigma_est))
     
     # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))]  # lambda via randomized cv 
@@ -79,9 +79,9 @@ test_debiased_coverage = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0
     
     soln = selectiveInference:::solve_problem_glmnet(X, y, lambda, penalty_factor=penalty_factor, loss=loss)
     print(c("nactive", length(which(soln!=0))))
-    active_set = which(beta!=0) #1:5 # which(soln!=0) #
+    active_set = 1:p # which(beta!=0) #1:5 # which(soln!=0) #
     
-    PVS = debiased_lasso_inference(X,y,soln,loss=loss)
+    PVS = debiased_lasso_inference(X,y,soln,loss=loss, sigma_est=sigma_est)
     
     naive_pvalues = c(naive_pvalues, PVS$naive_pvalues[active_set])
     naive_intervals = cbind(naive_intervals, PVS$naive_intervals[, active_set])

@@ -223,11 +223,11 @@ fixedLassoInf <- function(x, y, beta,
     a = TG.pvalue.base(limits.info, null_value=null_value[j], bits=bits)
     pv[j] = a$pv
     
-    if (is.na(sign_vars[j])) { # for variables not in the active set, report 2-sided pvalue
-       pv[j] = 2 * min(pv[j], 1 - pv[j])
-    } else if (sign_vars[j]<0){
-       pv[j]=1-pv[j]  
-    }
+    #if (is.na(sign_vars[j])) { # for variables not in the active set, report 2-sided pvalue
+    #   pv[j] = 2 * min(pv[j], 1 - pv[j])
+    #}
+    
+    pv[j] = 2 * min(pv[j], 1 - pv[j])
     
     
     vlo[j] = a$vlo * mj # Unstandardize (mult by norm of vj)

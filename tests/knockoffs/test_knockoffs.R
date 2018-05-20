@@ -35,12 +35,11 @@ compute.knockoff = function(data, method, q=0.2, model.free=TRUE){
 
 
 
-test_knockoffs = function(seed=1, outfile=NULL, method = "knockoff", loss="logit",
-                          nrep=10, n=5000, p=100, s=20, rho=0.){
+test_knockoffs = function(seed=1, outfile=NULL, method = "knockoff", loss="ls",
+                          nrep=10, n=500, p=1000, s=30, rho=0.){
   
-  snr = 5*sqrt(2*log(p)/n)
-  #snr = 5*sqrt(2*log(p))
-  
+  snr = sqrt(2*log(p)/n)
+
   set.seed(seed)
 
   FDR_sample=NULL

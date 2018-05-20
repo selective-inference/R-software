@@ -1,4 +1,28 @@
 
+estimate_sigma_data_spliting  = function(X,y, verbose=FALSE){
+  nrep = 20
+  sigma_est = 0
+  nest = 0
+  for (i in 1:nrep){
+    n=nrow(X)
+    m=floor(n/2)
+    subsample = sample(1:n, m, replace=FALSE)
+    leftover = setdiff(1:n, subsample)
+    CV = cv.glmnet(X[subsample,], y[subsample], standardize=FALSE, intercept=FALSE, family="gaussian")
+    beta_hat = coef(CV, s="lambda.min")[-1]
+    selected = which(beta_hat!=0)
+    if (verbose){
+      print(c("nselected",length(selected)))
+    }
+    if (length(selected)>0){
+      LM = lm(y[leftover]~X[leftover,][,selected])
+      sigma_est = sigma_est+sigma(LM)
+      nest = nest+1
+    }
+  }
+  return(sigma_est/nest)
+}
+
 selective.plus.BH = function(beta, selected.vars, pvalues, q, verbose=FALSE){
   
   if (is.null(selected.vars)){

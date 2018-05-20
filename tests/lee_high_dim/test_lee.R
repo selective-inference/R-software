@@ -4,10 +4,10 @@ library(glmnet)
 # testing Lee et al in high dimensional setting
 # uses debiasing matrix for type=full
 
-test_lee = function(seed=1, outfile=NULL, type="full", loss="logit", lambda_frac=0.4,
-                    nrep=5, n=500, p=100, s=30, rho=0.){
+test_lee = function(seed=1, outfile=NULL, type="full", loss="ls", lambda_frac=0.8,
+                    nrep=10, n=500, p=1000, s=30, rho=0.){
   
-  snr = 0.5*sqrt(2*log(p)/n)
+  snr = sqrt(2*log(p)/n)
   
   set.seed(seed)
   construct_ci=TRUE
@@ -34,9 +34,9 @@ test_lee = function(seed=1, outfile=NULL, type="full", loss="logit", lambda_frac
     
     #CV = cv.glmnet(X, y, standardize=FALSE, intercept=FALSE, family=selectiveInference:::family_label(loss))
     #sigma_est=selectiveInference:::estimate_sigma(X,y,coef(CV, s="lambda.min")[-1])  # sigma via Reid et al.
-    #print(c("sigma est", sigma_est))
-    
-    sigma_est=1
+    #sigma_est=1
+    sigma_est = selectiveInference:::estimate_sigma_data_spliting(X,y)
+    print(c("sigma est", sigma_est))
     
     # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))] # lambda via randomized cv 
     lambda = lambda_frac*selectiveInference:::theoretical.lambda(X, loss, sigma_est) # theoretical lambda
