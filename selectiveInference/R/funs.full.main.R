@@ -292,7 +292,7 @@ approximate = function(X, active_set){
   n=nrow(X)
   p=ncol(X)
   nactive=length(active_set)
-  #inactive_set=setdiff(1:p, active_set)
+  inactive_set=setdiff(1:p, active_set)
   X_active = X[, active_set]
   #X_inactive = X[, inactive_set]
   

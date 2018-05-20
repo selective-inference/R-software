@@ -36,8 +36,8 @@ debiased_lasso_inference=function(X, y, soln, loss, sigma_est){
 
 
 
-test_debiased_coverage = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.8,
-                         nrep=10, n=200, p=1000, s=30, rho=0.){
+test_debiased_coverage = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.7,
+                         nrep=10, n=200, p=500, s=20, rho=0.){
   
   snr=sqrt(2*log(p)/n)
 
