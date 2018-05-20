@@ -5,7 +5,7 @@ library(glmnet)
 # uses debiasing matrix for type=full
 
 test_lee = function(seed=1, outfile=NULL, type="full", loss="ls", lambda_frac=0.8,
-                    nrep=10, n=500, p=1000, s=30, rho=0.){
+                    nrep=10, n=200, p=1000, s=30, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
