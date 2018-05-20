@@ -202,10 +202,14 @@ create_tnorm_interval = function(z, sd, alpha, intervals, gridrange=c(-20,20), g
                                  griddepth = 2, bits = NULL){
   
   grid = seq(gridrange[1]*sd,gridrange[2]*sd,length=gridpts)
-  fun = function(x) { return(tnorm.union.surv(z, x, sd, intervals, bits)) }
+  fun = function(x) { 
+    pv = tnorm.union.surv(z, x, sd, intervals, bits)
+    return(pv)
+    #return(2*min(pv,1-pv)) 
+  }
   
   int = selectiveInference:::grid.search(grid, fun, alpha/2, 1-alpha/2, gridpts, griddepth)
-  #print(int)
+  
   return(int)
 }
 
@@ -244,9 +248,7 @@ compute_coverage = function(ci, beta){
   for (i in 1:nactive){
     if (beta[i]>=ci[1,i] && beta[i]<=ci[2,i]){
       coverage_vector[i]=1
-    } else if (beta[i]<ci[1,i]){ # true param on the left of the ci
-      coverage_vector[i]=-1
-    }
+    } 
   }
   return(coverage_vector)
 }
@@ -455,8 +457,8 @@ inference_debiased_full = function(X, y, soln, lambda, penalty_factor, sigma_est
         if (construct_ci){
           sel_int = create_tnorm_interval(z=target_stat, sd=sqrt(target_cov), alpha=0.1, intervals=intervals)
           #print(c("tg intervals", sel_int))
-          #sel_int = selective_CI(target_stat, target_cov, sigma_est, center, radius)
-          #print(c("jelena int", sel_int))
+          #sel_int_new = selective_CI(target_stat, target_cov, sigma_est, center, radius)
+          #print(c("jelena int", sel_int_new))
           naive_int = naive_CI(target_stat, target_cov)
           if (verbose==TRUE){
             cat("sel interval", sel_int, "\n")

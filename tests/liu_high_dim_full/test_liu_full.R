@@ -43,8 +43,8 @@ test_liu_full = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.7,
     
     # CV = cv.glmnet(X, y, standardize=FALSE, intercept=FALSE, family=selectiveInference:::family_label(loss))
     # sigma_est=selectiveInference:::estimate_sigma(X,y,coef(CV, s="lambda.min")[-1]) # sigma via Reid et al.
-    sigma_est=sigma
-    #sigma_est = selectiveInference:::estimate_sigma_data_spliting(X,y)
+    #sigma_est=sigma
+    sigma_est = selectiveInference:::estimate_sigma_data_spliting(X,y)
     print(c("sigma est", sigma_est))
     
     # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))]  # lambda via randomized cv 
@@ -75,6 +75,7 @@ test_liu_full = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.7,
       naive_coverages=c(naive_coverages, selectiveInference:::compute_coverage(PVS$naive_intervals, beta[active_vars]))
       sel_lengths=c(sel_lengths, as.vector(PVS$sel_intervals[2,]-PVS$sel_intervals[1,]))
       naive_lengths=c(naive_lengths, as.vector(PVS$naive_intervals[2,]-PVS$naive_intervals[1,]))
+      #cat("sel cov", sel_coverages, "\n")
       print(c("selective coverage:", mean(sel_coverages)))
       print(c("naive coverage:", mean(naive_coverages)))
       print(c("selective length mean:", mean(sel_lengths)))
