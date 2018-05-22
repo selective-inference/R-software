@@ -6,9 +6,9 @@ library(glmnet)
 # testing Liu et al type=full in high dimensional settings -- uses debiasing matrix
 
 test_liu_full = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.7,
-                         nrep=10, n=200, p=500, s=20, rho=0.){
+                         nrep=50, n=200, p=800, s=30, rho=0.){
   
-  snr = sqrt(2*log(p)/n)
+  snr = 2*sqrt(2*log(p)/n)
   
   set.seed(seed)
   construct_ci=TRUE

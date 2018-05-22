@@ -5,7 +5,7 @@ library(glmnet)
 # uses debiasing matrix for type=full
 
 test_lee = function(seed=1, outfile=NULL, type="full", loss="ls", lambda_frac=0.7,
-                    nrep=10, n=200, p=500, s=20, rho=0.){
+                    nrep=50, n=200, p=800, s=30, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
@@ -34,15 +34,15 @@ test_lee = function(seed=1, outfile=NULL, type="full", loss="ls", lambda_frac=0.
     
     #CV = cv.glmnet(X, y, standardize=FALSE, intercept=FALSE, family=selectiveInference:::family_label(loss))
     #sigma_est=selectiveInference:::estimate_sigma(X,y,coef(CV, s="lambda.min")[-1])  # sigma via Reid et al.
-    sigma_est=1
-    #sigma_est = selectiveInference:::estimate_sigma_data_spliting(X,y)
+    #sigma_est=1
+    sigma_est = selectiveInference:::estimate_sigma_data_spliting(X,y)
     print(c("sigma est", sigma_est))
     
     # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))] # lambda via randomized cv 
     lambda = lambda_frac*selectiveInference:::theoretical.lambda(X, loss, sigma_est) # theoretical lambda
     
     lasso = glmnet(X, y, family=selectiveInference:::family_label(loss), alpha=1, standardize=FALSE, intercept=FALSE, thresh=1e-12)
-    soln = as.numeric(coef(lasso,x=X,y=y, family=selectiveInference:::family_label(loss), s=lambda, exact=TRUE))
+    soln = as.numeric(coef(lasso,x=X,y=y, family=selectiveInference:::family_label(loss), s=lambda, exact=TRUE)[-1])
     
     PVS = selectiveInference:::fixedLassoInf(X,y,soln, intercept=FALSE, lambda*n, family=selectiveInference:::family_label(loss),
                                              type=type, sigma=sigma_est)

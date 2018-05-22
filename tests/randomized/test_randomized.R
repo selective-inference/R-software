@@ -3,8 +3,8 @@ library(selectiveInference)
 library(glmnet)
 
 
-test_randomized = function(seed=1, outfile=NULL, type="full", loss="ls", lambda_frac=1.5,
-                           nrep=50, n=1000, p=2000, s=20, rho=0.){
+test_randomized = function(seed=1, outfile=NULL, type="partial", loss="ls", lambda_frac=0.7,
+                           nrep=50, n=200, p=800, s=30, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
@@ -35,8 +35,10 @@ test_randomized = function(seed=1, outfile=NULL, type="full", loss="ls", lambda_
     
     #CV = cv.glmnet(X, y, standardize=FALSE, intercept=FALSE, family=selectiveInference:::family_label(loss))
     #sigma_est=selectiveInference:::estimate_sigma(X,y,coef(CV, s="lambda.min")[-1]) # sigma via Reid et al.
-    #print(c("sigma est", sigma_est))
-    sigma_est=1
+    #sigma_est=1
+    sigma_est = selectiveInference:::estimate_sigma_data_spliting(X,y)
+    print(c("sigma est", sigma_est))
+    
     # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))]  # lambda via randomized cv 
     lambda = lambda_frac*selectiveInference:::theoretical.lambda(X, loss, sigma_est)  # theoretical lambda
     
