@@ -36,8 +36,9 @@
 # pass 0-padded x[-fold] and y[-fold] to lar?
 
 library(selectiveInference)
-setwd("/Users/joftius/Dropbox/work/R-software/forLater/josh")
 source("selectiveInference/R/cv.R")
+
+library(glmnet)
 
 set.seed(1)
 n <- 100
@@ -45,14 +46,41 @@ p <- 50
 maxsteps <- 10
 sparsity <- 3
 snr <- 2
-rho <- 0.1
+#rho <- 0.1
 nfolds <- 5
+niters <- 200
 
-x <- matrix(rnorm(n*p), nrow=n)
-y <- rnorm(n)
-beta <- rep(0, p)
-beta[1:sparsity] <- 2* sqrt(2*log(p)/n) * sample(c(-1,1), sparsity, replace=T)
-y <- y + x %*% beta
-my <- mean(y)
-y <- y - my
+instance <- function(n, p, maxsteps, sparsity, snr, nfolds) {
+  
+  x <- matrix(rnorm(n*p), nrow=n)
+  y <- rnorm(n)
+  beta <- rep(0, p)
+  beta[1:sparsity] <- snr * sqrt(2*log(p)/n) * sample(c(-1,1), sparsity, replace=T)
+  y <- y + x %*% beta
+  my <- mean(y)
+  y <- y - my
+  
+  fit <- cvlar(x, y, maxsteps)
+  pv <- cvlarInf(fit)
+  
+  # Validate with glmnet
+  
+  glmnetfit <- cv.glmnet(fit$x, fit$y, intercept = FALSE, foldid = foldid(fit$folds))
+  
+  nzglmnet <- which(coef(glmnetfit) != 0)
+  nzcvlar <- fit$action
+  cat("glmnet:", nzglmnet, "\n")
+  cat("cvlar:", nzcvlar, "\n")
+  return(list(nzglmnet, nzcvlar))
+}
 
+
+time <- system.time({
+  output <- replicate(niters, instance(n, p, maxsteps, sparsity, snr, nfolds))
+})
+
+vglmnet <- do.call(c, list(output[1,]))
+vcvlar <- do.call(c, list(output[2,]))
+
+mean(sapply(vglmnet, length))
+mean(sapply(vcvlar, length))

@@ -1,5 +1,8 @@
-# ------------------------------------------------
-# Cross-validation, preliminary
+# Cross-validation
+
+#--------------------------------------
+# Functions for creating cv folds
+# -------------------------------------
 
 cvMakeFolds <- function(x, nfolds = 5) {
     inds <- sample(1:nrow(x), replace=FALSE)
@@ -15,9 +18,23 @@ cvMakeFolds <- function(x, nfolds = 5) {
     return(folds)
 }
 
-############################################
-# Can this be optimized using svdu_thresh? #
-############################################
+# To interface with glmnet
+foldid <- function(folds) {
+  n <- sum(sapply(folds, length))
+  glmnetfoldid <- rep(0, n)
+  for (ind in 1:length(folds)) {
+    glmnetfoldid[folds[[ind]]] <- ind
+  }
+  glmnetfoldid
+}
+
+#--------------------------------------
+# Functions for computing quadratic form for cv-error
+#--------------------------------------
+
+# There seems to be a problem here, picking overly conservative models
+
+# Can this be optimized using svdu_thresh? 
 cvHatMatrix <- function(x, folds, active.sets) {
     nfolds <- length(folds)
     lapply(1:nfolds, function(f) {
@@ -60,6 +77,11 @@ cvRSSquad <- function(x, folds, active.sets) {
     Q <- do.call(rbind, rows)
     return(Q)
 }
+
+
+#--------------------------------------
+# Functions for forward stepwise
+#--------------------------------------
 
 cvfs <- function(x, y, index = 1:ncol(x), maxsteps, sigma = NULL, intercept = TRUE, center = TRUE, normalize = TRUE, nfolds = 5) {
 
@@ -131,47 +153,58 @@ cvfs <- function(x, y, index = 1:ncol(x), maxsteps, sigma = NULL, intercept = TR
 }
 
 
-cvlar <- function(x, y) { # other args
+#--------------------------------------
+# Functions for lar
+#--------------------------------------
+
+cvlar <- function(x, y, maxsteps) { # other args
     folds <- cvMakeFolds(x)
     models <- lapply(folds, function(fold) {
-        x.train <- X
-        y.train <- Y
+        x.train <- x
+        y.train <- y
         x.train[fold,] <- 0
         y.train[fold] <- 0
-        x.test <- X[fold,]
-        y.test <- Y[fold]
-          larpath.train <- lar(x.train, y.train, maxsteps = maxsteps, intercept = F, normalize = F)
-        return(lff)
+        x.test <- x[fold,]
+        y.test <- y[fold]
+        larpath.train <- lar(x.train, y.train, maxsteps = maxsteps, intercept = F, normalize = F)
+        return(larpath.train)
     })
 
     active.sets <- lapply(models, function(model) model$action)
     lambdas <- lapply(models, function(model) model$lambda)
     lmin <- min(unlist(lambdas))
 
-# Interpolate lambda grid or parametrize by steps?
-# interpolation probably requires re-writing cvRSSquads for
-# penalized fits in order to make sense
+    # Interpolate lambda grid or parametrize by steps?
+    # interpolation probably requires re-writing cvRSSquads for
+    # penalized fits in order to make sense
 
-# do steps for now just to have something that works?
+    # do steps for now just to have something that works?
 
     RSSquads <- list()
     for (s in 1:maxsteps) {
         initial.active <- lapply(active.sets, function(a) a[1:s])
-        RSSquads[[s]] <- cvRSSquad(X, folds, initial.active)
+        RSSquads[[s]] <- cvRSSquad(x, folds, initial.active)
     }
 
-    RSSs <- lapply(RSSquads, function(Q) t(Y) %*% Q %*% Y)
+    RSSs <- lapply(RSSquads, function(Q) t(y) %*% Q %*% y)
     sstar <- which.min(RSSs)
     quadstar <- RSSquads[sstar][[1]]
 
-    RSSquads <- lapply(RSSquads, function(quad) quad - quadstar)
-    RSSquads[[sstar]] <- NULL # remove the all zeroes case
+    # Need to add these later?
+    #RSSquads <- lapply(RSSquads, function(quad) quad - quadstar)
+    #RSSquads[[sstar]] <- NULL # remove the all zeroes case
 
-    fit <- lar(X, Y, maxsteps=sstar, intercept = F, normalize = F)
+    fit <- lar(x, y, maxsteps=sstar, intercept = F, normalize = F)
 
-# Very tall Gamma encoding all cv-model paths
+    # Very tall Gamma encoding all cv-model paths
     Gamma <- do.call(rbind, lapply(models, function(model) return(model$Gamma)))
-
-# more to do here    
+    fit$Gamma <- rbind(fit$Gamma, Gamma)
+    fit$khat <- sstar
+    fit$folds <- folds
+    # more to do here
+    return(fit)
 }
 
+cvlarInf <- function(obj) {
+  larInf(obj, type = "all", k = obj$khat)
+}
