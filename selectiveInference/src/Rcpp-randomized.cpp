@@ -1,6 +1,7 @@
 #include <Rcpp.h>                // need to include the main Rcpp header file 
 #include <randomized_lasso.h>    // where densities are defined
 #include <stdio.h>
+
 // [[Rcpp::export]]
 Rcpp::NumericVector log_density_gaussian_(double noise_scale,                         // Scale of randomization
 					  Rcpp::NumericMatrix internal_linear,        // A_D -- linear part for data
@@ -126,4 +127,45 @@ Rcpp::NumericVector log_density_laplace_conditional_(double noise_scale,        
   }
 
   return(result);
+}
+
+// [[Rcpp::export]]
+Rcpp::List solve_barrier_(Rcpp::NumericVector conjugate_arg,                 // Argument to conjugate
+			  Rcpp::NumericMatrix precision,                     // Precision matrix in conjugate optimization problem
+			  Rcpp::NumericVector feasible_point,                // Feasible point -- must be nonnegative
+			  int max_iter,                                      // How many iterations to run
+			  double value_tol,                                  // Tolerance for convergence
+			  double initial_step) {                             // Initial step size
+
+  int ndim = precision.ncol();
+  int idim;
+
+  Rcpp::NumericVector gradient(ndim);
+  Rcpp::NumericVector opt_variable(ndim);
+  Rcpp::NumericVector opt_proposed(ndim);
+  Rcpp::NumericVector scaling(ndim);
+
+  double *scaling_ptr = scaling.begin();
+  double *opt_ptr = opt_variable.begin();
+
+  for (idim=0; idim<ndim; idim++) {
+    fprintf(stderr, "precision %f\n", precision(idim, idim));
+    *scaling_ptr = precision(idim, idim); scaling_ptr++;
+    *opt_ptr = feasible_point(idim); opt_ptr++;
+  }
+
+  double value = barrier_solve((double *) gradient.begin(),                   // Gradient vector
+			       (double *) opt_variable.begin(),               // Optimization variable
+			       (double *) opt_proposed.begin(),               // New value of optimization variable
+			       (double *) conjugate_arg.begin(),              // Argument to conjugate of Gaussian
+			       (double *) precision.begin(),                  // Precision matrix of Gaussian
+			       (double *) scaling.begin(),                    // Diagonal scaling matrix for log barrier
+			       ndim,                                          // Dimension of conjugate_arg, precision
+			       max_iter,                                      // Maximum number of iterations
+			       value_tol,                                     // Tolerance for convergence based on value
+			       initial_step);                                 // Initial stepsize 
+
+  return(Rcpp::List::create(Rcpp::Named("soln") = opt_variable,
+			    Rcpp::Named("value") = value,
+			    Rcpp::Named("gradient") = gradient));
 }
