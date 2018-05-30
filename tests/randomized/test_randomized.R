@@ -35,8 +35,8 @@ test_randomized = function(seed=1, outfile=NULL, type="partial", loss="ls", lamb
     
     #CV = cv.glmnet(X, y, standardize=FALSE, intercept=FALSE, family=selectiveInference:::family_label(loss))
     #sigma_est=selectiveInference:::estimate_sigma(X,y,coef(CV, s="lambda.min")[-1]) # sigma via Reid et al.
-    #sigma_est=1
-    sigma_est = selectiveInference:::estimate_sigma_data_spliting(X,y)
+    sigma_est=1
+    #sigma_est = selectiveInference:::estimate_sigma_data_spliting(X,y)
     print(c("sigma est", sigma_est))
     
     # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))]  # lambda via randomized cv 

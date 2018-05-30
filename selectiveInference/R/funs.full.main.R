@@ -290,7 +290,7 @@ mle=function(X,y,loss){
   return(reg$coefficients)
 }
 
-approximate = function(X, active_set){
+approximate_JM = function(X, active_set){
   n=nrow(X)
   p=ncol(X)
   nactive=length(active_set)
@@ -322,7 +322,21 @@ approximate = function(X, active_set){
   return(M_active)
 }
 
-
+approximate_BN = function(X, active_set){
+  n=nrow(X)
+  p=ncol(X)
+  nactive=length(active_set)
+  
+  inv = solve(X %*% t(X))
+  D = matrix(rep(0, nactive*p), nrow=nactive, ncol=p)
+  for (i in 1:nactive){
+    var = active_set[i]
+    D[i, var]=1/(t(X[,var]) %*% inv %*% X[,var])
+  }
+  
+  M_active = D %*% t(X) %*% inv
+  return(M_active)
+}
 
 
 get_QB = function(X, y, soln, active_set, loss){
@@ -361,9 +375,14 @@ get_QB = function(X, y, soln, active_set, loss){
     
   } else{
     
-    M_active = approximate(W_root %*% X, active_set) ## this should be the active rows of \hat{\Sigma}(W^{1/2} X)^T/n, so size |E|\times p 
+    #M_active = approximate_JM(W_root %*% X, active_set) ## this should be the active rows of \hat{\Sigma}(W^{1/2} X)^T/n, so size |E|\times p 
+    #beta_barE = soln[active_set] + M_active %*% diag(as.vector(1/diagonal)) %*% residuals
+    
+    M_active=approximate_BN(X, active_set)
+    beta_barE = M_active %*% y-((M_active %*% X-diag(p)[active_set,]) %*% soln)
+    
     QiE = M_active %*% t(M_active) # size |E|\times |E|
-    beta_barE = soln[active_set] + M_active %*% diag(as.vector(1/diagonal)) %*% residuals
+    
     
     QE = hessian_active(X, soln, loss, active_set)
     Q_sq = W_root %*% X

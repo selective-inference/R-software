@@ -2,7 +2,41 @@ library(selectiveInference)
 library(glmnet)
 library(MASS)
 
-debiased_lasso_inference=function(X, y, soln, loss, sigma_est){
+# M is p\times n
+correct = function(M, X, active_set){
+  p=ncol(X)
+  basis = diag(p)
+  nactive = length(active_set)
+  bias_cor =rep(0, nactive)
+  var_cor = rep(0,nactive)
+  
+  for (i in 1:nactive){
+    var = active_set[i]
+    #print(dim(M))
+    #print(dim(t(M[var,])))
+    bias_cor[i] = max(abs(t(X) %*% M[var,] - basis[var,]))
+    var_cor[i]=1/((1-bias_cor[i])^2)
+  }
+  return(list(bias_cor = bias_cor, var_cor = var_cor))
+}
+
+
+approximate = function(X){
+  n=nrow(X)
+  p=ncol(X)
+  D = diag(p)
+  inv = solve(X %*% t(X))
+  for (i in 1:p){
+    D[i,i]=1/(t(X[,i]) %*% inv %*% X[,i])
+  }
+  #print(diag(D))
+  M = D %*% t(X) %*% inv
+  print(diag(M %*% X))   ## should be 1
+  return(M)
+}
+
+
+debiased_lasso_inference=function(X, y, soln, loss, sigma_est, lambda, correction=FALSE){
   
   n=nrow(X)
   p=ncol(X)
@@ -18,9 +52,28 @@ debiased_lasso_inference=function(X, y, soln, loss, sigma_est){
     residuals = y-(exp(fit)/(1+exp(fit)))
   } 
   
-  M = selectiveInference:::approximate(W_root %*% X, 1:p)
+  #M = selectiveInference:::approximate_JM(W_root %*% X, 1:p)
+  #estimator = soln + M %*% diag(as.vector(1/diagonal)) %*% residuals
+  M = approximate(X)
+  estimator = M %*% y-((M %*% X-diag(p)) %*% soln)
   covariance = sigma_est^2*M %*% t(M)
-  estimator = soln + M %*% diag(as.vector(1/diagonal)) %*% residuals
+  
+  
+ 
+  if (correction==TRUE){
+      active_set = which(soln!=0)
+      nactive=length(active_set)
+      cor = correct(M, X, active_set)
+      bias_cor = cor$bias_cor*lambda
+      #bias_cor = rep(0, length(active_set))
+      var_cor = cor$var_cor
+      print(var_cor)
+      estimator[active_set] = estimator[active_set]+bias_cor
+      for (i in 1:nactive){
+        var = active_set[i]
+        covariance[var,var] = covariance[var, var] * var_cor[i]
+      }
+  }
   
   naive_pvalues=NULL
   naive_intervals = NULL
@@ -35,9 +88,23 @@ debiased_lasso_inference=function(X, y, soln, loss, sigma_est){
 }
 
 
+compute_coverage = function(ci, beta){
+  nactive=length(beta)
+  coverage_vector = rep(0, nactive)
+  for (i in 1:nactive){
+    if (beta[i]>=ci[1,i] && beta[i]<=ci[2,i]){
+      coverage_vector[i]=1
+    } else if (beta[i]<ci[1,i]){
+      coverage_vector[i]=-1  # parameter of the left of the iterval
+    }
+      
+  }
+  return(coverage_vector)
+}
 
-test_debiased_coverage = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.7,
-                         nrep=10, n=200, p=500, s=20, rho=0.){
+
+test_debiased_coverage = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.8,
+                         nrep=20, n=200, p=500, s=30, rho=0.){
   
   snr=sqrt(2*log(p)/n)
 
@@ -79,9 +146,11 @@ test_debiased_coverage = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0
     
     soln = selectiveInference:::solve_problem_glmnet(X, y, lambda, penalty_factor=penalty_factor, loss=loss)
     print(c("nactive", length(which(soln!=0))))
-    active_set = 1:p # which(beta!=0) #1:5 # which(soln!=0) #
+    cat("selected", which(soln!=0), "\n")
     
-    PVS = debiased_lasso_inference(X,y,soln,loss=loss, sigma_est=sigma_est)
+    active_set = which(beta!=0) #1:5 # which(soln!=0) #1:p 
+    
+    PVS = debiased_lasso_inference(X,y,soln,loss=loss, sigma_est=sigma_est, lambda=lambda)
     
     naive_pvalues = c(naive_pvalues, PVS$naive_pvalues[active_set])
     naive_intervals = cbind(naive_intervals, PVS$naive_intervals[, active_set])
@@ -93,11 +162,11 @@ test_debiased_coverage = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0
     
     if (construct_ci){
       
-      naive_coverages=c(naive_coverages, selectiveInference:::compute_coverage(PVS$naive_intervals[, active_set], beta[active_set]))
+      naive_coverages=c(naive_coverages, compute_coverage(PVS$naive_intervals[, active_set], beta[active_set]))
       naive_lengths=c(naive_lengths, as.vector(PVS$naive_intervals[2,active_set]-PVS$naive_intervals[1,active_set]))
       print(c("naive coverage:", length(which(naive_coverages==1))/length(naive_coverages)))
-      print(c("param. on the left:", length(which(naive_coverages==-1))/length(naive_coverages)))
-      print(c("param. on the right:", length(which(naive_coverages==0))/length(naive_coverages)))
+      print(c("param on the left of CI:", length(which(naive_coverages==-1))/length(naive_coverages)))
+      print(c("param on the right of CI:", length(which(naive_coverages==0))/length(naive_coverages)))
       
       print(c("naive length mean:", mean(naive_lengths)))
       print(c("naive length median:", median(naive_lengths)))

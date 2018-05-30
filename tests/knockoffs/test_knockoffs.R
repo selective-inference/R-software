@@ -35,10 +35,10 @@ compute.knockoff = function(data, method, q=0.2, model.free=TRUE){
 
 
 
-test_knockoffs = function(seed=1, outfile=NULL, method = "knockoff_plus", loss="ls",
-                          nrep=20, n=200, p=800, s=30, rho=0){
+test_knockoffs = function(seed=1, outfile=NULL, method = "knockoff", loss="ls",
+                          nrep=20, n=200, p=500, s=30, rho=0.){
   
-  snr = 2*sqrt(2*log(p)/n)
+  snr = sqrt(2*log(p)/n)
 
   set.seed(seed)
 
