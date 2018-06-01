@@ -54,7 +54,8 @@ test_liu_full = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.7,
     soln = selectiveInference:::solve_problem_glmnet(X, y, lambda, penalty_factor=penalty_factor, loss=loss)
     #soln = solve_problem_gglasso(X, y, groups=1:ncol(X), lambda, penalty_factor=penalty_factor, loss=loss)
     PVS = selectiveInference:::inference_debiased_full(X, y, soln, lambda=lambda, penalty_factor=penalty_factor, 
-                                sigma_est, loss=loss, algo="Q", construct_ci = construct_ci, verbose=TRUE)
+                                sigma_est, loss=loss, algo="Q", construct_ci = construct_ci, debias_mat = "JM",
+                                verbose=TRUE)
     
     active_vars=PVS$active_vars
     cat("active_vars:",active_vars,"\n")

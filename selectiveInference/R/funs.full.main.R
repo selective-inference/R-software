@@ -339,7 +339,7 @@ approximate_BN = function(X, active_set){
 }
 
 
-get_QB = function(X, y, soln, active_set, loss){
+get_QB = function(X, y, soln, active_set, loss, debias_mat){
   n=nrow(X)
   p=ncol(X)
   
@@ -375,12 +375,14 @@ get_QB = function(X, y, soln, active_set, loss){
     
   } else{
     
-    #M_active = approximate_JM(W_root %*% X, active_set) ## this should be the active rows of \hat{\Sigma}(W^{1/2} X)^T/n, so size |E|\times p 
-    #beta_barE = soln[active_set] + M_active %*% diag(as.vector(1/diagonal)) %*% residuals
-    
-    M_active=approximate_BN(X, active_set)
-    beta_barE = M_active %*% y-((M_active %*% X-diag(p)[active_set,]) %*% soln)
-    
+    if (debias_mat == "JM"){
+      M_active = approximate_JM(W_root %*% X, active_set) ## this should be the active rows of \hat{\Sigma}(W^{1/2} X)^T/n, so size |E|\times p 
+      beta_barE = soln[active_set] + M_active %*% diag(as.vector(1/diagonal)) %*% residuals
+    }  else if (debias_mat == "BN"){
+      M_active=approximate_BN(X, active_set)
+      beta_barE = M_active %*% y-((M_active %*% X-diag(p)[active_set,]) %*% soln)
+    }
+      
     QiE = M_active %*% t(M_active) # size |E|\times |E|
     
     
@@ -395,7 +397,7 @@ get_QB = function(X, y, soln, active_set, loss){
 
 
 inference_debiased_full = function(X, y, soln, lambda, penalty_factor, sigma_est,
-                                 loss, algo, construct_ci, verbose=FALSE){
+                                 loss, algo, construct_ci, debias_mat = "BN", verbose=FALSE){
   
   active_vars = which(soln!=0)
   nactive_vars = length(active_vars)
@@ -409,7 +411,7 @@ inference_debiased_full = function(X, y, soln, lambda, penalty_factor, sigma_est
   }
   
   begin_setup = Sys.time()
-  setup_params = get_QB(X=X, y=y, soln=soln, active_set=active_vars, loss=loss)
+  setup_params = get_QB(X=X, y=y, soln=soln, active_set=active_vars, loss=loss, debias_mat = debias_mat)
   QE=as.matrix(setup_params$QE)
   Q_sq=setup_params$Q_sq
   QiE=as.matrix(setup_params$QiE)
