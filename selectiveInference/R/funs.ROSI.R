@@ -562,12 +562,16 @@ print.ROSI <- function(x, ...) {
 
 
 compute_coverage = function(ci, beta){
+  print(ci)
+  print(beta) 
   nactive=length(beta)
-  coverage_vector = rep(0, nactive)
+  coverage_vector = rep(NA, nactive)
   for (i in 1:nactive){
-    if (beta[i]>=ci[1,i] && beta[i]<=ci[2,i]){
+  if(!is.na(ci[i,1]) & !is.na(ci[i,2])) {
+    if (beta[i]>=ci[i,1] && beta[i]<=ci[i,2]){
       coverage_vector[i]=1
     } 
+  }
   }
   return(coverage_vector)
 }
@@ -589,92 +593,4 @@ family_label = function(loss){
   }
 }
 
-
-# Unused
-
-selective_CI = function(observed, 
-                        variance, 
-                        sigma_est, 
-                        center, 
-                        radius,
-                        alpha=0.1, 
-                        gridrange=c(-20,20), 
-                        gridpts=10000, 
-                        griddepth=2) {
-  
-  pivot = function(param){
-    return(test_TG(param, 
-                   observed, 
-                   variance, 
-                   sigma_est, 
-                   center, 
-                   radius, 
-                   alt="upper"))
-  }
-  st.error = sqrt(variance)
-  param_grid = seq(observed+gridrange[1]*st.error, 
-                   observed+gridrange[2]*st.error, 
-                   length=gridpts)
-  interval = grid.search(param_grid, 
-                         pivot, 
-                         alpha/2, 
-                         1-alpha/2, 
-                         gridpts, 
-                         griddepth)
-  return(interval)
-}
-
-# the pvalue if prob(Z>obs given  |sigma_est^2/variance * Z+center|>radius)
-# where Z~N(param, variance)
-test_TG = function(param, 
-                   observed, 
-                   variance, 
-                   sigma_est, 
-                   center, 
-                   radius, 
-                   alt) {
-  st.error = sqrt(variance)
-  lower = variance*(-center-radius)/(sigma_est^2)
-  upper = variance*(-center+radius)/(sigma_est^2)
-  if (observed<=lower){
-     case=1
-     num = (pnorm(upper, 
-                  mean=param, 
-                  sd=st.error, 
-                  lower.tail=FALSE) + 
-            pnorm(lower, 
-                  mean=param, 
-                  sd=st.error) - 
-            pnorm(observed, mean=param, sd=st.error))
-  } else if (observed>=upper){
-    case=2
-    num = pnorm(observed, 
-                mean=param, 
-                sd=st.error, 
-                lower.tail=FALSE)
-  } else{
-    case=3
-    num = pnorm(upper, 
-                mean=param, 
-                sd=st.error, 
-                lower.tail=FALSE)
-    return(NULL)
-  }
-  den = (pnorm(upper, 
-               mean=param, 
-               sd=st.error, 
-               lower.tail=FALSE) + 
-         pnorm(lower, 
-               mean=param, 
-               sd=st.error))
-         pivot = num/den
-
-  if (alt=="two-sided"){
-    return(2*pmin(pivot, 1-pivot))
-  } else if (alt=="upper") {
-    return(pivot)
-  } else if (alt=="lower"){
-    return(1-pivot)
-  }
-}
 
