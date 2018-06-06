@@ -190,10 +190,22 @@ fixedLassoInf <- function(x, y, beta,
       # Approximate inverse covariance matrix for when (n < p) from lasso_Inference.R
       if (!is_wide) {
            hsigma = 1/n*(t(Xordered)%*%Xordered)
-           htheta = debiasingMatrix(hsigma, is_wide, n, 1:length(S), verbose=FALSE, max_try=linesearch.try, warn_kkt=TRUE)
+           htheta = debiasingMatrix(hsigma, 
+                                    is_wide, 
+                                    n, 
+                                    1:length(S), 
+                                    verbose=FALSE, 
+                                    max_try=linesearch.try, 
+                                    warn_kkt=TRUE)
            ithetasigma = (GS-(htheta%*%hsigma))
       } else {
-           htheta = debiasingMatrix(Xordered, is_wide, n, 1:length(S), verbose=FALSE, max_try=linesearch.try, warn_kkt=TRUE)
+           htheta = debiasingMatrix(Xordered, 
+                                    is_wide, 
+                                    n, 
+                                    1:length(S), 
+                                    verbose=FALSE, 
+                                    max_try=linesearch.try, 
+                                    warn_kkt=TRUE)
            ithetasigma = (GS-((htheta%*%t(Xordered)) %*% Xordered)/n)
       }
 
@@ -325,12 +337,13 @@ fixedLassoPoly =
 ## Approximates inverse covariance matrix theta
 ## using coordinate descent 
 
-debiasingMatrix = function(Xinfo,               # could be X or t(X) %*% X / n depending on is_wide
+debiasingMatrix = function(Xinfo,               # could be X or t(X) %*% X / n 
+                                                # depending on is_wide
                            is_wide,
                            nsample, 
                            rows, 
                            verbose=FALSE, 
-                           bound=NULL,             # starting value of bound
+                           bound=NULL,          # starting value of bound
                            linesearch=TRUE,     # do a linesearch?
                            scaling_factor=1.5,  # multiplicative factor for linesearch
                            max_active=NULL,     # how big can active set get?
@@ -367,7 +380,8 @@ debiasingMatrix = function(Xinfo,               # could be X or t(X) %*% X / n d
         print(paste(xperc,"% done",sep="")); }
     }
 
-    output = debiasingRow(Xinfo,               # could be X or t(X) %*% X / n depending on is_wide
+    output = debiasingRow(Xinfo,               # could be X or t(X) %*% X / n 
+                                               # depending on is_wide
                           is_wide,
                           row,
                           bound,
@@ -532,6 +546,7 @@ debiasingRow = function (Xinfo,               # could be X or t(X) %*% X / n dep
       last_output = list(soln=result$soln,
                          kkt_check=result$kkt_check)
     }
+
 
   # Check feasibility
 
