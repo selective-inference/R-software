@@ -5,7 +5,7 @@ library(glmnet)
 
 # testing Liu et al type=full in high dimensional settings -- uses debiasing matrix
 
-test_liu_full = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.7,
+test_liu_full = function(seed=1, outfile=NULL, family="gaussian", lambda_frac=0.7,
                          nrep=50, n=200, p=500, s=20, rho=0.){
   
   snr = sqrt(2*log(p)/n)
@@ -28,12 +28,14 @@ test_liu_full = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.7,
   
   for (i in 1:nrep){
     
-    if (loss=="ls"){
+    if (family=="gaussian"){
       sigma=1
       data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=sigma, snr=snr)
-    } else if (loss=="logit"){
+      loss = 'ls'
+    } else if (family=='binomial'){
       sigma=1
       data = selectiveInference:::logistic_instance(n=n, p=p, s=s, rho=rho, snr=snr)
+      loss = 'logit'
     }
 
     X=data$X
@@ -50,26 +52,32 @@ test_liu_full = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.7,
     lambda = lambda_frac*selectiveInference:::theoretical.lambda(X, loss, sigma_est)  # theoretical lambda
     print(c("lambda", lambda))
     
-    soln = selectiveInference:::solve_problem_glmnet(X, y, lambda, penalty_factor=penalty_factor, loss=loss)
-    PVS = selectiveInference:::ROSI(X, 
-                                    y, 
-                                    soln, 
-                                    lambda=lambda, 
-                                    penalty_factor=penalty_factor, 
-                                    sigma_est, 
-                                    loss=loss, 
-                                    algo="Q", 
-                                    construct_ci=construct_ci, 
-                                    debias_mat="JM",
-                                    verbose=TRUE)
+    soln = selectiveInference:::solve_problem_glmnet(X, y, lambda, penalty_factor=penalty_factor, family=family)
+    PVS = ROSI(X, 
+               y, 
+               soln, 
+               lambda=lambda, 
+               penalty_factor=penalty_factor, 
+               dispersion=sigma_est^2, 
+               family=family,
+               solver="QP", 
+               construct_ci=construct_ci, 
+               debiasing_method="JM",
+               verbose=TRUE)
     
-    active_vars=PVS$active_vars
+    active_vars=PVS$active_set
     cat("active_vars:",active_vars,"\n")
     pvalues = c(pvalues, PVS$pvalues)
-    naive_pvalues = c(naive_pvalues, PVS$naive_pvalues)
-    sel_intervals = cbind(sel_intervals, PVS$sel_intervals)  # matrix with two rows
-    naive_intervals = cbind(naive_intervals, PVS$naive_intervals)
-    
+    if (family == 'gaussian') {
+        glm_Xy = glm(y ~ X[,active_vars] - 1)
+    } else {
+        glm_Xy = glm(y ~ X[,active_vars] - 1, family=binomial)
+    }
+    naive_pvalues = c(naive_pvalues, summary(glm_Xy)$coef[,4])
+    sel_intervals = rbind(sel_intervals, PVS$intervals)  # matrix with two rows
+    naive_int = confint(glm_Xy, level=0.9)
+    naive_intervals = rbind(naive_intervals, naive_int)
+    print(naive_intervals)
     if (length(pvalues)>0){
       plot(ecdf(pvalues))
       lines(ecdf(naive_pvalues), col="red")
@@ -78,10 +86,11 @@ test_liu_full = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.7,
     
     if (construct_ci && length(active_vars)>0){
       
-      sel_coverages=c(sel_coverages, selectiveInference:::compute_coverage(PVS$sel_intervals, beta[active_vars]))
-      naive_coverages=c(naive_coverages, selectiveInference:::compute_coverage(PVS$naive_intervals, beta[active_vars]))
-      sel_lengths=c(sel_lengths, as.vector(PVS$sel_intervals[2,]-PVS$sel_intervals[1,]))
-      naive_lengths=c(naive_lengths, as.vector(PVS$naive_intervals[2,]-PVS$naive_intervals[1,]))
+
+      sel_coverages=c(sel_coverages, selectiveInference:::compute_coverage(PVS$intervals, beta[active_vars]))
+      naive_coverages=c(naive_coverages, selectiveInference:::compute_coverage(naive_int, beta[active_vars]))
+      sel_lengths=c(sel_lengths, as.vector(naive_int[,2]-naive_int[,1]))
+      naive_lengths=c(naive_lengths, as.vector(PVS$naive_intervals[,2]-PVS$naive_intervals[,1]))
       #cat("sel cov", sel_coverages, "\n")
       print(c("selective coverage:", mean(sel_coverages)))
       print(c("naive coverage:", mean(naive_coverages)))
