@@ -1,134 +1,14 @@
-
-smoke_test = function() {
-    n = 100; p = 50
-    X = matrix(rnorm(n * p), n, p)
-    y = rnorm(n)
-    lam = 20 / sqrt(n)
-    noise_scale = 0.01 * sqrt(n)
-    ridge_term = .1 / sqrt(n)
-    selectiveInference:::randomizedLasso(X, 
-                                         y, 
-                                         lam, 
-                                         noise_scale=noise_scale, 
-                                         ridge_term=ridge_term)
-}
-
-A = smoke_test()
-
-sampler_test = function() {
-
-    n = 100; p = 50
-    X = matrix(rnorm(n * p), n, p)
-    y = rnorm(n)
-    lam = 20 / sqrt(n)
-    noise_scale = 0.01 * sqrt(n)
-    ridge_term = .1 / sqrt(n)
-    obj = selectiveInference:::randomizedLasso(X, 
-                                               y, 
-                                               lam, 
-                                               noise_scale=noise_scale, 
-                                               ridge_term=ridge_term,
- 					       condition_subgrad=FALSE)
-    S = selectiveInference:::sample_opt_variables(obj$law, jump_scale=rep(1/sqrt(n), p), nsample=10000)
-    return(S$samples[2001:10000,])
-}
-B = sampler_test()
-
-gaussian_density_test = function() {
-
-    noise_scale = 10.
-    random_lasso = smoke_test()
-    p = nrow(random_lasso$internal_transform$linear_term)
-    internal_state = matrix(rnorm(p * 20), p, 20)
-    optimization_state = matrix(rnorm(p * 20), p, 20)
-    offset = rnorm(p)
-
-    V1 = selectiveInference:::log_density_gaussian_(noise_scale,
-                                                    random_lasso$internal_transform$linear_term,
-                                                    internal_state,
-                                                    random_lasso$optimization_transform$linear_term,
-                                                    optimization_state,
-                                                    offset)
-    A1 = random_lasso$internal_transform$linear_term
-    A2 = random_lasso$optimization_transform$linear_term
-    arg = A1 %*% internal_state + A2 %*% optimization_state + offset
-    V2 = -apply(arg^2, 2, sum) / (2 * noise_scale^2)
-    print(sqrt(sum((V1-V2)^2) / sum(V1^2)))
-
-    U1 = selectiveInference:::log_density_gaussian_conditional_(noise_scale,
-                                                                random_lasso$optimization_transform$linear_term,
-                                                                optimization_state,
-                                                                offset)
-    arg = A2 %*% optimization_state + offset
-    U2 = -apply(arg^2, 2, sum) / (2 * noise_scale^2)
-    print(sqrt(sum((U1-U2)^2) / sum(U1^2)))
-
-    # test that a single column matrix works -- numeric should not
-
-    print(selectiveInference:::log_density_gaussian_conditional_(noise_scale,
-                                                                 random_lasso$optimization_transform$linear_term,
-                                                                 optimization_state[,1,drop=FALSE],
-                                                                 offset))
-    print(selectiveInference:::log_density_gaussian_(noise_scale,
-                                                     random_lasso$internal_transform$linear_term,
-                                                     internal_state[,1,drop=FALSE],
-                                                     random_lasso$optimization_transform$linear_term,
-                                                     optimization_state[,1,drop=FALSE],
-                                                     offset))
-
-}
-
-gaussian_density_test()
-
-laplace_density_test = function() {
-
-    noise_scale = 10.
-    random_lasso = smoke_test()
-    p = nrow(random_lasso$internal_transform$linear_term)
-    internal_state = matrix(rnorm(p * 20), p, 20)
-    optimization_state = matrix(rnorm(p * 20), p, 20)
-    offset = rnorm(p)
-
-    V1 = selectiveInference:::log_density_laplace_(noise_scale,
-                                                    random_lasso$internal_transform$linear_term,
-                                                    internal_state,
-                                                    random_lasso$optimization_transform$linear_term,
-                                                    optimization_state,
-                                                    offset)
-    A1 = random_lasso$internal_transform$linear_term
-    A2 = random_lasso$optimization_transform$linear_term
-    arg = A1 %*% internal_state + A2 %*% optimization_state + offset
-    V2 = -apply(abs(arg), 2, sum) / noise_scale
-    print(sqrt(sum((V1-V2)^2) / sum(V1^2)))
-
-    U1 = selectiveInference:::log_density_laplace_conditional_(noise_scale,
-                                                                random_lasso$optimization_transform$linear_term,
-                                                                optimization_state,
-                                                                offset)
-    arg = A2 %*% optimization_state + offset
-    U2 = -apply(abs(arg), 2, sum) / noise_scale
-    print(sqrt(sum((U1-U2)^2) / sum(U1^2)))
-
-    # test that a single column matrix works -- numeric should not
-
-    print(selectiveInference:::log_density_laplace_conditional_(noise_scale,
-                                                                 random_lasso$optimization_transform$linear_term,
-                                                                 optimization_state[,1,drop=FALSE],
-                                                                 offset))
-    print(selectiveInference:::log_density_laplace_(noise_scale,
-                                                     random_lasso$internal_transform$linear_term,
-                                                     internal_state[,1,drop=FALSE],
-                                                     random_lasso$optimization_transform$linear_term,
-                                                     optimization_state[,1,drop=FALSE],
-                                                     offset))
+library(MASS)
+library(selectiveInference)
+library(glmnet)
 
 
-test_randomized = function(seed=1, outfile, type="full", nrep=1, n=1000, p=10000, s=50, rho=0.){
+test_randomized = function(seed=1, outfile=NULL, type="partial", loss="ls", lambda_frac=0.7,
+                           nrep=50, n=200, p=800, s=30, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
   set.seed(seed)
-  loss="ls"
   construct_ci=TRUE
   penalty_factor = rep(1, p)
   
@@ -141,7 +21,13 @@ test_randomized = function(seed=1, outfile, type="full", nrep=1, n=1000, p=10000
   power_sample=NULL
   
   for (i in 1:nrep){
-    data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
+    
+    if (loss=="ls"){
+      data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
+    } else if (loss=="logit"){
+      data = selectiveInference:::logistic_instance(n=n, p=p, s=s, rho=rho, snr=snr)
+    }
+    
     X=data$X
     y=data$y
     beta=data$beta
@@ -149,10 +35,12 @@ test_randomized = function(seed=1, outfile, type="full", nrep=1, n=1000, p=10000
     
     #CV = cv.glmnet(X, y, standardize=FALSE, intercept=FALSE, family=selectiveInference:::family_label(loss))
     #sigma_est=selectiveInference:::estimate_sigma(X,y,coef(CV, s="lambda.min")[-1]) # sigma via Reid et al.
-    #print(c("sigma est", sigma_est))
     sigma_est=1
+    #sigma_est = selectiveInference:::estimate_sigma_data_spliting(X,y)
+    print(c("sigma est", sigma_est))
+    
     # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))]  # lambda via randomized cv 
-    lambda = 0.8*selectiveInference:::theoretical.lambda(X, loss, sigma_est)  # theoretical lambda
+    lambda = lambda_frac*selectiveInference:::theoretical.lambda(X, loss, sigma_est)  # theoretical lambda
     
     
     rand_lasso_soln = selectiveInference:::randomizedLasso(X, 
@@ -161,10 +49,10 @@ test_randomized = function(seed=1, outfile, type="full", nrep=1, n=1000, p=10000
                                                            family=selectiveInference:::family_label(loss),
                                                            condition_subgrad=TRUE)
     
-    full_targets=selectiveInference:::set.target(rand_lasso_soln, type=type, sigma_est=sigma_est)
+    targets=selectiveInference:::compute_target(rand_lasso_soln, type=type, sigma_est=sigma_est)
     
     PVS = selectiveInference:::randomizedLassoInf(rand_lasso_soln,
-                                                  full_targets=full_targets,
+                                                  targets=targets,
                                                   sampler = "norejection", #"adaptMCMC", #
                                                   level=0.9, 
                                                   burnin=1000, 
@@ -206,15 +94,17 @@ test_randomized = function(seed=1, outfile, type="full", nrep=1, n=1000, p=10000
   }
   
   if (is.null(outfile)){
-    outfile="randomized_full.rds"
+    outfile=paste("randomized_", type, ".rds", sep="")
   }
   
   saveRDS(list(sel_intervals=sel_intervals, sel_coverages=sel_coverages, sel_lengths=sel_lengths,
                pvalues=pvalues,
                FDR_sample=FDR_sample, power_sample=power_sample,
-               n=n,p=p, s=s, snr=snr, rho=rho), file=outfile)
+               n=n,p=p, s=s, snr=snr, rho=rho, type=type), file=outfile)
   
   return(list(pvalues=pvalues))
 }
 
-#test_randomized()
+test_randomized()
+
+

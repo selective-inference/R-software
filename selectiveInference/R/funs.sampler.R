@@ -92,7 +92,7 @@ gaussian_sampler = function(noise_scale,
   }
   grad_negative_log_density=function(x){
     recon = linear_term %*% x+offset_term
-    return(t(linear_term)%*% recon/(noise_scale^2))
+    return(t(linear_term) %*% recon/(noise_scale^2))
   }
   
   return(log_concave_sampler(negative_log_density, 

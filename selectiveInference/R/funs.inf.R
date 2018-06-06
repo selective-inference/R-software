@@ -271,7 +271,8 @@ TG.interval.base = function(limits.info, alpha=0.1,
     param_grid = seq(gridrange[1] * limits.info$sd, gridrange[2] * limits.info$sd, length=gridpts)
 
     pivot = function(param) {
-        tnorm.surv(limits.info$estimate, param, limits.info$sd, limits.info$vlo, limits.info$vup, bits) 
+        pv = tnorm.surv(limits.info$estimate, param, limits.info$sd, limits.info$vlo, limits.info$vup, bits) 
+        return(pv)
     }
 
     interval = grid.search(param_grid, pivot, alpha/2, 1-alpha/2, gridpts, griddepth)

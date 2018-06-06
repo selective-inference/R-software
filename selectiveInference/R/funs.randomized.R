@@ -35,12 +35,13 @@ randomizedLasso = function(X,
 
     if (is.null(noise_scale)) {
         if (family == "gaussian") {
-            noise_scale = 0.5 * sd(y) * sqrt(mean_diag)
+            noise_scale = 0.25 * sd(y) * sqrt(mean_diag)
         } else if (family == "binomial") {
 	    noise_scale = 0.5 * sd(y) * sqrt(mean_diag) 
         }
     }
     
+    print(c("noise scale", noise_scale))
     if (noise_scale > 0) {
         perturb_ = rnorm(p) * noise_scale
     } else {
@@ -97,8 +98,11 @@ randomizedLasso = function(X,
                               kkt_stop=kkt_stop,
                               parameter_stop=parameter_stop)
     }
-    sign_soln = sign(result$soln)
+    #print("SOLN")
+    #print(result$soln)
+    print(c("nactive", length(which(result$soln!=0))))
     
+    sign_soln = sign(result$soln)
     unpenalized = lam == 0
     active = (!unpenalized) & (sign_soln != 0)
     inactive = (!unpenalized) & (sign_soln == 0)
@@ -447,7 +451,8 @@ compute_target = function(rand_lasso_soln,
     
     crosscov_target_internal=rbind(cov_target, matrix(0, nrow=p-nactive, ncol=nactive))
   } 
-  
+  #print("signs")
+  #print(rand_lasso_soln$sign_soln)
   alternatives = c()
   for (i in 1:length(rand_lasso_soln$sign_soln)) {
       if (rand_lasso_soln$sign_soln[i] == 1) {
@@ -485,19 +490,22 @@ compute_target = function(rand_lasso_soln,
       M_inactive  =  (htheta[, (nactive+1):p]%*%t(X[,inactive_set])/n)
                        #+ithetasigma_inactive%*%FS%*%hsigmaSinv%*%t(X_active))/n)
       M_inactive_full = htheta[, (nactive+1)]
+      
+      cov_target = sigma_est^2*M_active %*% t(M_active)
     }
     else{
       pseudo_invX = pinv(crossprod(X))
       M_active = pseudo_invX[active_set,] %*% t(X)
       M_inactive = (pseudo_invX[,inactive_set] %*% t(X_inactive))[active_set,]
+      
+      cov_target = sigma_est^2*pseudo_invX[active_set,active_set]
     }
 
     residuals = y-X%*%lasso.est
     scalar = 1 #sqrt(n) # JT: this is sigma?
     observed_target = lasso.est[active_set]+scalar*M_active %*% residuals
-    cov_target = glm_cov + sigma_est^2*scalar^2*M_inactive %*% t(M_inactive)
-    crosscov_target_internal = rbind(glm_cov, sigma_est^2*scalar*t(X_inactive) %*% t(M_inactive))
-    
+    hat_matrix = X_active %*% solve(t(X_active) %*% X_active)
+    crosscov_target_internal = sigma_est^2*rbind(M_active %*% hat_matrix, t(X_inactive) %*% t(M_inactive))
   }
   
   if (!is.null(colnames(X))) {
@@ -521,7 +529,7 @@ compute_target = function(rand_lasso_soln,
   return(list(targets=targets,
               construct_ci=construct_ci, 
               construct_pvalues=construct_pvalues,
-              alternatives=alternatives))
+              alternatives=alternatives[active_set]))
 }
 
 
@@ -655,7 +663,7 @@ randomizedLassoInf = function(rand_lasso_soln,
       arg_ = candidate * sufficient_stat + log_reference_measure
       arg_ = arg_ - max(arg_)
       weights = exp(arg_)
-      p = mean((target_sample + candidate < targets$observed_target[i]) * weights)/mean(weights)
+      p = mean((target_sample + candidate <= targets$observed_target[i]) * weights)/mean(weights)
       return(p)
     }
 
@@ -666,14 +674,15 @@ randomizedLassoInf = function(rand_lasso_soln,
     rootL = function(candidate){
       return(pivot(targets$observed_target[i]+candidate)-(1+level)/2)
     }
-    
+
     if (construct_pvalues[i]==1){
+      #print(alternatives[i])
       pvalues[i] = pivot(0)
       if (alternatives[i]=="two-sided"){
         pvalues[i] = 2*min(pvalues[i], 1-pvalues[i])
       } else if (alternatives[i]=="greater"){
         pvalues[i]= 1-pvalues[i]
-      } 
+      }
     }
     
     if (construct_ci[i]==1){

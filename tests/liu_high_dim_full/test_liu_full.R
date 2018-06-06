@@ -5,20 +5,20 @@ library(glmnet)
 
 # testing Liu et al type=full in high dimensional settings -- uses debiasing matrix
 
-test_liu_full = function(seed=1, outfile=NULL, nrep=1, n=4000, p=70000, s=20, rho=0.){
+test_liu_full = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.7,
+                         nrep=50, n=200, p=500, s=20, rho=0.){
   
   snr = sqrt(2*log(p)/n)
   
   set.seed(seed)
-  loss="ls"
   construct_ci=TRUE
   penalty_factor = rep(1, p)
   
-  pvalues = NULL
+  pvalues=NULL
   sel_intervals=NULL
   sel_coverages=NULL
   sel_lengths=NULL
-  naive_pvalues = NULL
+  naive_pvalues=NULL
   naive_intervals=NULL
   naive_coverages=NULL
   naive_lengths=NULL
@@ -27,7 +27,15 @@ test_liu_full = function(seed=1, outfile=NULL, nrep=1, n=4000, p=70000, s=20, rh
   power_sample=NULL
   
   for (i in 1:nrep){
-    data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=1, snr=snr)
+    
+    if (loss=="ls"){
+      sigma=1
+      data = selectiveInference:::gaussian_instance(n=n, p=p, s=s, rho=rho, sigma=sigma, snr=snr)
+    } else if (loss=="logit"){
+      sigma=1
+      data = selectiveInference:::logistic_instance(n=n, p=p, s=s, rho=rho, snr=snr)
+    }
+
     X=data$X
     y=data$y
     beta=data$beta
@@ -35,17 +43,20 @@ test_liu_full = function(seed=1, outfile=NULL, nrep=1, n=4000, p=70000, s=20, rh
     
     # CV = cv.glmnet(X, y, standardize=FALSE, intercept=FALSE, family=selectiveInference:::family_label(loss))
     # sigma_est=selectiveInference:::estimate_sigma(X,y,coef(CV, s="lambda.min")[-1]) # sigma via Reid et al.
-    sigma_est=1
+    sigma_est=sigma
+    #sigma_est = selectiveInference:::estimate_sigma_data_spliting(X,y)
     print(c("sigma est", sigma_est))
     
     # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))]  # lambda via randomized cv 
-    lambda = 0.8*selectiveInference:::theoretical.lambda(X, loss, sigma_est)  # theoretical lambda
+    lambda = lambda_frac*selectiveInference:::theoretical.lambda(X, loss, sigma_est)  # theoretical lambda
     print(c("lambda", lambda))
     
     soln = selectiveInference:::solve_problem_glmnet(X, y, lambda, penalty_factor=penalty_factor, loss=loss)
     #soln = solve_problem_gglasso(X, y, groups=1:ncol(X), lambda, penalty_factor=penalty_factor, loss=loss)
-    PVS = selectiveInference:::inference_group_lasso(X, y, soln, groups=1:ncol(X), lambda=lambda, penalty_factor=penalty_factor, 
-                                sigma_est, loss=loss, algo="glmnet", construct_ci = construct_ci)
+    PVS = selectiveInference:::inference_debiased_full(X, y, soln, lambda=lambda, penalty_factor=penalty_factor, 
+                                sigma_est, loss=loss, algo="Q", construct_ci = construct_ci, debias_mat = "JM",
+                                verbose=TRUE)
+    
     active_vars=PVS$active_vars
     cat("active_vars:",active_vars,"\n")
     pvalues = c(pvalues, PVS$pvalues)
@@ -65,6 +76,7 @@ test_liu_full = function(seed=1, outfile=NULL, nrep=1, n=4000, p=70000, s=20, rh
       naive_coverages=c(naive_coverages, selectiveInference:::compute_coverage(PVS$naive_intervals, beta[active_vars]))
       sel_lengths=c(sel_lengths, as.vector(PVS$sel_intervals[2,]-PVS$sel_intervals[1,]))
       naive_lengths=c(naive_lengths, as.vector(PVS$naive_intervals[2,]-PVS$naive_intervals[1,]))
+      #cat("sel cov", sel_coverages, "\n")
       print(c("selective coverage:", mean(sel_coverages)))
       print(c("naive coverage:", mean(naive_coverages)))
       print(c("selective length mean:", mean(sel_lengths)))
@@ -96,5 +108,5 @@ test_liu_full = function(seed=1, outfile=NULL, nrep=1, n=4000, p=70000, s=20, rh
   return(list(pvalues=pvalues, naive_pvalues=naive_pvalues))
 }
 
-#test_liu_full()
+test_liu_full()
 

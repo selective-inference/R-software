@@ -1,5 +1,29 @@
 
-selective.plus.BH = function(beta, selected.vars, pvalues, q){
+estimate_sigma_data_spliting  = function(X,y, verbose=FALSE){
+  nrep = 20
+  sigma_est = 0
+  nest = 0
+  for (i in 1:nrep){
+    n=nrow(X)
+    m=floor(n/2)
+    subsample = sample(1:n, m, replace=FALSE)
+    leftover = setdiff(1:n, subsample)
+    CV = cv.glmnet(X[subsample,], y[subsample], standardize=FALSE, intercept=FALSE, family="gaussian")
+    beta_hat = coef(CV, s="lambda.min")[-1]
+    selected = which(beta_hat!=0)
+    if (verbose){
+      print(c("nselected",length(selected)))
+    }
+    if (length(selected)>0){
+      LM = lm(y[leftover]~X[leftover,][,selected])
+      sigma_est = sigma_est+sigma(LM)
+      nest = nest+1
+    }
+  }
+  return(sigma_est/nest)
+}
+
+selective.plus.BH = function(beta, selected.vars, pvalues, q, verbose=FALSE){
   
   if (is.null(selected.vars)){
     return(list(power=NA, FDR=NA, pvalues=NULL, null.pvalues=NULL, ci=NULL, nselected=0))
@@ -9,11 +33,16 @@ selective.plus.BH = function(beta, selected.vars, pvalues, q){
   p.adjust.BH = p.adjust(pvalues, method = "BH", n = nselected)
   rejected = selected.vars[which(p.adjust.BH<q)]
   nrejected=length(rejected)
-  print(paste("sel+BH rejected", nrejected, "vars:",toString(rejected)))
+  
+  if (verbose){
+      print(paste("sel+BH rejected", nrejected, "vars:",toString(rejected)))
+  }
   
   true.nonzero = which(beta!=0)
   true.nulls = which(beta==0)
-  print(paste("true nonzero", length(true.nonzero), "vars:", toString(true.nonzero)))
+  if (verbose){
+    print(paste("true nonzero", length(true.nonzero), "vars:", toString(true.nonzero)))
+  }
   
   TP = length(intersect(rejected, true.nonzero))
   s = length(true.nonzero)
@@ -35,7 +64,9 @@ selective.plus.BH = function(beta, selected.vars, pvalues, q){
   null.pvalues=NA
   if (length(selected.nulls)>0){
     null.pvalues = pvalues[selected.nulls]
-    print(paste("selected nulls", length(selected.nulls), "vars:",toString(selected.vars[selected.nulls])))
+    if (verbose){
+      print(paste("selected nulls", length(selected.nulls), "vars:",toString(selected.vars[selected.nulls])))
+    }
   }
   
   return(list(power=power, 
@@ -91,7 +122,7 @@ gaussian_instance = function(n, p, s, rho, sigma, snr, random_signs=TRUE, scale=
   return(result)
 }
 
-logistic_instance = function(n, p, s, rho, sigma, snr, random_signs=TRUE, scale=FALSE, design="AR"){
+logistic_instance = function(n, p, s, rho, snr, random_signs=TRUE, scale=FALSE, design="AR"){
   
   if (design=="AR"){
     X=AR_design(n,p,rho, scale)
@@ -141,7 +172,7 @@ theoretical.lambda = function(X, loss="ls", sigma=1){
   if (loss=="ls"){
     empirical = apply(abs(t(X) %*% matrix(rnorm(n*nsamples), nrow=n)), 2, max)
   } else if (loss=="logit"){
-    empirical = apply(abs(t(X) %*% matrix(sample(c(0,1), n*nsamples, replace = TRUE), nrow=n)), 2, max)
+    empirical = apply(abs(t(X) %*% matrix(sample(c(-0.5,0.5), n*nsamples, replace = TRUE), nrow=n)), 2, max)
   }
   lam = mean(empirical)*sigma/n
   return(lam)
