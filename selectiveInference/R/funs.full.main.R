@@ -479,18 +479,18 @@ setup_Qbeta = function(X,
               M_active=M_active))  
 }
 
-inference_debiased_full = function(X, 
-                                   y, 
-                                   soln, 
-                                   lambda, 
-                                   penalty_factor, 
-                                   sigma_est,
-                                   loss, 
-                                   algo, 
-                                   construct_ci, 
-                                   debias_mat="JM", 
-                                   verbose=FALSE,
-                                   use_debiased=FALSE){
+ROSI = function(X, 
+                y, 
+                soln, 
+                lambda, 
+                penalty_factor, 
+                sigma_est,
+                loss, 
+                algo, 
+                construct_ci, 
+                debias_mat="JM", 
+                verbose=FALSE,
+                use_debiased=TRUE){
   
   active_vars = which(soln!=0)
   nactive_vars = length(active_vars)

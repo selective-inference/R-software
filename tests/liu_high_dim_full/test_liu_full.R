@@ -47,15 +47,21 @@ test_liu_full = function(seed=1, outfile=NULL, loss="ls", lambda_frac=0.7,
     #sigma_est = selectiveInference:::estimate_sigma_data_spliting(X,y)
     print(c("sigma est", sigma_est))
     
-    # lambda = CV$lambda[which.min(CV$cvm+rnorm(length(CV$cvm))/sqrt(n))]  # lambda via randomized cv 
     lambda = lambda_frac*selectiveInference:::theoretical.lambda(X, loss, sigma_est)  # theoretical lambda
     print(c("lambda", lambda))
     
     soln = selectiveInference:::solve_problem_glmnet(X, y, lambda, penalty_factor=penalty_factor, loss=loss)
-    #soln = solve_problem_gglasso(X, y, groups=1:ncol(X), lambda, penalty_factor=penalty_factor, loss=loss)
-    PVS = selectiveInference:::inference_debiased_full(X, y, soln, lambda=lambda, penalty_factor=penalty_factor, 
-                                sigma_est, loss=loss, algo="Q", construct_ci = construct_ci, debias_mat = "JM",
-                                verbose=TRUE)
+    PVS = selectiveInference:::ROSI(X, 
+                                    y, 
+                                    soln, 
+                                    lambda=lambda, 
+                                    penalty_factor=penalty_factor, 
+                                    sigma_est, 
+                                    loss=loss, 
+                                    algo="Q", 
+                                    construct_ci=construct_ci, 
+                                    debias_mat="JM",
+                                    verbose=TRUE)
     
     active_vars=PVS$active_vars
     cat("active_vars:",active_vars,"\n")
