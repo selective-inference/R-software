@@ -1,23 +1,35 @@
-export(lar,fs,
-       larInf,fsInf,
-       coef.lar,coef.fs,
-       predict.lar,predict.fs,
-       print.lar,print.fs,
-       print.larInf,print.fsInf,
-       plot.lar,plot.fs,
-       fixedLassoInf,print.fixedLassoInf,
+export(lar,
+       fs,
+       larInf,
+       fsInf,
+       coef.lar,
+       coef.fs,
+       predict.lar,
+       predict.fs,
+       print.lar,
+       print.fs,
+       print.larInf,
+       print.fsInf,
+       plot.lar,
+       plot.fs,
+       fixedLassoInf,
+       print.fixedLassoInf,
        forwardStop,
        estimateSigma,
-       manyMeans,print.manyMeans,
-       groupfs,groupfsInf,
-       scaleGroups,factorDesign,
+       manyMeans,
+       print.manyMeans,
+       groupfs,
+       groupfsInf,
+       scaleGroups,
+       factorDesign,
        TG.pvalue, 
        TG.limits, 
        TG.interval,
        debiasingMatrix,
        randomizedLasso,
        randomizedLassoInf,
-       ROSI
+       ROSI,
+       print.ROSI
     )
 
 S3method("coef", "lar")
@@ -31,6 +43,7 @@ S3method("print", "fs")
 S3method("plot", "fs")
 S3method("print", "fsInf")
 S3method("print", "fixedLassoInf")
+S3method("print", "ROSI")
 S3method("print", "fixedLogitLassoInf")
 S3method("print", "fixedCoxLassoInf")
 S3method("print", "manyMeans")

@@ -399,8 +399,11 @@ ROSI = function(X,
                 construct_ci=TRUE, 
                 debiasing_method=c("JM", "BN"),
                 verbose=FALSE,
+		level=0.9,
                 use_debiased=TRUE) {
   
+  this.call = match.call()
+
   family = match.arg(family)
   solver = match.arg(solver)
   debiasing_method = match.arg(debiasing_method)
@@ -502,28 +505,58 @@ ROSI = function(X,
         if (construct_ci) {
           sel_int = create_tnorm_interval(z=target_stat, 
                                           sd=sqrt(target_cov) * sigma_est, 
-                                          alpha=0.1, 
+                                          alpha=1-level, 
                                           intervals=intervals)
           if (verbose==TRUE){
             cat("sel interval", sel_int, "\n")
           }
-          sel_intervals = cbind(sel_intervals, sel_int)
+          sel_intervals = rbind(sel_intervals, sel_int)
         }
       } else {
            pvalues = c(pvalues, NA)
-	   sel_intervals = cbind(sel_intervals, c(NA, NA))
+	   sel_intervals = rbind(sel_intervals, c(NA, NA))
            warning("observation not within the truncation limits!")
       }
   }
   
-  return(list(pvalues=pvalues, 
-              active_set=active_set,
-              intervals=sel_intervals,
-	      estimate=beta_barE,
-              std_err=sqrt(diag(QiE) * dispersion),
-              lower_trunc=lower_trunc,
-	      upper_trunc=upper_trunc))
+  out = list(pvalues=pvalues, 
+             active_set=active_set,
+             intervals=sel_intervals,
+             estimate=as.numeric(beta_barE),
+             std_err=sqrt(diag(QiE) * dispersion),
+             dispersion=dispersion,
+             lower_trunc=as.numeric(lower_trunc),
+             upper_trunc=as.numeric(upper_trunc),
+             lambda=lambda,
+             penalty_factor=penalty_factor,
+             level=level,
+             call=this.call)
+   class(out) = "ROSI"
+   return(out)
 }
+
+print.ROSI <- function(x, ...) {
+  cat("\nCall:\n")
+  dput(x$call)
+
+  cat(sprintf("\nDispersion taken to be dispersion = %0.3f\n",
+              x$dispersion))
+
+  cat(sprintf("\nTesting results at lambda = %0.3f, with level = %0.2f\n",x$lambda,x$level))
+  cat("",fill=T)
+  tab = cbind(signif(x$std_err^2,3),
+              round(x$estimate,3),
+              round(x$estimate / x$std_err,3),
+              round(x$pvalues,3),
+              round(x$intervals,3))
+  colnames(tab) = c("Var", "Coef", "Z-score", "P-value", "LowConfPt", "UpConfPt")
+  rownames(tab) = rep("",nrow(tab))
+  print(tab)
+
+  cat("\nNote: coefficients shown are full regression coefficients.\n")
+  invisible()
+}
+
 
 # Some little used functions -- not exported
 

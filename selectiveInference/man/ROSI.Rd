@@ -20,6 +20,7 @@ ROSI(X,
      construct_ci=TRUE, 
      debiasing_method=c("JM", "BN"),
      verbose=FALSE,
+     level=0.9,
      use_debiased=TRUE) 
 }
 \arguments{
@@ -79,6 +80,9 @@ or "BN" (method described in arxiv.org/1703.03282).
 \item{verbose}{
 Print out progress along the way? Default is FALSE.
 }
+\item{level}{
+Confidence level for intervals.
+}
 \item{use_debiased}{
 Use the debiased estimate of the parameter or not. When FALSE, this is the
 method desribed in arxiv.org/1801.09037. The default TRUE often
@@ -96,8 +100,13 @@ p is comparable to n. Ignored when n<p and set to TRUE.
 \item{intervals}{Confidence intervals}
 \item{estimate}{Relaxed (i.e. unshrunk) selected estimates.}
 \item{std_err}{Standard error of relaxed estimates (pre-selection).}
+\item{dispersion}{Dispersion parameter.}
 \item{lower_trunc}{Lower truncation point. The estimates should be outside the interval formed by the lower and upper truncation poitns.}
 \item{upper_trunc}{Lower truncation point. The estimates should be outside the interval formed by the lower and upper truncation poitns.}
+\item{lambda}{Value of tuning parameter lambda used.}
+\item{penalty_factor}{Penalty factor used for solving problem.}
+\item{level}{Confidence level.}
+\item{call}{The call to fixedLassoInf.}
 }
 
 \references{

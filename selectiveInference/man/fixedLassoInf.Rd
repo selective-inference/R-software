@@ -142,7 +142,7 @@ for the model fit to the active set from the lasso.
 \item{sign}{Signs of active coefficients}
 \item{alpha}{Desired coverage (alpha/2 in each tail)}
 \item{sigma}{Value of error standard deviation (sigma) used}
-\item{call}{The call to lassoInf}
+\item{call}{The call to fixedLassoInf}
 }
 
 \references{
