@@ -151,9 +151,8 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial,full"), to
     pv[j] = a$pv
     if (is.na(s2[j])) { # for variables not in the active set, report 2-sided pvalue
       pv[j] = 2 * min(pv[j], 1 - pv[j])
-    }  else if (s2[j]<0){
-      pv[j]=1-pv[j]  
-    }
+    }  
+
     vlo[j] = a$vlo # * mj # Unstandardize (mult by norm of vj)
     vup[j] = a$vup # * mj # Unstandardize (mult by norm of vj)
     sd[j] = a$sd # * mj # Unstandardize (mult by norm of vj)
