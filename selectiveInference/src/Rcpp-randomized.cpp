@@ -1,7 +1,6 @@
 #include <Rcpp.h>                // need to include the main Rcpp header file 
 #include <randomized_lasso.h>    // where densities are defined
 #include <selective_mle.h>       // where barrier_solve is defined
-#include <stdio.h>
 
 // [[Rcpp::export]]
 Rcpp::NumericVector log_density_gaussian_(double noise_scale,                         // Scale of randomization
@@ -55,7 +54,6 @@ Rcpp::NumericVector log_density_gaussian_conditional_(double noise_scale,       
 
   int ipt;
   for (ipt=0; ipt<npt; ipt++) {
-    // fprintf(stderr, "here 5: %f %d %d %d %d\n", noise_scale, ndim, noptimization, ipt, npt);
     result[ipt] = log_density_gaussian_conditional(noise_scale,
 						   ndim,
 						   noptimization,
@@ -151,7 +149,6 @@ Rcpp::List solve_barrier_(Rcpp::NumericVector conjugate_arg,     // Argument to 
   double *opt_ptr = opt_variable.begin();
 
   for (idim=0; idim<ndim; idim++) {
-    fprintf(stderr, "precision %f\n", precision(idim, idim));
     *scaling_ptr = precision(idim, idim); scaling_ptr++;
     *opt_ptr = feasible_point(idim); opt_ptr++;
   }

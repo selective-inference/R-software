@@ -23,4 +23,5 @@ forLater/josh/**
 selectiveInference/src/matrixcomps.*
 selectiveInference/src/debias.*
 selectiveInference/src/randomized_lasso.*
-selectiveInference/src/quadratic_program*.c
+selectiveInference/src/quadratic_program*
+selectiveInference/src/selective_mle*

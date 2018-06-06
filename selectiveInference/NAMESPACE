@@ -16,7 +16,8 @@ export(lar,fs,
        TG.interval,
        debiasingMatrix,
        randomizedLasso,
-       randomizedLassoInf
+       randomizedLassoInf,
+       ROSI
     )
 
 S3method("coef", "lar")

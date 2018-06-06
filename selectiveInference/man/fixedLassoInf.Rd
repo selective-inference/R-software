@@ -9,10 +9,23 @@ Compute p-values and confidence intervals for the lasso estimate, at a
 fixed value of the tuning parameter lambda
 }
 \usage{
-fixedLassoInf(x, y, beta, lambda, family = c("gaussian", "binomial", 
-         "cox"),intercept=TRUE, add.targets=NULL, status=NULL, sigma=NULL, alpha=0.1,
-         type=c("partial","full"), tol.beta=1e-5, tol.kkt=0.1,
-         gridrange=c(-100,100), bits=NULL, verbose=FALSE, linesearch.try=10) 
+fixedLassoInf(x, 
+              y, 
+              beta, 
+              lambda, 
+              family = c("gaussian", "binomial", "cox"),
+              intercept=TRUE, 
+              add.targets=NULL, 
+              status=NULL, 
+              sigma=NULL, 
+              alpha=0.1,
+              type=c("partial","full"), 
+              tol.beta=1e-5, 
+              tol.kkt=0.1,
+              gridrange=c(-100,100), 
+              bits=NULL, 
+              verbose=FALSE, 
+              linesearch.try=10) 
 }
 \arguments{
   \item{x}{
@@ -205,106 +218,107 @@ out
 
 #logistic model
 set.seed(43)
-     n = 50
-     p = 10
-     sigma = 1
-     
-     x = matrix(rnorm(n*p),n,p)
-     x=scale(x,TRUE,TRUE)
-     
-     beta = c(3,2,rep(0,p-2))
-     y = x\%*\%beta + sigma*rnorm(n)
-     y=1*(y>mean(y))
-     # first run glmnet
-     gfit = glmnet(x,y,standardize=FALSE,family="binomial")
-     
-     # extract coef for a given lambda; note the 1/n factor!
-     # (and here  we DO  include the intercept term)
-     lambda = .8
-     beta_hat = coef(gfit, x=x, y=y, s=lambda/n, exact=TRUE)
-     
-     # compute fixed lambda p-values and selection intervals
-     out = fixedLassoInf(x,y,beta_hat,lambda,family="binomial")
-     out
+
+n = 50
+p = 10
+sigma = 1
+
+x = matrix(rnorm(n*p),n,p)
+x=scale(x,TRUE,TRUE)
+
+beta = c(3,2,rep(0,p-2))
+y = x\%*\%beta + sigma*rnorm(n)
+y=1*(y>mean(y))
+# first run glmnet
+gfit = glmnet(x,y,standardize=FALSE,family="binomial")
+
+# extract coef for a given lambda; note the 1/n factor!
+# (and here  we DO  include the intercept term)
+lambda = .8
+beta_hat = coef(gfit, x=x, y=y, s=lambda/n, exact=TRUE)
+
+# compute fixed lambda p-values and selection intervals
+out = fixedLassoInf(x,y,beta_hat,lambda,family="binomial")
+out
 
 
-     # Cox model
-     
-     set.seed(43)
-     n = 50
-     p = 10
-     sigma = 1
-     
-     x = matrix(rnorm(n*p), n, p)
-     x=scale(x, TRUE, TRUE)
-     
-     beta = c(3,2,rep(0,p-2))
-     tim = as.vector(x\%*\%beta + sigma*rnorm(n))
-     tim= tim-min(tim)+1
-     status=sample(c(0,1),size=n,replace=TRUE)
-     # first run glmnet
+# Cox model
+
+set.seed(43)
+n = 50
+p = 10
+sigma = 1
+
+x = matrix(rnorm(n*p), n, p)
+x = scale(x, TRUE, TRUE)
+
+beta = c(3,2,rep(0,p-2))
+tim = as.vector(x\%*\%beta + sigma*rnorm(n))
+tim= tim-min(tim)+1
+status=sample(c(0,1),size=n,replace=TRUE)
+# first run glmnet
 
 
-     y = Surv(tim,status)
-     gfit = glmnet(x, y, standardize=FALSE, family="cox")
-   
-     # extract coef for a given lambda; note the 1/n factor!
-   
-     lambda = 1.5
-     beta_hat = as.numeric(coef(gfit, x=x, y=y, s=lambda/n, exact=TRUE))
+y = Surv(tim,status)
+gfit = glmnet(x, y, standardize=FALSE, family="cox")
 
-     # compute fixed lambda p-values and selection intervals
-     out = fixedLassoInf(x, tim, beta_hat, lambda, status=status, family="cox")
-     out
+# extract coef for a given lambda; note the 1/n factor!
 
-     # Debiased lasso or "full"
+lambda = 1.5
+beta_hat = as.numeric(coef(gfit, x=x, y=y, s=lambda/n, exact=TRUE))
 
-     n = 50
-     p = 100
-     sigma = 1
+# compute fixed lambda p-values and selection intervals
+out = fixedLassoInf(x, tim, beta_hat, lambda, status=status, family="cox")
+out
 
-     x = matrix(rnorm(n*p),n,p)
-     x = scale(x,TRUE,TRUE)
+# Debiased lasso or "full"
 
-     beta = c(3,2,rep(0,p-2))
-     y = x\%*\%beta + sigma*rnorm(n)
+n = 50
+p = 100
+sigma = 1
 
-     # first run glmnet
-     gfit = glmnet(x, y, standardize=FALSE, intercept=FALSE)
+x = matrix(rnorm(n*p),n,p)
+x = scale(x,TRUE,TRUE)
 
-     # extract coef for a given lambda; note the 1/n factor!
-     # (and we don't save the intercept term)
-     lambda = 2.8
-     beta = coef(gfit, x=x, y=y, s=lambda/n, exact=TRUE)[-1]
+beta = c(3,2,rep(0,p-2))
+y = x\%*\%beta + sigma*rnorm(n)
 
-     # compute fixed lambda p-values and selection intervals
-     out = fixedLassoInf(x, y, beta, lambda, sigma=sigma, type='full', intercept=FALSE)
-     out
+# first run glmnet
+gfit = glmnet(x, y, standardize=FALSE, intercept=FALSE)
 
-     # When n > p and "full" we use the full inverse
-     # instead of Javanmard and Montanari's approximate inverse
+# extract coef for a given lambda; note the 1/n factor!
+# (and we don't save the intercept term)
+lambda = 2.8
+beta = coef(gfit, x=x, y=y, s=lambda/n, exact=TRUE)[-1]
 
-     n = 200
-     p = 50
-     sigma = 1
+# compute fixed lambda p-values and selection intervals
+out = fixedLassoInf(x, y, beta, lambda, sigma=sigma, type='full', intercept=FALSE)
+out
 
-     x = matrix(rnorm(n*p),n,p)
-     x = scale(x,TRUE,TRUE)
+# When n > p and "full" we use the full inverse
+# instead of Javanmard and Montanari's approximate inverse
 
-     beta = c(3,2,rep(0,p-2))
-     y = x\%*\%beta + sigma*rnorm(n)
+n = 200
+p = 50
+sigma = 1
 
-     # first run glmnet
-     gfit = glmnet(x, y, standardize=FALSE, intercept=FALSE)
+x = matrix(rnorm(n*p),n,p)
+x = scale(x,TRUE,TRUE)
 
-     # extract coef for a given lambda; note the 1/n factor!
-     # (and we don't save the intercept term)
-     lambda = 2.8
-     beta = coef(gfit, x=x, y=y, s=lambda/n, exact=TRUE)[-1]
+beta = c(3,2,rep(0,p-2))
+y = x\%*\%beta + sigma*rnorm(n)
 
-     # compute fixed lambda p-values and selection intervals
-     out = fixedLassoInf(x, y, beta, lambda, sigma=sigma, type='full', intercept=FALSE)
-     out
+# first run glmnet
+gfit = glmnet(x, y, standardize=FALSE, intercept=FALSE)
+
+# extract coef for a given lambda; note the 1/n factor!
+# (and we don't save the intercept term)
+lambda = 2.8
+beta = coef(gfit, x=x, y=y, s=lambda/n, exact=TRUE)[-1]
+
+# compute fixed lambda p-values and selection intervals
+out = fixedLassoInf(x, y, beta, lambda, sigma=sigma, type='full', intercept=FALSE)
+out
 
 }
  

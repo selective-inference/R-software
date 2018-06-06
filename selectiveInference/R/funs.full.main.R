@@ -1,18 +1,10 @@
-family_label = function(loss){
-  if (loss=="ls"){
-    return("gaussian")
-  } else if (loss=="logit"){
-    return("binomial")
-  }
-}
-
 # solves full lasso problem via glmnet
 
-solve_problem_glmnet = function(X, y, lambda, penalty_factor, loss){
+solve_problem_glmnet = function(X, y, lambda, penalty_factor, family){
   if (is.null(lambda)){
     cv = cv.glmnet(x=X, 
                    y=y, 
-                   family=family_label(loss), 
+                   family=family,
                    penalty.factor=penalty_factor, 
                    intercept=FALSE,  
                    thresh = 1e-12)
@@ -21,7 +13,7 @@ solve_problem_glmnet = function(X, y, lambda, penalty_factor, loss){
   else {
     lasso = glmnet(x=X, 
                    y=y, 
-                   family=family_label(loss), 
+                   family=family,
                    penalty.factor=penalty_factor,
                    alpha=1,
                    standardize=FALSE, 
@@ -33,12 +25,12 @@ solve_problem_glmnet = function(X, y, lambda, penalty_factor, loss){
 }
 
 # solves full group lasso problem via gglasso
-solve_problem_gglasso = function(X, y, groups, lambda, penalty_factor, loss){
+solve_problem_gglasso = function(X, y, groups, lambda, penalty_factor, family){
   if (is.null(lambda)){
     cv <- cv.gglasso(x=X, 
                      y=y, 
                      group=groups, 
-                     loss=loss, 
+                     loss=loss_label(family), 
                      pf=penalty_factor, 
                      intercept=FALSE, 
                      eps=1e-12)
@@ -46,34 +38,34 @@ solve_problem_gglasso = function(X, y, groups, lambda, penalty_factor, loss){
   }
   else {
       # gglasso for logit loss needs the response to be in {-1,1}
-      if (loss=="logit"){
+      if (family == 'binomial') {
         y_pm1 = rep(y)
         y_pm1[which(y==0)]=-1
-      } else if (loss=="ls"){
+      } else if (family == 'gaussian'){
        y_pm1 = rep(y)
       }
-      m <- gglasso(x=X, 
-                   y=y_pm1, 
-                   group=groups, 
-                   loss=loss, 
-                   pf=penalty_factor, 
-                   intercept=FALSE, 
-                   eps=1e-20)
+      m = gglasso(x=X, 
+                  y=y_pm1, 
+                  group=groups, 
+                  loss=loss_label(family), 
+                  pf=penalty_factor, 
+                  intercept=FALSE, 
+                  eps=1e-20)
       beta_hat = coef(m, s=lambda)
   }
   return(beta_hat[-1])
 }
 
 # solves the restricted problem
-solve_restricted_problem = function(X, y, var, lambda, penalty_factor, loss, algo){
-  if (algo=="glmnet"){
+solve_restricted_problem = function(X, y, var, lambda, penalty_factor, loss, solver){
+  if (solver=="glmnet"){
     restricted_soln=rep(0, ncol(X))
     restricted_soln[-var] = solve_problem_glmnet(X[,-var], 
                                                  y, 
                                                  lambda, 
                                                  penalty_factor[-var], 
-                                                 loss=loss)
-  } else if (algo=="gglasso"){
+                                                 family=family_label(loss))
+  } else if (solver=="gglasso"){
     penalty_factor_rest = rep(penalty_factor)
     penalty_factor_rest[var] = 10^10
     restricted_soln = solve_problem_gglasso(X,
@@ -81,12 +73,15 @@ solve_restricted_problem = function(X, y, var, lambda, penalty_factor, loss, alg
                                             1:ncol(X), 
                                             lambda, 
                                             penalty_factor=penalty_factor_rest, 
-                                            loss=loss)
+                                            family=family_label(loss))
   }
   return(restricted_soln)
 }
 
-solve_problem_Q = function(Q_sq, Qbeta_bar, lambda, penalty_factor,
+solve_problem_Q = function(Q_sq, 
+                           Qbeta_bar, 
+                           lambda, 
+                           penalty_factor,
                            max_iter=50,
                            kkt_tol=1.e-4, 
                            objective_tol=1.e-4, 
@@ -147,13 +142,13 @@ truncation_set = function(X,
                           target_stat, 
                           target_cov,
                           var, 
-                          active_vars,
+                          active_set,
                           lambda, 
                           penalty_factor, 
                           loss, 
-                          algo){
+                          solver){
   
-  if (algo=="Q"){
+  if (solver=="QP"){
     penalty_factor_rest = rep(penalty_factor)
     penalty_factor_rest[var] = 10^10
     restricted_soln = solve_problem_Q(Q_sq, 
@@ -167,12 +162,12 @@ truncation_set = function(X,
                                                lambda, 
                                                penalty_factor=penalty_factor, 
                                                loss=loss, 
-                                               algo=algo)
+                                               solver=solver)
   }
 
   n = nrow(X)
-  idx = match(var, active_vars)                    # active_vars[idx]=var
-  nuisance_res = (Qbeta_bar[var] -                 # nuisance stat restricted to active vars
+  idx = match(var, active_set)                    # active_set[idx]=var
+  nuisance_res = (Qbeta_bar[var] -                # nuisance stat restricted to active vars
                   solve(target_cov) %*% target_stat)/n 
   center = nuisance_res - (QE[idx,] %*% restricted_soln/n)
   radius = penalty_factor[var]*lambda
@@ -196,61 +191,6 @@ linear_contrast = function(i,
   return(list(target_cov=target_cov[i,i], center=new_center, radius=new_radius))
 
 }
-
-# the pvalue if prob(Z>obs given  |sigma_est^2/variance * Z+center|>radius)
-# where Z~N(param, variance)
-test_TG = function(param, 
-                   observed, 
-                   variance, 
-                   sigma_est, 
-                   center, 
-                   radius, 
-                   alt) {
-  st.error = sqrt(variance)
-  lower = variance*(-center-radius)/(sigma_est^2)
-  upper = variance*(-center+radius)/(sigma_est^2)
-  if (observed<=lower){
-     case=1
-     num = (pnorm(upper, 
-                  mean=param, 
-                  sd=st.error, 
-                  lower.tail=FALSE) + 
-            pnorm(lower, 
-                  mean=param, 
-                  sd=st.error) - 
-            pnorm(observed, mean=param, sd=st.error))
-  } else if (observed>=upper){
-    case=2
-    num = pnorm(observed, 
-                mean=param, 
-                sd=st.error, 
-                lower.tail=FALSE)
-  } else{
-    case=3
-    num = pnorm(upper, 
-                mean=param, 
-                sd=st.error, 
-                lower.tail=FALSE)
-    return(NULL)
-  }
-  den = (pnorm(upper, 
-               mean=param, 
-               sd=st.error, 
-               lower.tail=FALSE) + 
-         pnorm(lower, 
-               mean=param, 
-               sd=st.error))
-         pivot = num/den
-
-  if (alt=="two-sided"){
-    return(2*pmin(pivot, 1-pivot))
-  } else if (alt=="upper") {
-    return(pivot)
-  } else if (alt=="lower"){
-    return(1-pivot)
-  }
-}
-
 
 # returns P(Z > z | z in union of intervals)
 tnorm.union.surv = function(z, 
@@ -306,37 +246,6 @@ create_tnorm_interval = function(z,
   return(conf_interval)
 }
 
-selective_CI = function(observed, 
-                        variance, 
-                        sigma_est, 
-                        center, 
-                        radius,
-                        alpha=0.1, 
-                        gridrange=c(-20,20), 
-                        gridpts=10000, 
-                        griddepth=2) {
-  
-  pivot = function(param){
-    return(test_TG(param, 
-                   observed, 
-                   variance, 
-                   sigma_est, 
-                   center, 
-                   radius, 
-                   alt="upper"))
-  }
-  st.error = sqrt(variance)
-  param_grid = seq(observed+gridrange[1]*st.error, 
-                   observed+gridrange[2]*st.error, 
-                   length=gridpts)
-  interval = grid.search(param_grid, 
-                         pivot, 
-                         alpha/2, 
-                         1-alpha/2, 
-                         gridpts, 
-                         griddepth)
-  return(interval)
-}
 
 # GLM based functions
 
@@ -425,7 +334,7 @@ setup_Qbeta = function(X,
                        soln, 
                        active_set, 
                        loss, 
-                       debias_mat,
+                       debiasing_method,
                        use_debiased=FALSE){
   n=nrow(X)
   p=ncol(X)
@@ -454,10 +363,10 @@ setup_Qbeta = function(X,
     
   } else {
     
-    if (debias_mat == "JM"){
+    if (debiasing_method == "JM"){
       ## this should be the active rows of \hat{\Sigma}(W^{1/2} X)^T/n, so size |E|\times p 
       M_active = approximate_JM(W_root %*% X, active_set) 
-    }  else if (debias_mat == "BN"){
+    }  else if (debiasing_method == "BN"){
       M_active = approximate_BN(W_root %*% X, active_set)
     }
       
@@ -483,33 +392,37 @@ ROSI = function(X,
                 y, 
                 soln, 
                 lambda, 
-                penalty_factor, 
-                sigma_est,
-                loss, 
-                algo, 
-                construct_ci, 
-                debias_mat="JM", 
+                penalty_factor=NULL, 
+                dispersion=1,
+                family=c('gaussian', 'binomial'),
+                solver=c('QP', 'glmnet'),
+                construct_ci=TRUE, 
+                debiasing_method=c("JM", "BN"),
                 verbose=FALSE,
-                use_debiased=TRUE){
+                use_debiased=TRUE) {
   
-  active_vars = which(soln!=0)
-  nactive_vars = length(active_vars)
+  family = match.arg(family)
+  solver = match.arg(solver)
+  debiasing_method = match.arg(debiasing_method)
+
+  active_set = which(soln!=0)
+  nactive_set = length(active_set)
   
-  if (nactive_vars==0){
-    return(list(pvalues=NULL, naive_pvalues=NULL))
+  if (is.null(penalty_factor)) { 
+     penalty_factor = rep(1, ncol(X))
   }
-  
+
   if (verbose){
-    print(c("nactive", nactive_vars))
+    print(c("nactive", nactive_set))
   }
   
   begin_setup = Sys.time()
   setup_params = setup_Qbeta(X=X, 
                              y=y, 
                              soln=soln, 
-                             active_set=active_vars, 
-                             loss=loss, 
-                             debias_mat=debias_mat,
+                             active_set=active_set, 
+                             loss=loss_label(family), 
+                             debiasing_method=debiasing_method,
                              use_debiased=use_debiased)
 
   QE = as.matrix(setup_params$QE)
@@ -524,37 +437,39 @@ ROSI = function(X,
   }
   
   pvalues = NULL
-  naive_pvalues = NULL
   selected_vars = NULL
   sel_intervals = NULL
-  naive_intervals= NULL
-  
-  for (i in 1:nactive_vars){
+  lower_trunc = NULL
+  upper_trunc = NULL
+
+  sigma_est = sqrt(dispersion)
+
+  for (i in 1:nactive_set){
     
     target_stat = beta_barE[i]
     target_cov = as.matrix(QiE)[i,i]
     
     begin_TS = Sys.time()
-    # JT would be good 
-    TS =  truncation_set(X=X, 
-                         y=y, 
-                         Qbeta_bar=Qbeta_bar, 
-                         QE=QE, 
-                         Q_sq=Q_sq, 
-                         target_cov=target_cov, # this Hessian, i.e. without dispersion
-                         target_stat=target_stat, 
-                         var=active_vars[i], 
-                         active_vars=active_vars,
-                         lambda=lambda, 
-                         penalty_factor=penalty_factor, 
-                         loss=loss, 
-                         algo=algo)
+
+    TS = truncation_set(X=X, 
+                        y=y, 
+                        Qbeta_bar=Qbeta_bar, 
+                        QE=QE, 
+                        Q_sq=Q_sq, 
+                        target_cov=target_cov, # this Hessian, i.e. without dispersion
+                        target_stat=target_stat, 
+                        var=active_set[i], 
+                        active_set=active_set,
+                        lambda=lambda, 
+                        penalty_factor=penalty_factor, 
+                        loss=loss_label(family), 
+                        solver=solver)
     end_TS = Sys.time()
 
     if (verbose) {
-      print(c("current var", active_vars[i]))
+      print(c("current var", active_set[i]))
       cat("TS time", end_TS-begin_TS, "\n")
-      cat("variable", active_vars[i], "\n")
+      cat("variable", active_set[i], "\n")
     }
     
     center = TS$center
@@ -562,7 +477,9 @@ ROSI = function(X,
     
     lower = target_cov * (-center - radius)
     upper = target_cov * (-center + radius)
-      
+    lower_trunc = c(lower_trunc, lower)
+    upper_trunc = c(upper_trunc, upper)  
+
     if (target_stat<=lower | target_stat>=upper)
       {
         intervals = matrix(nrow=2, ncol=2)
@@ -581,55 +498,34 @@ ROSI = function(X,
         }
 
         pvalues = c(pvalues, pval)
-        
-        selected_vars = c(selected_vars, active_vars[i])
-        
-        # JT: why are we reporting naive ones -- which we know are bad?
-        naive_pval =  pvalue_naive_linear(target_stat, target_cov * sigma_est^2)
-        naive_pvalues = c(naive_pvalues, naive_pval)
-        
+       
         if (construct_ci) {
           sel_int = create_tnorm_interval(z=target_stat, 
                                           sd=sqrt(target_cov) * sigma_est, 
                                           alpha=0.1, 
                                           intervals=intervals)
-          naive_int = naive_CI(target_stat, target_cov * sigma_est^2)
           if (verbose==TRUE){
             cat("sel interval", sel_int, "\n")
-            cat("naive interval", naive_int, "\n")
           }
           sel_intervals = cbind(sel_intervals, sel_int)
-          naive_intervals = cbind(naive_intervals, naive_int)
         }
       } else {
+           pvalues = c(pvalues, NA)
+	   sel_intervals = cbind(sel_intervals, c(NA, NA))
            warning("observation not within the truncation limits!")
       }
   }
   
   return(list(pvalues=pvalues, 
-              naive_pvalues=naive_pvalues, 
-              active_vars=selected_vars,
-              sel_intervals=sel_intervals, 
-              naive_intervals=naive_intervals,
-              M_active=setup_params$M_active))
+              active_set=active_set,
+              intervals=sel_intervals,
+	      estimate=beta_barE,
+              std_err=sqrt(diag(QiE) * dispersion),
+              lower_trunc=lower_trunc,
+	      upper_trunc=upper_trunc))
 }
 
 # Some little used functions -- not exported
-
-pvalue_naive_linear = function(observed, variance){
-  pval = pnorm(observed, 
-               mean=0, 
-               sd=sqrt(variance), 
-               lower.tail=FALSE)
-  return(2*min(pval, 1-pval))
-}
-
-naive_CI = function(observed, variance, alpha=0.1){
-  quantile = abs(qnorm(alpha/2, mean=0, sd=1))
-  st.error = sqrt(variance)
-  interval = c(observed - st.error*quantile, observed + st.error*quantile)
-  return(interval)
-}
 
 
 compute_coverage = function(ci, beta){
@@ -642,3 +538,110 @@ compute_coverage = function(ci, beta){
   }
   return(coverage_vector)
 }
+
+loss_label = function(family) {
+  if (family=="gaussian"){
+    return("ls")
+  } else if (family=="binomial"){
+    return("logit")
+  }
+}
+
+
+family_label = function(loss){
+  if (loss=="ls"){
+    return("gaussian")
+  } else if (loss=="logit"){
+    return("binomial")
+  }
+}
+
+
+# Unused
+
+selective_CI = function(observed, 
+                        variance, 
+                        sigma_est, 
+                        center, 
+                        radius,
+                        alpha=0.1, 
+                        gridrange=c(-20,20), 
+                        gridpts=10000, 
+                        griddepth=2) {
+  
+  pivot = function(param){
+    return(test_TG(param, 
+                   observed, 
+                   variance, 
+                   sigma_est, 
+                   center, 
+                   radius, 
+                   alt="upper"))
+  }
+  st.error = sqrt(variance)
+  param_grid = seq(observed+gridrange[1]*st.error, 
+                   observed+gridrange[2]*st.error, 
+                   length=gridpts)
+  interval = grid.search(param_grid, 
+                         pivot, 
+                         alpha/2, 
+                         1-alpha/2, 
+                         gridpts, 
+                         griddepth)
+  return(interval)
+}
+
+# the pvalue if prob(Z>obs given  |sigma_est^2/variance * Z+center|>radius)
+# where Z~N(param, variance)
+test_TG = function(param, 
+                   observed, 
+                   variance, 
+                   sigma_est, 
+                   center, 
+                   radius, 
+                   alt) {
+  st.error = sqrt(variance)
+  lower = variance*(-center-radius)/(sigma_est^2)
+  upper = variance*(-center+radius)/(sigma_est^2)
+  if (observed<=lower){
+     case=1
+     num = (pnorm(upper, 
+                  mean=param, 
+                  sd=st.error, 
+                  lower.tail=FALSE) + 
+            pnorm(lower, 
+                  mean=param, 
+                  sd=st.error) - 
+            pnorm(observed, mean=param, sd=st.error))
+  } else if (observed>=upper){
+    case=2
+    num = pnorm(observed, 
+                mean=param, 
+                sd=st.error, 
+                lower.tail=FALSE)
+  } else{
+    case=3
+    num = pnorm(upper, 
+                mean=param, 
+                sd=st.error, 
+                lower.tail=FALSE)
+    return(NULL)
+  }
+  den = (pnorm(upper, 
+               mean=param, 
+               sd=st.error, 
+               lower.tail=FALSE) + 
+         pnorm(lower, 
+               mean=param, 
+               sd=st.error))
+         pivot = num/den
+
+  if (alt=="two-sided"){
+    return(2*pmin(pivot, 1-pivot))
+  } else if (alt=="upper") {
+    return(pivot)
+  } else if (alt=="lower"){
+    return(1-pivot)
+  }
+}
+
