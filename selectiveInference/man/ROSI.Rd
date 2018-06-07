@@ -138,10 +138,11 @@ gfit = glmnet(x,y,standardize=FALSE)
 
 # extract coef for a given lambda; note the 1/n factor!
 # (and we don't save the intercept term)
-lambda = 4 / sqrt(n)
+lambda = 4 * sqrt(n)
+lambda_glmnet = 4 / sqrt(n)
 beta = selectiveInference:::solve_problem_glmnet(x, 
                                                  y, 
-                                                 lambda, 
+                                                 lambda_glmnet, 
                                                  penalty_factor=rep(1,p),
                                                  family="gaussian")
 # compute fixed lambda p-values and selection intervals

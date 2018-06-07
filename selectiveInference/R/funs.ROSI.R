@@ -1,7 +1,7 @@
 # solves full lasso problem via glmnet
 
-solve_problem_glmnet = function(X, y, lambda, penalty_factor, family){
-  if (is.null(lambda)){
+solve_problem_glmnet = function(X, y, lambda_glmnet, penalty_factor, family){
+  if (is.null(lambda_glmnet)){
     cv = cv.glmnet(x=X, 
                    y=y, 
                    family=family,
@@ -19,14 +19,14 @@ solve_problem_glmnet = function(X, y, lambda, penalty_factor, family){
                    standardize=FALSE, 
                    intercept=FALSE, 
                    thresh=1e-20)
-    beta_hat = coef(lasso, s=lambda)
+    beta_hat = coef(lasso, s=lambda_glmnet)
   }
   return(beta_hat[-1])
 }
 
 # solves full group lasso problem via gglasso
-solve_problem_gglasso = function(X, y, groups, lambda, penalty_factor, family){
-  if (is.null(lambda)){
+solve_problem_gglasso = function(X, y, groups, lambda_glmnet, penalty_factor, family){
+  if (is.null(lambda_glmnet)){
     cv <- cv.gglasso(x=X, 
                      y=y, 
                      group=groups, 
@@ -51,18 +51,18 @@ solve_problem_gglasso = function(X, y, groups, lambda, penalty_factor, family){
                   pf=penalty_factor, 
                   intercept=FALSE, 
                   eps=1e-20)
-      beta_hat = coef(m, s=lambda)
+      beta_hat = coef(m, s=lambda_glmnet)
   }
   return(beta_hat[-1])
 }
 
 # solves the restricted problem
-solve_restricted_problem = function(X, y, var, lambda, penalty_factor, loss, solver){
+solve_restricted_problem = function(X, y, var, lambda_glmnet, penalty_factor, loss, solver){
   if (solver=="glmnet"){
     restricted_soln=rep(0, ncol(X))
     restricted_soln[-var] = solve_problem_glmnet(X[,-var], 
                                                  y, 
-                                                 lambda, 
+                                                 lambda_glmnet, 
                                                  penalty_factor[-var], 
                                                  family=family_label(loss))
   } else if (solver=="gglasso"){
@@ -71,7 +71,7 @@ solve_restricted_problem = function(X, y, var, lambda, penalty_factor, loss, sol
     restricted_soln = solve_problem_gglasso(X,
                                             y, 
                                             1:ncol(X), 
-                                            lambda, 
+                                            lambda_glmnet, 
                                             penalty_factor=penalty_factor_rest, 
                                             family=family_label(loss))
   }
@@ -80,7 +80,7 @@ solve_restricted_problem = function(X, y, var, lambda, penalty_factor, loss, sol
 
 solve_problem_Q = function(Q_sq, 
                            Qbeta_bar, 
-                           lambda, 
+                           lambda_glmnet, 
                            penalty_factor,
                            max_iter=50,
                            kkt_tol=1.e-4, 
@@ -108,7 +108,7 @@ solve_problem_Q = function(Q_sq,
   
   #solve_QP_wide solves n*slinear_func^T\beta+\beta^T Xinfo\beta+\sum\lambda_i|\beta_i|
   result = solve_QP_wide(Xinfo,         # this is a design matrix
-                         as.numeric(penalty_factor*lambda),  # vector of Lagrange multipliers
+                         as.numeric(penalty_factor*lambda_glmnet),  # vector of Lagrange multipliers
                          0,                          # ridge_term 
                          max_iter, 
                          soln, 
@@ -143,7 +143,7 @@ truncation_set = function(X,
                           target_cov,
                           var, 
                           active_set,
-                          lambda, 
+                          lambda_glmnet, 
                           penalty_factor, 
                           loss, 
                           solver){
@@ -153,13 +153,13 @@ truncation_set = function(X,
     penalty_factor_rest[var] = 10^10
     restricted_soln = solve_problem_Q(Q_sq, 
                                       Qbeta_bar, 
-                                      lambda, 
+                                      lambda_glmnet, 
                                       penalty_factor=penalty_factor_rest)
   } else {
     restricted_soln = solve_restricted_problem(X, 
                                                y, 
                                                var, 
-                                               lambda, 
+                                               lambda_glmnet, 
                                                penalty_factor=penalty_factor, 
                                                loss=loss, 
                                                solver=solver)
@@ -170,7 +170,7 @@ truncation_set = function(X,
   nuisance_res = (Qbeta_bar[var] -                # nuisance stat restricted to active vars
                   solve(target_cov) %*% target_stat)/n 
   center = nuisance_res - (QE[idx,] %*% restricted_soln/n)
-  radius = penalty_factor[var]*lambda
+  radius = penalty_factor[var]*lambda_glmnet
   return(list(center=center*n, radius=radius*n))
 }
 
@@ -454,6 +454,8 @@ ROSI = function(X,
     
     begin_TS = Sys.time()
 
+    n = nrow(X)
+    lambda_glmnet = lambda / n
     TS = truncation_set(X=X, 
                         y=y, 
                         Qbeta_bar=Qbeta_bar, 
@@ -463,7 +465,7 @@ ROSI = function(X,
                         target_stat=target_stat, 
                         var=active_set[i], 
                         active_set=active_set,
-                        lambda=lambda, 
+                        lambda_glmnet=lambda_glmnet, 
                         penalty_factor=penalty_factor, 
                         loss=loss_label(family), 
                         solver=solver)
