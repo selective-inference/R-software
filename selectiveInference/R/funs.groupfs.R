@@ -684,33 +684,32 @@ scaleGroups <- function(x, index, center = TRUE, normalize = TRUE) {
 #' pvals = groupfsInf(fit)
 #' }
 factorDesign <- function(df) {
-    factor.inds <- sapply(df[1,], is.factor)
+    factor.inds <- sapply(df[1, ], is.factor)
     factor.labels <- which(factor.inds)
     nfacs <- sum(factor.inds)
-    nlevs <- sapply(df[1,factor.inds], function(fac) nlevels(fac))
+    nlevs <- sapply(df[1, factor.inds], function(fac) nlevels(fac))
     totnlevs <- sum(nlevs)
     num.num = indcounter = ncol(df) - nfacs
-    x <- matrix(nrow=nrow(df), ncol = totnlevs + num.num)
+    x <- matrix(NA_real_, nrow = nrow(df), ncol = totnlevs + num.num)
     colnames(x) <- 1:ncol(x)
     index <- integer(ncol(x))
-    varnames <- character(ncol(df))
+    
     if (num.num > 0) {
-        x[,1:num.num] <- df[, !factor.inds]
-        varnames[1:num.num] = colnames(x)[1:num.num] <- colnames(df)[1:num.num]
+        x[, 1:num.num] <- as.matrix(df[, !factor.inds, drop = FALSE])
+        colnames(x)[1:num.num] <- colnames(df)[!factor.inds]
         index[1:num.num] <- 1:num.num
-        indcounter <- indcounter + num.num - 1
     }
+    
     for (j in 1:nfacs) {
-        submat <- model.matrix(~ df[, factor.labels[j]] - 1)
-        indcounter <- indcounter+1
-        submatinds <- indcounter:(indcounter+nlevs[j]-1)
+        submat <- model.matrix(~df[, factor.labels[j]] - 1)
+        indcounter <- indcounter + 1
+        submatinds <- indcounter:(indcounter + nlevs[j] - 1)
         indcounter <- indcounter + nlevs[j] - 1
-        colnames(x)[submatinds] <- paste0(colnames(df)[num.num + j], ":", 1:nlevs[j])
-        varnames[num.num + j] <- colnames(df)[num.num + j]
-        x[,submatinds] <- submat
+        colnames(x)[submatinds] <- paste0(colnames(df)[factor.inds][j], ":", 1:nlevs[j])
+        x[, submatinds] <- submat
         index[submatinds] <- num.num + j
     }
-    attr(x, "varnames") <- varnames
+    attr(x, "varnames") <- c(colnames(df)[!factor.inds], colnames(df)[factor.inds])
     return(list(x = x, index = index))
 }
 
