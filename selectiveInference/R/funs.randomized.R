@@ -7,7 +7,6 @@ randomizedLasso = function(X,
                            y, 
                            lam, 
                            family=c("gaussian","binomial"),
-                           condition_subgrad=TRUE,
                            noise_scale=NULL, 
                            ridge_term=NULL, 
                            max_iter=100,        # how many iterations for each optimization problem
@@ -41,7 +40,6 @@ randomizedLasso = function(X,
         }
     }
     
-    print(c("noise scale", noise_scale))
     if (noise_scale > 0) {
         perturb_ = rnorm(p) * noise_scale
     } else {
@@ -98,9 +96,6 @@ randomizedLasso = function(X,
                               kkt_stop=kkt_stop,
                               parameter_stop=parameter_stop)
     }
-    #print("SOLN")
-    #print(result$soln)
-    print(c("nactive", length(which(result$soln!=0))))
     
     sign_soln = sign(result$soln)
     unpenalized = lam == 0
@@ -160,20 +155,7 @@ randomizedLasso = function(X,
       coef_term = coef_term %*% diag(signs_)  # scalings are non-negative
     }
     
-    if (sum(inactive) > 0) {
-        if (condition_subgrad == FALSE) {
-            subgrad_term = matrix(0, p, sum(inactive)) # for subgrad
-            for (i in 1:sum(inactive)) {
-                subgrad_term[inactive_set[i], i] = 1
-                }
-            linear_term = cbind(coef_term,
-                                subgrad_term)
-        } else {
-            linear_term = coef_term
-        }
-    } else {
-        linear_term = coef_term
-    }    
+    linear_term = coef_term
     offset_term = rep(0, p)
     offset_term[active] = lam[active] * sign_soln[active]
 
@@ -192,22 +174,8 @@ randomizedLasso = function(X,
 
     active_term = -L_E                           # for \bar{\beta}_E
 
-    if (sum(inactive) > 0) {
-        if (condition_subgrad == FALSE) {
-            inactive_term = subgrad_term
-            linear_term = cbind(active_term,
-                                inactive_term)
-        } else {
-            linear_term = active_term
-        }
-    } else {
-        linear_term = active_term
-    }
-  
+    linear_term = active_term
     offset_term = rep(0, p)
-
-    # if conditional_subgrad == FALSE, linear_term will have E columns
-    # otherwise it will have p columns
 
     internal_transform = list(linear_term=linear_term,
                               offset_term=offset_term)
@@ -239,39 +207,19 @@ randomizedLasso = function(X,
         return(D)
     }
 
-    # work out conditional density and save it as well
+    constraints = matrix(0, length(active_set), 2)
+    constraints[,2] = Inf
 
-    if (condition_subgrad == TRUE) {
-
-        constraints = matrix(0, length(active_set), 2)
-        constraints[,2] = Inf
-
-        conditional_law = conditional_opt_transform(noise_scale, 
-                                                    active_set,
-                                                    inactive_set,
-                                                    observed_subgrad,
-                                                    observed_raw,
-                                                    opt_transform$linear_term,
-                                                    opt_transform$offset_term,
-                                                    observed_opt_state)
-        conditional_law$constraints = constraints
-        law = conditional_law
-    } else {
-
-        constraints = matrix(0, length(active_set), 2)
-        constraints[,2] = Inf
-
-        subgrad_constraints = cbind(-lam[inactive_set], lam[inactive_set])
-        constraints = rbind(constraints, subgrad_constraints)
-
-        full_law = list(sampling_transform=list(linear_term=opt_transform$linear_term,
-                                                offset_term=opt_transform$offset_term + observed_raw),
-                        constraints=constraints,
-                        observed_opt_state=observed_opt_state,
-                        log_optimization_density=log_optimization_density,
-                        importance_transform=opt_transform)
-        law = full_law
-    }
+    conditional_law = conditional_opt_transform(noise_scale, 
+                                                active_set,
+                                                inactive_set,
+                                                observed_subgrad,
+                                                observed_raw,
+                                                opt_transform$linear_term,
+                                                opt_transform$offset_term,
+                                                observed_opt_state)
+    conditional_law$constraints = constraints
+    law = conditional_law
 
     return(list(X=X,
                 y=y,
@@ -288,7 +236,6 @@ randomizedLasso = function(X,
                 noise_scale=noise_scale,
                 soln=result$soln,
                 perturb=perturb_,
-                condition_subgrad=condition_subgrad,
 		ridge_term=ridge_term
                 ))
 
@@ -302,30 +249,7 @@ sample_opt_variables = function(law, jump_scale, nsample=10000) {
                   scale=jump_scale))
 }
 
-# Carry out a linear decompositon of an internal
-# representation with respect to a target
-
-# Returns an affine transform into raw coordinates (i.e. \omega or randomization coordinates)
-
-linear_decomposition = function(observed_target,
-                                observed_internal,
-                                var_target,
-                                cov_target_internal,
-                                internal_transform) {
-    var_target = as.matrix(var_target) 
-    if (nrow(var_target) == 1) {
-        nuisance = observed_internal - cov_target_internal * observed_target / var_target
-        target_linear = internal_transform$linear_term %*% cov_target_internal / var_target[1,1]
-    } else {
-        nuisance = observed_internal - cov_target_internal %*% solve(var_target) %*% observed_target 
-        target_linear = internal_transform$linear_term %*% cov_target_internal %*% solve(var_target)
-    }
-    target_offset = internal_transform$linear_term %*% nuisance + internal_transform$offset_term
-    return(list(linear_term=target_linear,
-                offset_term=target_offset))
-}
-
-# XXX only for Gaussian so far
+# Gaussian importance weight
 
 importance_weight = function(noise_scale,
                              target_sample,
@@ -353,13 +277,6 @@ importance_weight = function(noise_scale,
     return(W)
 }
 
-get_mean_cov = function(noise_scale, linear_term, offset_term){
-    temp = solve(t(linear_term) %*% linear_term)
-    cov = noise_scale^2*temp
-    mean = temp %*% t(linear_term) %*% offset_term
-    return(list(mean=mean, cov=cov))
-}
-                             
 conditional_opt_transform = function(noise_scale, 
                                      active_set,
                                      inactive_set,
@@ -413,7 +330,6 @@ conditional_opt_transform = function(noise_scale,
 	      cond_mean=cond_mean))
 }
 
-
 compute_target = function(rand_lasso_soln, 
                           type, 
                           sigma_est=1,
@@ -451,8 +367,7 @@ compute_target = function(rand_lasso_soln,
     
     crosscov_target_internal=rbind(cov_target, matrix(0, nrow=p-nactive, ncol=nactive))
   } 
-  #print("signs")
-  #print(rand_lasso_soln$sign_soln)
+
   alternatives = c()
   for (i in 1:length(rand_lasso_soln$sign_soln)) {
       if (rand_lasso_soln$sign_soln[i] == 1) {
@@ -503,7 +418,7 @@ compute_target = function(rand_lasso_soln,
 
     residuals = y-X%*%lasso.est
     scalar = 1 #sqrt(n) # JT: this is sigma?
-    observed_target = lasso.est[active_set]+scalar*M_active %*% residuals
+    observed_target = lasso.est[active_set] + scalar*M_active %*% residuals
     hat_matrix = X_active %*% solve(t(X_active) %*% X_active)
     crosscov_target_internal = sigma_est^2*rbind(M_active %*% hat_matrix, t(X_inactive) %*% t(M_inactive))
   }
@@ -649,16 +564,6 @@ randomizedLassoInf = function(rand_lasso_soln,
                                           observed_raw)
     log_reference_measure = log(reference_measure)	       
 
-#     alternative_measure = importance_weight(noise_scale,
-#                                             t(as.matrix(target_sample) + 0.1 * sqrt(targets$cov_target[i,i])),
-#                                             t(opt_samples),
-#                                             importance_transform,
-#                                             target_transform,
-#                                             observed_raw)
-
-
-#     sufficient_stat = (log(alternative_measure) - log_reference_measure) / (0.1 * sqrt(targets$cov_target[i,i]))
-
     pivot = function(candidate){
       arg_ = candidate * sufficient_stat + log_reference_measure
       arg_ = arg_ - max(arg_)
@@ -676,7 +581,6 @@ randomizedLassoInf = function(rand_lasso_soln,
     }
 
     if (construct_pvalues[i]==1){
-      #print(alternatives[i])
       pvalues[i] = pivot(0)
       if (alternatives[i]=="two-sided"){
         pvalues[i] = 2*min(pvalues[i], 1-pvalues[i])

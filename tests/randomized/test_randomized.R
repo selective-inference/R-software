@@ -46,8 +46,7 @@ test_randomized = function(seed=1, outfile=NULL, type="partial", loss="ls", lamb
     rand_lasso_soln = selectiveInference:::randomizedLasso(X, 
                                                            y, 
                                                            lambda*n, 
-                                                           family=selectiveInference:::family_label(loss),
-                                                           condition_subgrad=TRUE)
+                                                           family=selectiveInference:::family_label(loss))
     
     targets=selectiveInference:::compute_target(rand_lasso_soln, type=type, sigma_est=sigma_est)
     
@@ -60,7 +59,7 @@ test_randomized = function(seed=1, outfile=NULL, type="partial", loss="ls", lamb
     active_vars=rand_lasso_soln$active_set
     cat("active_vars:",active_vars,"\n")
     pvalues = c(pvalues, PVS$pvalues)
-    sel_intervals = cbind(sel_intervals, t(PVS$ci))  # matrix with two rows
+    sel_intervals = rbind(sel_intervals, PVS$ci)  # matrix with two rows
     
     
     if (length(pvalues)>0){
@@ -71,7 +70,7 @@ test_randomized = function(seed=1, outfile=NULL, type="partial", loss="ls", lamb
     
     if (construct_ci && length(active_vars)>0){
       
-      sel_coverages=c(sel_coverages, selectiveInference:::compute_coverage(t(PVS$ci), beta[active_vars]))
+      sel_coverages=c(sel_coverages, selectiveInference:::compute_coverage(PVS$ci, beta[active_vars]))
       sel_lengths=c(sel_lengths, as.vector(PVS$ci[,2]-PVS$ci[,1]))
       print(c("selective coverage:", mean(sel_coverages)))
       print(c("selective length mean:", mean(sel_lengths)))
@@ -105,6 +104,6 @@ test_randomized = function(seed=1, outfile=NULL, type="partial", loss="ls", lamb
   return(list(pvalues=pvalues))
 }
 
-test_randomized()
+test_randomized(n=100, p=20, s=4)
 
 
