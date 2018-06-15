@@ -331,11 +331,13 @@ conditional_opt_transform = function(noise_scale,
 }
 
 compute_target = function(rand_lasso_soln, 
-                          type, 
+                          type=c("selected", "full"),
                           sigma_est=1,
                           construct_pvalues=NULL,
                           construct_ci=NULL){
   
+  type = match.arg(type)
+
   # compute internal representation of the data
   y = rand_lasso_soln$y
   X = rand_lasso_soln$X
@@ -356,7 +358,7 @@ compute_target = function(rand_lasso_soln,
     glm_cov = vcov(glm_y)
   }
   
-  if (type=="partial"){
+  if (type=="selected"){
     
     observed_target = as.vector(glm_y$coefficients)
     cov_target = glm_cov
