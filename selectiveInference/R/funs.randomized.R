@@ -492,7 +492,7 @@ randomizedLassoInf = function(rand_lasso_soln,
   }
 
   if (is.null(targets)){
-    targets = compute_target(rand_lasso_soln, type="partial")
+    targets = compute_target(rand_lasso_soln, type="selected")
   }
   
   alternatives = targets$alternatives

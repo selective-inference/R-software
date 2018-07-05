@@ -24,57 +24,14 @@ solve_problem_glmnet = function(X, y, lambda_glmnet, penalty_factor, family){
   return(beta_hat[-1])
 }
 
-# solves full group lasso problem via gglasso
-solve_problem_gglasso = function(X, y, groups, lambda_glmnet, penalty_factor, family){
-  if (is.null(lambda_glmnet)){
-    cv <- cv.gglasso(x=X, 
-                     y=y, 
-                     group=groups, 
-                     loss=loss_label(family), 
-                     pf=penalty_factor, 
-                     intercept=FALSE, 
-                     eps=1e-12)
-    beta_hat = coef(cv, s="lambda.min")
-  }
-  else {
-      # gglasso for logit loss needs the response to be in {-1,1}
-      if (family == 'binomial') {
-        y_pm1 = rep(y)
-        y_pm1[which(y==0)]=-1
-      } else if (family == 'gaussian'){
-       y_pm1 = rep(y)
-      }
-      m = gglasso(x=X, 
-                  y=y_pm1, 
-                  group=groups, 
-                  loss=loss_label(family), 
-                  pf=penalty_factor, 
-                  intercept=FALSE, 
-                  eps=1e-20)
-      beta_hat = coef(m, s=lambda_glmnet)
-  }
-  return(beta_hat[-1])
-}
-
 # solves the restricted problem
-solve_restricted_problem = function(X, y, var, lambda_glmnet, penalty_factor, loss, solver){
-  if (solver=="glmnet"){
-    restricted_soln=rep(0, ncol(X))
-    restricted_soln[-var] = solve_problem_glmnet(X[,-var], 
-                                                 y, 
-                                                 lambda_glmnet, 
-                                                 penalty_factor[-var], 
-                                                 family=family_label(loss))
-  } else if (solver=="gglasso"){
-    penalty_factor_rest = rep(penalty_factor)
-    penalty_factor_rest[var] = 10^10
-    restricted_soln = solve_problem_gglasso(X,
-                                            y, 
-                                            1:ncol(X), 
-                                            lambda_glmnet, 
-                                            penalty_factor=penalty_factor_rest, 
-                                            family=family_label(loss))
-  }
+solve_restricted_problem = function(X, y, var, lambda_glmnet, penalty_factor, loss){
+  restricted_soln=rep(0, ncol(X))
+  restricted_soln[-var] = solve_problem_glmnet(X[,-var], 
+                                               y, 
+                                               lambda_glmnet, 
+                                               penalty_factor[-var], 
+                                               family=family_label(loss))
   return(restricted_soln)
 }
 
@@ -161,8 +118,7 @@ truncation_set = function(X,
                                                var, 
                                                lambda_glmnet, 
                                                penalty_factor=penalty_factor, 
-                                               loss=loss, 
-                                               solver=solver)
+                                               loss=loss)
   }
 
   n = nrow(X)
