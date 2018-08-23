@@ -459,8 +459,7 @@ randomizedLassoInf = function(rand_lasso_soln,
                               sampler=c("norejection", "adaptMCMC"),
                               nsample=10000,
                               burnin=2000,
-                              opt_samples=NULL,
-                              target_samples=NULL)
+                              opt_samples=NULL)
  {
 
   n = nrow(rand_lasso_soln$X)
@@ -518,7 +517,6 @@ randomizedLassoInf = function(rand_lasso_soln,
   
   names(pvalues) = names(targets$observed_target)
   rownames(ci) = names(targets$observed_target)
-  
   
   target_samples = mvrnorm(nrow(as.matrix(opt_samples)),rep(0,nactive),targets$cov_target)
   
@@ -584,11 +582,10 @@ randomizedLassoInf = function(rand_lasso_soln,
   
   return_list = list(targets=targets, 
                      pvalues=pvalues, 
-                     ci=ci)
-  if (for_test) {
-    return_list$opt_samples=opt_samples
-    return_list$target_samples=target_samples
-  }
+                     ci=ci,
+                     opt_samples=opt_samples,
+                     target_samples=target_samples)
+  
   return(return_list)
 }
 

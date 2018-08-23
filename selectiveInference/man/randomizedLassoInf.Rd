@@ -16,7 +16,9 @@ randomizedLassoInf(rand_lasso_soln,
                    level=0.9,
                    sampler=c("norejection", "adaptMCMC"),
                    nsample=10000,
-                   burnin=2000)
+                   burnin=2000,
+                   opt_samples=NULL,
+                   target_samples=NULL)
 }
 \arguments{
 \item{rand_lasso_soln}{
@@ -47,6 +49,9 @@ Number of samples of optimization variables to sample.
 }
 \item{burnin}{
 How many samples of optimization variable to discard (should be less than nsample).
+}
+\item{opt_samples}{
+Optional sample of optimization variables. If not NULL then no MCMC will be run.
 }
 }
 
