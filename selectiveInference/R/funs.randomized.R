@@ -15,8 +15,7 @@ randomizedLasso = function(X,
                            objective_tol=1.e-8, # tolerance for relative decrease in objective
                            objective_stop=FALSE,
                            kkt_stop=TRUE,
-                           parameter_stop=TRUE,
-                           for_test=FALSE)
+                           parameter_stop=TRUE)
 {
     family = match.arg(family)
 
@@ -235,11 +234,10 @@ randomizedLasso = function(X,
                        observed_internal=observed_internal,
                        observed_raw=observed_raw,
                        noise_scale=noise_scale,
-                       soln=result$soln)
-    if (for_test) {
-      return_list$perturb=perturb_
-      return_list$ridge_term=ridge_term
-    }
+                       soln=result$soln,
+                       perturb=perturb_,
+                       ridge_term=ridge_term)
+
     return(return_list)
 }
 
@@ -461,10 +459,8 @@ randomizedLassoInf = function(rand_lasso_soln,
                               sampler=c("norejection", "adaptMCMC"),
                               nsample=10000,
                               burnin=2000,
-                              weight_mat=NULL,
                               opt_samples=NULL,
-                              target_samples=NULL,
-                              for_test=FALSE)
+                              target_samples=NULL)
  {
 
   n = nrow(rand_lasso_soln$X)
