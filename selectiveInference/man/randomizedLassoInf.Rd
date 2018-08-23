@@ -17,8 +17,7 @@ randomizedLassoInf(rand_lasso_soln,
                    sampler=c("norejection", "adaptMCMC"),
                    nsample=10000,
                    burnin=2000,
-                   opt_samples=NULL,
-                   target_samples=NULL)
+                   opt_samples=NULL)
 }
 \arguments{
 \item{rand_lasso_soln}{
