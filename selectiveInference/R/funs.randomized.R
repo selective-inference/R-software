@@ -15,7 +15,8 @@ randomizedLasso = function(X,
                            objective_tol=1.e-8, # tolerance for relative decrease in objective
                            objective_stop=FALSE,
                            kkt_stop=TRUE,
-                           parameter_stop=TRUE)
+                           parameter_stop=TRUE,
+                           for_test=FALSE)
 {
     family = match.arg(family)
 
@@ -221,24 +222,25 @@ randomizedLasso = function(X,
     conditional_law$constraints = constraints
     law = conditional_law
 
-    return(list(X=X,
-                y=y,
-                lam=lam,
-                family=family,
-                active_set=active_set,
-                inactive_set=inactive_set,
-                unpenalized_set=unpenalized_set,
-                sign_soln=sign_soln,
-                law=law,
-                internal_transform=internal_transform,
-	        observed_internal=observed_internal,
-                observed_raw=observed_raw,
-                noise_scale=noise_scale,
-                soln=result$soln,
-                perturb=perturb_,
-		ridge_term=ridge_term
-                ))
-
+    return_list = list(X=X,
+                       y=y,
+                       lam=lam,
+                       family=family,
+                       active_set=active_set,
+                       inactive_set=inactive_set,
+                       unpenalized_set=unpenalized_set,
+                       sign_soln=sign_soln,
+                       law=law,
+                       internal_transform=internal_transform,
+                       observed_internal=observed_internal,
+                       observed_raw=observed_raw,
+                       noise_scale=noise_scale,
+                       soln=result$soln)
+    if (for_test) {
+      return_list$perturb=perturb_
+      return_list$ridge_term=ridge_term
+    }
+    return(return_list)
 }
 
 sample_opt_variables = function(law, jump_scale, nsample=10000) {
@@ -256,25 +258,27 @@ importance_weight = function(noise_scale,
                              opt_sample,
                              opt_transform,
                              target_transform,
-                             observed_raw) {
-
+                             law_density) {
+  
+  for_candidate = function(candidate) {
+    
     log_num = log_density_gaussian_(noise_scale,
                                     target_transform$linear_term,
-                                    as.matrix(target_sample),
+                                    as.matrix(target_sample) + candidate,
                                     opt_transform$linear_term,
                                     as.matrix(opt_sample),
                                     target_transform$offset_term + opt_transform$offset_term)
-
-    log_den = log_density_gaussian_conditional_(noise_scale,
-                                                opt_transform$linear_term,
-                                                as.matrix(opt_sample),
-                                                observed_raw + opt_transform$offset_term)
-
+    
+    log_den = law_density(as.matrix(opt_sample))
+    
     W = log_num - log_den
     W = W - max(W)
     W = exp(W)
-    W = W / sum(W)
-    return(W)
+    return(list(W=W,
+                log_num=log_num,
+                log_den=log_den))
+  }
+  return(for_candidate)
 }
 
 conditional_opt_transform = function(noise_scale, 
@@ -352,7 +356,7 @@ compute_target = function(rand_lasso_soln,
   if (rand_lasso_soln$family == 'gaussian') {
     glm_y = glm(y ~ X_E-1)
     sigma_res = sigma(glm_y)
-    glm_cov = vcov(glm_y)*sigma_est^2/(sigma_res^2)
+    glm_cov = vcov(glm_y)
   } else if (rand_lasso_soln$family == 'binomial') {
     glm_y = glm(y ~ X_E-1, family=binomial())
     glm_cov = vcov(glm_y)
@@ -367,17 +371,18 @@ compute_target = function(rand_lasso_soln,
       stop("unregularized (relaxed) fit has NA values -- X[,active_set] likely singular")
     }
     
-    crosscov_target_internal=rbind(cov_target, matrix(0, nrow=p-nactive, ncol=nactive))
+    crosscov_target_internal=-(t(X)%*%X_E)%*%cov_target
   } 
 
-  alternatives = c()
-  for (i in 1:length(rand_lasso_soln$sign_soln)) {
-      if (rand_lasso_soln$sign_soln[i] == 1) {
-          alternatives = c(alternatives, 'greater')
-      } else {
-          alternatives = c(alternatives, 'less')
-      }
-  }
+  alternatives = rep("two-sided",length(rand_lasso_soln$sign_soln))
+  # alternatives = c()
+  # for (i in 1:length(rand_lasso_soln$sign_soln)) {
+  #     if (rand_lasso_soln$sign_soln[i] == 1) {
+  #         alternatives = c(alternatives, 'greater')
+  #     } else {
+  #         alternatives = c(alternatives, 'less')
+  #     }
+  # }
 
   if (type=="full"){
     
@@ -455,7 +460,11 @@ randomizedLassoInf = function(rand_lasso_soln,
                               level=0.9,
                               sampler=c("norejection", "adaptMCMC"),
                               nsample=10000,
-                              burnin=2000)
+                              burnin=2000,
+                              weight_mat=NULL,
+                              opt_samples=NULL,
+                              target_samples=NULL,
+                              for_test=FALSE)
  {
 
   n = nrow(rand_lasso_soln$X)
@@ -476,19 +485,21 @@ randomizedLassoInf = function(rand_lasso_soln,
   sampler = match.arg(sampler)
 
   law = rand_lasso_soln$law
-
-  if (sampler == "adaptMCMC"){
-    S = sample_opt_variables(law, 
-                             jump_scale=rep(1/sqrt(n), length(law$observed_opt_state)), nsample=nsample)
-    opt_samples = as.matrix(S$samples[(burnin+1):nsample,,drop=FALSE])
-  } else if (sampler == "norejection") {
-    opt_samples = gaussian_sampler(noise_scale, 
-                                   law$observed_opt_state, 
-                                   law$sampling_transform$linear_term,
-                                   law$sampling_transform$offset_term,
-                                   law$constraints,
-                                   nsamples=nsample,
-		                   burnin=burnin)
+  
+  if (is.null(opt_samples)) {
+    if (sampler == "adaptMCMC"){
+      S = sample_opt_variables(law, 
+                               jump_scale=rep(1/sqrt(n), length(law$observed_opt_state)), nsample=nsample)
+      opt_samples = as.matrix(S$samples[(burnin+1):nsample,,drop=FALSE])
+    } else if (sampler == "norejection") {
+      opt_samples = gaussian_sampler(noise_scale, 
+                                     law$observed_opt_state, 
+                                     law$sampling_transform$linear_term,
+                                     law$sampling_transform$offset_term,
+                                     law$constraints,
+                                     nsamples=nsample,
+  		                   burnin=burnin)
+    }
   }
 
   if (is.null(targets)){
@@ -511,65 +522,31 @@ randomizedLassoInf = function(rand_lasso_soln,
   
   names(pvalues) = names(targets$observed_target)
   rownames(ci) = names(targets$observed_target)
-
+  
+  
+  target_samples = mvrnorm(nrow(as.matrix(opt_samples)),rep(0,nactive),targets$cov_target)
+  
   for (i in 1:nactive){
-    pre_nuisance = observed_internal - (as.vector(targets$crosscov_target_internal[,i]) *
-                                        targets$observed_target[i] / 
-                                        targets$cov_target[i,i])
+    target_sample = target_samples[,i]
     
-    nuisance = internal_transform$linear_term %*% pre_nuisance[1:nactive] 
-    nuisance[inactive_set] = nuisance[inactive_set] - pre_nuisance[(nactive+1):p]
-
-    pre_linear_term = targets$crosscov_target_internal[,i] / targets$cov_target[i,i]
-    linear_term = rep(0, p)
-    linear_term = internal_transform$linear_term %*% pre_linear_term[1:nactive]
-    linear_term[inactive_set] = linear_term[inactive_set] - pre_linear_term[(nactive+1):p]
+    reduced_linear = solve(t(law$sampling_transform$linear_term)) %*% t(importance_transform$linear_term)
+    linear_term = reduced_linear%*%(as.matrix(targets$crosscov_target_internal[,i],ncol=1) / 
+                   targets$cov_target[i,i])
+    obs_opt_contrib = linear_term * targets$observed_target[i]
     target_transform = list(linear_term=linear_term,
-                            offset_term=as.vector(nuisance + internal_transform$offset_term)) # internal_transform$offset_term is 0...
+                            offset_term=as.vector(-obs_opt_contrib))
     
-    # compute sufficient statistic for root finding
-
-    target_sample = rnorm(nrow(as.matrix(opt_samples))) * sqrt(targets$cov_target[i,i])
-
-    # weight in the numerator is of the form
-    # -1/(2 noise_scale^2)\|Do + q + P(t+\theta)\|^2_2 
-    # with D=importance_transform$linear_term
-    #      q=target_transform$offset_term + importance_transform$offset_term
-    #      P=target_transform$linear_term
-
-    # weight in the denominator is of the form
-    # -1/(2 noise_scale^2)\|Do + q_D\|^2_2  
-    # with D=importance_transform$linear_term
-    #      q_D = observed_raw + importance_transform$offset_term
-
-    # reference measure just is the ratio at \theta=0
-    # sufficient statistic is linear term in \theta
-
-    den = importance_transform$linear_term %*% t(opt_samples) + observed_raw + importance_transform$offset_term
-
-    num1 = (importance_transform$linear_term %*% t(opt_samples) + 
-            target_transform$linear_term %*% t(as.matrix(target_sample)) + 
-            importance_transform$offset_term +
-            target_transform$offset_term)
-    num2 = (importance_transform$linear_term %*% t(opt_samples) + 
-            target_transform$linear_term %*% t(as.matrix(target_sample) + 1) +
-            importance_transform$offset_term +
-            target_transform$offset_term)
-
-    sufficient_stat = -apply(num2^2 - num1^2, 2, sum) / (2 * noise_scale^2)
-
-    reference_measure = importance_weight(noise_scale,
-                                          t(as.matrix(target_sample)),
-                                          t(opt_samples),
-                                          importance_transform,
-                                          target_transform,
-                                          observed_raw)
-    log_reference_measure = log(reference_measure)	       
+    weighting_transform = law$sampling_transform
+    
+    importance_for_candidate = importance_weight(noise_scale,
+                                t(as.matrix(target_sample)),
+                                t(as.matrix(opt_samples)),
+                                weighting_transform,
+                                target_transform,
+                                law$log_optimization_density) 
 
     pivot = function(candidate){
-      arg_ = candidate * sufficient_stat + log_reference_measure
-      arg_ = arg_ - max(arg_)
-      weights = exp(arg_)
+      weights = importance_for_candidate(candidate)$W
       p = mean((target_sample + candidate <= targets$observed_target[i]) * weights)/mean(weights)
       return(p)
     }
@@ -608,7 +585,15 @@ randomizedLassoInf = function(rand_lasso_soln,
       }
     }
   }
-  return(list(targets=targets, pvalues=pvalues, ci=ci))
+  
+  return_list = list(targets=targets, 
+                     pvalues=pvalues, 
+                     ci=ci)
+  if (for_test) {
+    return_list$opt_samples=opt_samples
+    return_list$target_samples=target_samples
+  }
+  return(return_list)
 }
 
 logistic_fitted = function(X, beta){
