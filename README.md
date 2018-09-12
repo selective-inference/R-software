@@ -24,10 +24,17 @@ Code in repo is under development and may be unstable.
 
 ## For development
 
-You will have to run
+As the C code is shared between python and R, it is in a git submodule. Current version can be grabbed with
 
 ```
-make Rcpp
+git submodule init
+git submodule update
+```
+
+## To install
+
+```
+make install
 ```
 
 ## To test
