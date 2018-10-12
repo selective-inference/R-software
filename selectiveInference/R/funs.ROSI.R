@@ -269,18 +269,21 @@ approximate_JM = function(X, active_set){
 }
 
 approximate_BN = function(X, active_set){
+	       # from (6) of https://arxiv.org/pdf/1703.03282.pdf
+               # approximate inverse is a scaled pseudo-inverse
   n=nrow(X)
   p=ncol(X)
   nactive=length(active_set)
   
   svdX = svd(X)
-  inv = solve(svdX$v %*% diag(svdX$d^2) %*% t(svdX$v))
-  D = matrix(rep(0, nactive*p), nrow=nactive, ncol=p)
+  inv = solve(svdX$u %*% diag(svdX$d^2) %*% t(svdX$u))
+  D = rep(0, nactive)
   for (i in 1:nactive){
     var = active_set[i]
-    D[i, var] = 1/(t(X[,var]) %*% inv %*% X[,var])
+    D[i] = 1/(t(X[,var]) %*% inv %*% X[,var])
   }
-  M_active = D %*% svdX$v %*% t(svdX$v) # last two terms: projection onto row(X)
+  pseudo_XTX = svdX$v[active_set,,drop=FALSE] %*% diag(1/svdX$d^2) %*% t(svdX$v)
+  M_active = diag(D) %*% pseudo_XTX # last two terms: projection onto row(X)
   return(M_active)
 }
 
@@ -319,10 +322,10 @@ setup_Qbeta = function(X,
     
   } else {
     
-    if (debiasing_method == "JM"){
+    if (debiasing_method == "JM") {
       ## this should be the active rows of \hat{\Sigma}(W^{1/2} X)^T/n, so size |E|\times p 
       M_active = approximate_JM(W_root %*% X, active_set) 
-    }  else if (debiasing_method == "BN"){
+    }  else if (debiasing_method == "BN") {
       M_active = approximate_BN(W_root %*% X, active_set)
     }
       
