@@ -88,6 +88,8 @@ Use the debiased estimate of the parameter or not. When FALSE, this is the
 method desribed in arxiv.org/1801.09037. The default TRUE often
 produces noticably shorter intervals and more powerful tests when
 p is comparable to n. Ignored when n<p and set to TRUE.
+Also note that with "BN" as debiasing method and n > p, this agrees with
+method in arxiv.org/1801.09037.
 }
 }
 
