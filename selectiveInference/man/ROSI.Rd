@@ -127,49 +127,6 @@ library(selectiveInference)
 library(glmnet)
 set.seed(43)
 
-n = 200
-p = 100
-s = 2
-sigma = 1
-
-x = matrix(rnorm(n*p),n,p)
-x = scale(x,TRUE,TRUE)
-
-beta = c(rep(10, s), rep(0,p-s)) / sqrt(n)
-y = x \%*\% beta + sigma*rnorm(n)
-
-# first run glmnet
-gfit = glmnet(x,y,standardize=FALSE)
-
-# extract coef for a given lambda; note the 1/n factor!
-# (and we don't save the intercept term)
-lambda = 4 * sqrt(n)
-lambda_glmnet = 4 / sqrt(n)
-beta = selectiveInference:::solve_problem_glmnet(x, 
-                                                 y, 
-                                                 lambda_glmnet, 
-                                                 penalty_factor=rep(1,p),
-                                                 family="gaussian")
-# compute fixed lambda p-values and selection intervals
-out = ROSI(x,
-           y,
-           beta,
-           lambda,
-           dispersion=sigma^2)
-out
-
-# an alternate approximate inverse from Boot and Nibbering
-
-out = ROSI(x,
-           y,
-           beta,
-           lambda,
-           dispersion=sigma^2,
-           debiasing_method="BN")
-out
-
-# wide matrices work too
-
 n = 100
 p = 200
 s = 2
@@ -201,7 +158,7 @@ out = ROSI(x,
            dispersion=sigma^2)
 out
 
-# an alternate approximate inverse
+# an alternate approximate inverse from Boot and Nibbering
 
 out = ROSI(x,
            y,
