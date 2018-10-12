@@ -276,7 +276,14 @@ approximate_BN = function(X, active_set){
   nactive=length(active_set)
   
   svdX = svd(X)
-  inv = solve(svdX$u %*% diag(svdX$d^2) %*% t(svdX$u))
+  
+  rank = sum(svdX$d > max(svdX$d) * 1.e-9)
+  inv_d = 1. / svdX$d
+  if (rank < length(svdX$d)) { 
+     inv_d[(rank+1):length(svdX$d)] = 0.
+  }
+  inv = svdX$u %*% diag(inv_d^2) %*% t(svdX$u)
+
   D = rep(0, nactive)
   for (i in 1:nactive){
     var = active_set[i]

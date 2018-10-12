@@ -111,8 +111,12 @@ p is comparable to n. Ignored when n<p and set to TRUE.
 
 \references{
 
+
 Keli Liu, Jelena Markovic, Robert Tibshirani. More powerful post-selection 
 inference, with application to the Lasso. arXiv:1801.09037
+
+Tom Boot, Didier Nibbering. Inference in high-dimensional linear regression models.
+arXiv:1703.03282
 
 }
 \author{Jelena Markovic, Jonathan Taylor}
@@ -122,6 +126,7 @@ inference, with application to the Lasso. arXiv:1801.09037
 library(selectiveInference)
 library(glmnet)
 set.seed(43)
+
 n = 200
 p = 100
 s = 2
@@ -151,6 +156,59 @@ out = ROSI(x,
            beta,
            lambda,
            dispersion=sigma^2)
+out
+
+# an alternate approximate inverse from Boot and Nibbering
+
+out = ROSI(x,
+           y,
+           beta,
+           lambda,
+           dispersion=sigma^2,
+           debiasing_method="BN")
+out
+
+# wide matrices work too
+
+n = 100
+p = 200
+s = 2
+sigma = 1
+
+x = matrix(rnorm(n*p),n,p)
+x = scale(x,TRUE,TRUE)
+
+beta = c(rep(10, s), rep(0,p-s)) / sqrt(n)
+y = x \%*\% beta + sigma*rnorm(n)
+
+# first run glmnet
+gfit = glmnet(x,y,standardize=FALSE)
+
+# extract coef for a given lambda; note the 1/n factor!
+# (and we don't save the intercept term)
+lambda = 4 * sqrt(n)
+lambda_glmnet = 4 / sqrt(n)
+beta = selectiveInference:::solve_problem_glmnet(x, 
+                                                 y, 
+                                                 lambda_glmnet, 
+                                                 penalty_factor=rep(1,p),
+                                                 family="gaussian")
+# compute fixed lambda p-values and selection intervals
+out = ROSI(x,
+           y,
+           beta,
+           lambda,
+           dispersion=sigma^2)
+out
+
+# an alternate approximate inverse
+
+out = ROSI(x,
+           y,
+           beta,
+           lambda,
+           dispersion=sigma^2,
+           debiasing_method="BN")
 out
 
 }
