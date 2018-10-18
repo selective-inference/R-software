@@ -56,7 +56,7 @@ test_liu_full = function(seed=1, outfile=NULL, family="gaussian", lambda_frac=0.
     PVS = ROSI(X, 
                y, 
                soln, 
-               lambda=lambda, 
+               lambda=lambda*n, 
                penalty_factor=penalty_factor, 
                dispersion=sigma_est^2, 
                family=family,

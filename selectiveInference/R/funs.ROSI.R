@@ -68,7 +68,7 @@ solve_problem_Q = function(Xdesign,
   #print(as.numeric(n*penalty_factor*lambda_glmnet))
 
   result = selectiveInference:::solve_QP_wide(Xdesign,                                       # this is a design matrix
-                                              n * as.numeric(penalty_factor*lambda_glmnet),  # vector of Lagrange multipliers
+                                              as.numeric(penalty_factor*lambda_glmnet),      # vector of Lagrange multipliers
                                               0,                                             # ridge_term 
                                               max_iter, 
                                               soln, 
@@ -131,7 +131,7 @@ truncation_set = function(X,
   nuisance_res = (Qbeta_bar[var] -                # nuisance stat restricted to active vars
                   solve(QiE) %*% target_stat)/n 
   center = nuisance_res - (QE[idx,] %*% restricted_soln/n)
-  radius = penalty_factor[var]*lambda_glmnet*n
+  radius = penalty_factor[var]*lambda_glmnet
   return(list(center=center*n, radius=radius*n))
 }
 
