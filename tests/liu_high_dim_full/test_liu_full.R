@@ -68,11 +68,6 @@ test_liu_full = function(seed=1, outfile=NULL, family="gaussian", lambda_frac=0.
     active_vars=PVS$active_set
     cat("active_vars:",active_vars,"\n")
     pvalues = c(pvalues, PVS$pvalues)
-    if (family == 'gaussian') {
-        glm_Xy = glm(y ~ X[,active_vars] - 1)
-    } else {
-        glm_Xy = glm(y ~ X[,active_vars] - 1, family=binomial)
-    }
 
     naive_Z = PVS$estimate / PVS$std_err
     naive_P = pnorm(naive_Z)
@@ -93,7 +88,6 @@ test_liu_full = function(seed=1, outfile=NULL, family="gaussian", lambda_frac=0.
     
     if (construct_ci && length(active_vars)>0){
       
-
       sel_coverages=c(sel_coverages, selectiveInference:::compute_coverage(PVS$intervals, beta[active_vars]))
       naive_coverages=c(naive_coverages, selectiveInference:::compute_coverage(naive_int, beta[active_vars]))
       sel_lengths=c(sel_lengths, as.vector(naive_int[,2]-naive_int[,1]))
