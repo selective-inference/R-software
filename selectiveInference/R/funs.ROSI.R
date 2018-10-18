@@ -68,7 +68,7 @@ solve_problem_Q = function(Xdesign,
   print(as.numeric(n*penalty_factor*lambda_glmnet))
 
   result = selectiveInference:::solve_QP_wide(Xdesign,                                       # this is a design matrix
-                                              as.numeric(penalty_factor*lambda_glmnet),      # vector of Lagrange multipliers
+                                              n * as.numeric(penalty_factor*lambda_glmnet),  # vector of Lagrange multipliers
                                               0,                                             # ridge_term 
                                               max_iter, 
                                               soln, 
