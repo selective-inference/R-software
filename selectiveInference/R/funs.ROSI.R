@@ -277,8 +277,11 @@ approximate_JM = function(X, active_set){
 }
 
 approximate_BN = function(X, active_set){
-	       # from (6) of https://arxiv.org/pdf/1703.03282.pdf
+	       # inspired by (6) of https://arxiv.org/pdf/1703.03282.pdf
                # approximate inverse is a scaled pseudo-inverse
+	       # in the paper above, they use certain rows scaled X^{\dagger}
+               # here we compute some scaled rows of (X^TX)^{\dagger} in such a way that
+	       # our final answer, when multiplied by X^T agrees with (6).
   n=nrow(X)
   p=ncol(X)
   nactive=length(active_set)
