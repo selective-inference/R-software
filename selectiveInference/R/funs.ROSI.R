@@ -296,11 +296,13 @@ approximate_BN = function(X, active_set){
   inv = svdX$u %*% diag(inv_d^2) %*% t(svdX$u)
 
   D = rep(0, nactive)
+
   for (i in 1:nactive){
     var = active_set[i]
     D[i] = 1/(t(X[,var]) %*% inv %*% X[,var])
   }
-  pseudo_XTX = svdX$v[active_set,,drop=FALSE] %*% diag(1/svdX$d^2) %*% t(svdX$v)
+  pseudo_XTX = svdX$v[active_set,,drop=FALSE] %*% diag(inv_d^2) %*% t(svdX$v)
+
   M_active = diag(D) %*% pseudo_XTX # last two terms: projection onto row(X)
   return(M_active)
 }
