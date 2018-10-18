@@ -62,24 +62,28 @@ solve_problem_Q = function(Xdesign,
   linear_func = linear_func/n
   gradient = gradient/n
   
-  #solve_QP_wide solves n*slinear_func^T\beta+1/2(X\beta)^T (X\beta)+\sum\lambda_i|\beta_i|
-  result = solve_QP_wide(Xdesign,         # this is a design matrix
-                         as.numeric(penalty_factor*lambda_glmnet),  # vector of Lagrange multipliers
-                         0,                          # ridge_term 
-                         max_iter, 
-                         soln, 
-                         linear_func, 
-                         gradient, 
-                         Xsoln,
-                         ever_active, 
-                         nactive, 
-                         kkt_tol, 
-                         objective_tol, 
-                         parameter_tol,
-                         max_active,
-                         kkt_stop,
-                         objective_stop,	
-                         parameter_stop)
+  #solve_QP_wide solves n*linear_func^T\beta+1/2(X\beta)^T (X\beta)+\sum\lambda_i|\beta_i|
+
+  print('lambda')
+  print(as.numeric(n*penalty_factor*lambda_glmnet))
+
+  result = selectiveInference:::solve_QP_wide(Xdesign,                                       # this is a design matrix
+                                              as.numeric(penalty_factor*lambda_glmnet),      # vector of Lagrange multipliers
+                                              0,                                             # ridge_term 
+                                              max_iter, 
+                                              soln, 
+                                              linear_func, 
+                                              gradient, 
+                                              Xsoln,
+                                              ever_active, 
+                                              nactive, 
+                                              kkt_tol, 
+                                              objective_tol, 
+                                              parameter_tol,
+                                              max_active,
+                                              kkt_stop,
+                                              objective_stop,	
+                                              parameter_stop)
   
   return(result$soln)
 }
@@ -111,6 +115,8 @@ truncation_set = function(X,
                                       Qbeta_bar, 
                                       lambda_glmnet, 
                                       penalty_factor=penalty_factor_rest)
+    print('restrict')
+    print(restricted_soln)
   } else {
     restricted_soln = solve_restricted_problem(X, 
                                                y, 
