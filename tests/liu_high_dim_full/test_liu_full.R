@@ -73,10 +73,17 @@ test_liu_full = function(seed=1, outfile=NULL, family="gaussian", lambda_frac=0.
     } else {
         glm_Xy = glm(y ~ X[,active_vars] - 1, family=binomial)
     }
-    naive_pvalues = c(naive_pvalues, summary(glm_Xy)$coef[,4])
+
+    naive_Z = PVS$estimate / PVS$std_err
+    naive_P = pnorm(naive_Z)
+    naive_P = 2 * pmin(naive_P, 1 - naive_P)
+    naive_pvalues = c(naive_pvalues, naive_P)
     sel_intervals = rbind(sel_intervals, PVS$intervals)  # matrix with two rows
-    naive_int = confint(glm_Xy, level=0.9)
+    naive_Q = qnorm(0.95)
+    naive_int = cbind(PVS$estimate - naive_Q * PVS$std_err, PVS$estimate + naive_Q * PVS$std_err)
+    naive_int[is.na(PVS$pvalues),] = NA
     naive_intervals = rbind(naive_intervals, naive_int)
+    print('naive intervals')
     print(naive_intervals)
     if (length(pvalues)>0){
       plot(ecdf(pvalues))
@@ -92,12 +99,15 @@ test_liu_full = function(seed=1, outfile=NULL, family="gaussian", lambda_frac=0.
       sel_lengths=c(sel_lengths, as.vector(naive_int[,2]-naive_int[,1]))
       naive_lengths=c(naive_lengths, as.vector(PVS$naive_intervals[,2]-PVS$naive_intervals[,1]))
       #cat("sel cov", sel_coverages, "\n")
-      print(c("selective coverage:", mean(sel_coverages)))
-      print(c("naive coverage:", mean(naive_coverages)))
-      print(c("selective length mean:", mean(sel_lengths)))
-      print(c("selective length median:", median(sel_lengths)))
-      print(c("naive length mean:", mean(naive_lengths)))
-      print(c("naive length median:", median(naive_lengths)))
+      print(c("selective coverage:", mean(sel_coverages, na.rm=TRUE)))
+      NA_sel = is.na(sel_coverages)
+      naive_coverages[NA_sel] = NA
+      print(c("naive coverage:", mean(naive_coverages, na.rm=TRUE)))
+      print(c("selective length mean:", mean(sel_lengths, na.rm=TRUE)))
+      print(c("selective length median:", median(sel_lengths, na.rm=TRUE)))
+      naive_lengths[NA_sel] = NA
+      print(c("naive length mean:", mean(naive_lengths, na.rm=TRUE)))
+      print(c("naive length median:", median(naive_lengths, na.rm=TRUE)))
     }
     
     mc = selectiveInference:::selective.plus.BH(beta, active_vars, PVS$pvalues, q=0.2)
