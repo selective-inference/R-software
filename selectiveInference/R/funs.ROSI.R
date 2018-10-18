@@ -35,7 +35,7 @@ solve_restricted_problem = function(X, y, var, lambda_glmnet, penalty_factor, lo
   return(restricted_soln)
 }
 
-solve_problem_Q = function(Q_sq, 
+solve_problem_Q = function(Xdesign, 
                            Qbeta_bar, 
                            lambda_glmnet, 
                            penalty_factor,
@@ -46,25 +46,24 @@ solve_problem_Q = function(Q_sq,
                            kkt_stop=TRUE,
                            objective_stop=TRUE,	
                            parameter_stop=TRUE){
-  n=nrow(Q_sq)
-  p=ncol(Q_sq)
+  n=nrow(Xdesign)
+  p=ncol(Xdesign)
 
-  Xinfo = Q_sq
   linear_func = -as.numeric(Qbeta_bar)
   soln = as.numeric(rep(0., p))
   ever_active = as.integer(rep(0, p))
   ever_active[1] = 1
   ever_active = as.integer(ever_active)
   nactive = as.integer(1)
-  Xsoln = as.numeric(rep(0, nrow(Xinfo)))
+  Xsoln = as.numeric(rep(0, n))
   gradient = 1. * linear_func 
-  max_active=as.integer(p)
+  max_active = as.integer(p)
   
   linear_func = linear_func/n
   gradient = gradient/n
   
-  #solve_QP_wide solves n*slinear_func^T\beta+\beta^T Xinfo\beta+\sum\lambda_i|\beta_i|
-  result = solve_QP_wide(Xinfo,         # this is a design matrix
+  #solve_QP_wide solves n*slinear_func^T\beta+1/2(X\beta)^T (X\beta)+\sum\lambda_i|\beta_i|
+  result = solve_QP_wide(Xdesign,         # this is a design matrix
                          as.numeric(penalty_factor*lambda_glmnet),  # vector of Lagrange multipliers
                          0,                          # ridge_term 
                          max_iter, 
@@ -95,9 +94,9 @@ truncation_set = function(X,
                           y, 
                           Qbeta_bar, 
                           QE, 
-                          Q_sq, 
+                          Xdesign, 
                           target_stat, 
-                          target_cov,
+			  QiE,
                           var, 
                           active_set,
                           lambda_glmnet, 
@@ -108,7 +107,7 @@ truncation_set = function(X,
   if (solver=="QP"){
     penalty_factor_rest = rep(penalty_factor)
     penalty_factor_rest[var] = 10^10
-    restricted_soln = solve_problem_Q(Q_sq, 
+    restricted_soln = solve_problem_Q(Xdesign, 
                                       Qbeta_bar, 
                                       lambda_glmnet, 
                                       penalty_factor=penalty_factor_rest)
@@ -124,7 +123,7 @@ truncation_set = function(X,
   n = nrow(X)
   idx = match(var, active_set)                    # active_set[idx]=var
   nuisance_res = (Qbeta_bar[var] -                # nuisance stat restricted to active vars
-                  solve(target_cov) %*% target_stat)/n 
+                  solve(QiE) %*% target_stat)/n 
   center = nuisance_res - (QE[idx,] %*% restricted_soln/n)
   radius = penalty_factor[var]*lambda_glmnet
   return(list(center=center*n, radius=radius*n))
@@ -158,10 +157,13 @@ tnorm.union.surv = function(z,
   
   pval = matrix(NA, nrow = dim(intervals)[1], ncol = length(mean))
 
+  print('truncation intervals')
+  print(intervals)
+
   for(jj in 1:dim(intervals)[1]){
     if(z <= intervals[jj,1]){
       pval[jj,] = 1
-    }else if(z >= intervals[jj,2]){
+    } else if(z >= intervals[jj,2]){
       pval[jj,] = 0
     }else{
       pval[jj,] = tnorm.surv(z, mean, sd, intervals[jj,1], intervals[jj,2], bits=bits)
@@ -321,7 +323,7 @@ setup_Qbeta = function(X,
     Qi = solve(Q)   ## (X^TWX)^{-1}
     QiE = Qi[active_set,][, active_set]
 
-    Q_sq = W_root %*% X
+    Xdesign = W_root %*% X
     beta_bar = soln - Qi %*% gradient(X, y, soln, loss=loss)
     Qbeta_bar = Q%*%soln - gradient(X, y, soln, loss=loss)
     beta_barE = beta_bar[active_set]
@@ -342,12 +344,12 @@ setup_Qbeta = function(X,
     M2 = M_active %*% t(W_root %*% X)
     QiE = M2 %*% t(M2) # size |E|\times |E|
     QE = hessian_active(X, soln, loss, active_set)
-    Q_sq = W_root %*% X
+    Xdesign = W_root %*% X
     Qbeta_bar = t(QE)%*%soln[active_set] - G
   }
   
   return(list(QE=QE, 
-              Q_sq=Q_sq, 
+              Xdesign=Xdesign, 
               Qbeta_bar=Qbeta_bar, 
               QiE=QiE, 
               beta_barE=beta_barE,
@@ -395,7 +397,7 @@ ROSI = function(X,
                              use_debiased=use_debiased)
 
   QE = as.matrix(setup_params$QE)
-  Q_sq = setup_params$Q_sq
+  Xdesign = setup_params$Xdesign
   QiE = as.matrix(setup_params$QiE)
   beta_barE = setup_params$beta_barE
   Qbeta_bar = setup_params$Qbeta_bar
@@ -426,8 +428,8 @@ ROSI = function(X,
                         y=y, 
                         Qbeta_bar=Qbeta_bar, 
                         QE=QE, 
-                        Q_sq=Q_sq, 
-                        target_cov=target_cov, # this Hessian, i.e. without dispersion
+                        Xdesign=Xdesign, 
+                        QiE=QiE[i,i,drop=FALSE], # this is part of inverse Hessian, i.e. without dispersion
                         target_stat=target_stat, 
                         var=active_set[i], 
                         active_set=active_set,
@@ -484,6 +486,7 @@ ROSI = function(X,
            pvalues = c(pvalues, NA)
 	   sel_intervals = rbind(sel_intervals, c(NA, NA))
            warning("observation not within the truncation limits!")
+           print("observation not within the truncation limits!")
       }
   }
   
@@ -528,10 +531,8 @@ print.ROSI <- function(x, ...) {
 
 # Some little used functions -- not exported
 
-
 compute_coverage = function(ci, beta){
-  print(ci)
-  print(beta) 
+
   nactive=length(beta)
   coverage_vector = rep(0, nactive)
   for (i in 1:nactive){
@@ -553,7 +554,6 @@ loss_label = function(family) {
     return("logit")
   }
 }
-
 
 family_label = function(loss){
   if (loss=="ls"){
