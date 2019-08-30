@@ -288,12 +288,12 @@ approximate_BN = function(X, active_set){
   
   svdX = svd(X)
   
-  rank = sum(svdX$d > max(svdX$d) * 1.e-9)
+  approx_rank = sum(svdX$d > max(svdX$d) * 1.e-9)
   inv_d = 1. / svdX$d
-  if (rank < length(svdX$d)) { 
-     inv_d[(rank+1):length(svdX$d)] = 0.
+  if (approx_rank < length(svdX$d)) { 
+     inv_d[(approx_rank+1):length(svdX$d)] = 0.
   }
-  inv = svdX$u %*% diag(inv_d^2) %*% t(svdX$u)
+  inv = svdX$u[,1:approx_rank,drop=FALSE] %*% diag(inv_d[1:approx_rank]^2) %*% t(svdX$u)[1:approx_rank,,drop=FALSE]
 
   D = rep(0, nactive)
 
@@ -301,7 +301,8 @@ approximate_BN = function(X, active_set){
     var = active_set[i]
     D[i] = 1/(t(X[,var]) %*% inv %*% X[,var])
   }
-  pseudo_XTX = svdX$v[active_set,,drop=FALSE] %*% diag(inv_d^2) %*% t(svdX$v)
+
+  pseudo_XTX = svdX$v[active_set,1:approx_rank,drop=FALSE] %*% diag(inv_d[1:approx_rank]^2) %*% t(svdX$v)[1:approx_rank,,drop=FALSE]
 
   M_active = diag(D) %*% pseudo_XTX # last two terms: projection onto row(X)
   return(M_active)
