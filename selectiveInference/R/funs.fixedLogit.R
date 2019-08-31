@@ -4,7 +4,7 @@ fixedLogitLassoInf=function(x,y,beta,lambda,alpha=.1, type=c("partial,full"), to
                             linesearch.try=10, this.call=NULL){
   
   
-  #type = match.arg(type)
+  type = match.arg(type)
   checkargs.xy(x,y)
   if (missing(beta) || is.null(beta)) stop("Must supply the solution beta")
   if (missing(lambda) || is.null(lambda)) stop("Must supply the tuning parameter value lambda") 

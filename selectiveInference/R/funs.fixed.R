@@ -20,9 +20,9 @@ fixedLassoInf <- function(x, y, beta,
 
   family = match.arg(family)
   this.call = match.call()
-  #type = match.arg(type)
+  type = match.arg(type)
   if(family=="binomial")  {
-    #if(type!="partial") stop("Only type= partial allowed with binomial family")
+    if(type!="partial") stop("Only type= partial allowed with binomial family")
     out=fixedLogitLassoInf(x,y,beta,lambda,alpha=alpha, type=type, tol.beta=tol.beta, tol.kkt=tol.kkt,
                            gridrange=gridrange, bits=bits, verbose=verbose,
                            linesearch.try=linesearch.try,
