@@ -14,4 +14,4 @@ src:
 
 check: Rcpp build 
 	R CMD build selectiveInference
-	R CMD check selectiveInference_1.2.2.tar.gz # fix this to be a script variable
+	R CMD check selectiveInference_1.2.5.tar.gz --as-cran # fix this to be a script variable
