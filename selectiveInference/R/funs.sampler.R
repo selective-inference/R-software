@@ -54,7 +54,7 @@ log_concave_sampler = function(negative_log_density,
   
   update_velocity = function(){
     Z=rnorm(dim)
-    return(Z/sqrt(t(Z)%*%Z))
+    return(Z/sqrt(sum(Z^2)))
   }
   
   compute_next = function(state){
