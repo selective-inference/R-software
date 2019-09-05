@@ -125,12 +125,13 @@ arXiv:1703.03282
 
 \examples{
 
+\donttest{
 library(selectiveInference)
 library(glmnet)
 set.seed(43)
 
 n = 100
-p = 20
+p = 200
 s = 2
 sigma = 1
 
@@ -169,6 +170,6 @@ out = ROSI(x,
            dispersion=sigma^2,
            debiasing_method="BN")
 out
-
+}
 }
  
