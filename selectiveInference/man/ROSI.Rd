@@ -130,7 +130,7 @@ library(glmnet)
 set.seed(43)
 
 n = 100
-p = 200
+p = 20
 s = 2
 sigma = 1
 
@@ -150,7 +150,7 @@ lambda_glmnet = 4 / sqrt(n)
 beta = selectiveInference:::solve_problem_glmnet(x, 
                                                  y, 
                                                  lambda_glmnet, 
-                                                 penalty_factor=rep(1,p),
+                                                 penalty_factor=rep(1, p),
                                                  family="gaussian")
 # compute fixed lambda p-values and selection intervals
 out = ROSI(x,
