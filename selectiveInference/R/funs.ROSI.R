@@ -160,9 +160,6 @@ tnorm.union.surv = function(z,
   
   pval = matrix(NA, nrow = dim(intervals)[1], ncol = length(mean))
 
-  print('truncation intervals')
-  print(intervals)
-
   for(jj in 1:dim(intervals)[1]){
     if(z <= intervals[jj,1]){
       pval[jj,] = 1
